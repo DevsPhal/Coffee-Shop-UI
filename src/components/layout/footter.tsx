@@ -1,0 +1,134 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import "@/app/globals.scss";
+
+const infoLinks = [
+  { label: "Home", href: "/" },
+  { label: "Menu", href: "/menu" },
+  { label: "Drinks", href: "/drinks" },
+  { label: "Location", href: "/location" },
+  { label: "Contact Us", href: "/contact" },
+];
+
+const socialLinks = [
+  { label: "Instagram", href: "#", icon: "/icons/instagram.svg" },
+  { label: "Facebook", href: "#", icon: "/icons/facebook.svg" },
+  { label: "TikTok", href: "#", icon: "/icons/tiktok.svg" },
+];
+
+export function Footer() {
+  const pathname = usePathname();
+
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    return pathname.startsWith(href);
+  };
+
+  return (
+    <footer className="footer_wrapper font-sans">
+      <div className="footer_container">
+        <div className="footer_top_row">
+          <div className="footer_address_box">
+            <Link href="/" className="footer_logo_link">
+              <Image
+                src="/images/Logo.svg"
+                alt="590st CAFE"
+                width={66}
+                height={48}
+              />
+            </Link>
+            <p className="footer_address_text">
+              30a St 590, Phnom Penh 12101, Khan Toul Kork, Phnom Penh Cambodia.
+            </p>
+          </div>
+
+          <div className="footer_links_grid">
+            <div>
+              <h3 className="footer_column_title">
+                Info
+              </h3>
+              <ul className="footer_list">
+                {infoLinks.map(({ label, href }) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className={`footer_link ${isActive(href) ? "active" : ""}`}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="footer_column_title">
+                Contact for Service
+              </h3>
+              <p className="footer_contact_text">
+                Telegram:{" "}
+                <a
+                  href="https://t.me/095600676"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  095 600 676
+                </a>
+              </p>
+            </div>
+
+            <div>
+              <h3 className="footer_column_title">
+                Contact for Partner
+              </h3>
+              <ul className="footer_list">
+                <li>
+                  <a href="tel:095600676" className="footer_link">
+                    095 600 676
+                  </a>
+                </li>
+                <li>
+                  <a href="tel:069955878" className="footer_link">
+                    069 955 878
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="mailto:lengsokpunlork611@gmail.com"
+                    className="footer_email_link"
+                  >
+                    lengsokpunlork611@gmail.com
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="footer_bottom_row">
+          <p className="footer_copyright_text">© 2026 — Copyright</p>
+
+          <div className="footer_social_links">
+            {socialLinks.map(({ label, href, icon }) => (
+              <a
+                key={label}
+                href={href}
+                aria-label={label}
+                className="footer_social_item"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Image src={icon} alt={label} width={20} height={20} />
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+export default Footer;
