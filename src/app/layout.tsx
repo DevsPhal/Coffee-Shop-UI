@@ -1,18 +1,6 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
-import localFont from "next/font/local";
+import { CartProvider } from "@/context/CartContext";
 import "./globals.css";
-
-const geist = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const googleSansCode = localFont({
-  src: "./fonts/GoogleSansCode.ttf",
-  variable: "--font-google-sans-flex",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "590st",
@@ -25,11 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${googleSansCode.variable} ${geist.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className="h-full antialiased font-sans">
+      <body className="min-h-full flex flex-col font-sans">
+        <CartProvider>{children}</CartProvider>
+      </body>
     </html>
   );
 }
