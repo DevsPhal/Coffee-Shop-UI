@@ -32,14 +32,21 @@ export function LoginPageView() {
     <div className="login_page_wrapper font-sans">
       {/* Left Side: Login Form */}
       <div className="login_form_side">
-        {/* Top Left Circle Button */}
+        {/* Top Left Back Button with back.svg icon */}
         <div className="flex justify-start">
           <Link
             href="/"
             className="login_back_home_btn"
             title="Return to Home"
           >
-            <div className="w-4 h-4 rounded-full bg-white/20" />
+            <Image
+              src="/icons/back.svg"
+              alt="Back to Home"
+              width={24}
+              height={24}
+              unoptimized
+              className="w-6 h-6 object-contain"
+            />
           </Link>
         </div>
 
