@@ -47,7 +47,7 @@ export function MenupageView() {
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
                 className={`category_btn ${isSelected ? "active" : ""}`}
-                >
+              >
                 <span>{cat}</span>
                 <span className="category_badge">
                   {count}

@@ -14,9 +14,9 @@ const infoLinks = [
 ];
 
 const socialLinks = [
-  { label: "Instagram", href: "#", icon: "/icons/instagram.svg" },
-  { label: "Facebook", href: "#", icon: "/icons/facebook.svg" },
-  { label: "TikTok", href: "#", icon: "/icons/tiktok.svg" },
+  { label: "Instagram", href: "https://www.instagram.com/", icon: "/icons/instagram.svg" },
+  { label: "Facebook", href: "https://www.facebook.com/profile.php?id=61573086337988", icon: "/icons/facebook.svg" },
+  { label: "TikTok", href: "https://www.tiktok.com/en/", icon: "/icons/tiktok.svg" },
 ];
 
 export function Footer() {
