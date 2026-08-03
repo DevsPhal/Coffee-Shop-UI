@@ -47,7 +47,9 @@
 }
 
 @theme inline {
-  --font-sans: "SF Pro Display", "Khmer", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans:
+    "SF Pro Display", "Khmer", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
   --font-khmer: "Moul", "Khmer", sans-serif;
   --font-heading: var(--font-sans);
   --color-background: var(--background);
@@ -162,15 +164,36 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    font-family: "SF Pro Display", "Khmer", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family:
+      "SF Pro Display",
+      "Khmer",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
   }
   body {
     @apply bg-background text-foreground font-sans;
-    font-family: "SF Pro Display", "Khmer", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family:
+      "SF Pro Display",
+      "Khmer",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
   }
   html {
     @apply font-sans;
-    font-family: "SF Pro Display", "Khmer", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family:
+      "SF Pro Display",
+      "Khmer",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
   }
 
   /* Utility class for Moul (decorative Khmer headings) */
@@ -180,6 +203,10 @@
 
   /* Utility class for Khmer body text */
   .font-khmer {
-    font-family: "Khmer", "SF Pro Display", -apple-system, sans-serif;
+    font-family:
+      "Khmer",
+      "SF Pro Display",
+      -apple-system,
+      sans-serif;
   }
 }
