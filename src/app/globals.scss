@@ -303,7 +303,7 @@
 @media (min-width: 640px) { .hero_slide_description { font-size: 0.75rem; } }
 .hero_buy_btn { background-color: #A1255B; color: #FFFFFF; font-weight: 600; font-size: 0.75rem; padding: 0.5rem 1rem; border-radius: 9999px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); transition-property: transform; flex-shrink: 0; border: none; cursor: pointer; }
 @media (min-width: 640px) { .hero_buy_btn { padding: 0.625rem 1.5rem; } }
-.hero_buy_btn:hover { background-color: #8D1E53; }
+.hero_buy_btn:hover { background-color: var(--background-hover); }
 .hero_buy_btn:active { transform: scale(0.95); }
 .hero_controls_margin { margin-top: 1.5rem; }
 
