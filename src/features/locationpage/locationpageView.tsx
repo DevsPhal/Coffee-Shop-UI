@@ -11,7 +11,7 @@ export function LocationpageView() {
 
   return (
     <div className="product_detail_container font-sans">
-      {/* Header & Breadcrumb */}
+      {/* Header & Breadcrumb Section */}
       <div className="product_detail_header">
         <h1 className="product_detail_title">Location</h1>
         <nav className="product_detail_breadcrumb" aria-label="Breadcrumb">
@@ -23,9 +23,9 @@ export function LocationpageView() {
         </nav>
       </div>
 
-      {/* Main Grid Layout using globals.scss classes */}
+      {/* Main Grid Layout */}
       <div className="location_page_grid">
-        {/* Left Column: Store Image Box */}
+        {/* Left Column: Main Store Photo Card */}
         <div className="location_page_image_box group">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -33,79 +33,91 @@ export function LocationpageView() {
             alt="590st CAFE Location"
             className="location_page_image"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
-          <div className="absolute bottom-6 left-6 right-6 text-white z-10">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-600/90 text-white mb-2 backdrop-blur-sm shadow-sm">
+          <div className="location_image_overlay_gradient" />
+          <div className="location_image_content">
+            <span className="location_badge">
               <Coffee className="w-3.5 h-3.5" /> Main Store
             </span>
-            <h3 className="text-2xl font-bold drop-shadow-sm">590st CAFE</h3>
-            <p className="text-sm text-gray-200">Toul Kork, Phnom Penh</p>
+            <h3 className="location_store_title">590st CAFE</h3>
+            <p className="location_store_subtitle">Toul Kork, Phnom Penh</p>
           </div>
         </div>
 
-        {/* Right Column: Store Information Card */}
+        {/* Right Column: Store Information & Map Card */}
         <div className="location_page_card">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">590st CAFE Main Store</h2>
-            <p className="product_description">
-              Visit us to experience freshly crafted coffee, delicious beverages, and a cozy atmosphere perfect for relaxation, meeting friends, or working.
-            </p>
-          </div>
+          <div className="location_card_top">
+            <div>
+              <h2 className="location_card_title">590st CAFE Main Store</h2>
+              <p className="location_card_description">
+                Visit us to experience freshly crafted coffee, delicious beverages, and a cozy atmosphere perfect for relaxation, meeting friends, or working.
+              </p>
+            </div>
 
-          <div className="location_info_group">
-            {/* Address */}
-            <div className="location_info_item">
-              <div className="location_info_icon">
-                <MapPin className="w-5 h-5" />
+            {/* Address & Info List */}
+            <div className="location_info_group">
+              {/* Address */}
+              <div className="location_info_item">
+                <div className="location_info_icon">
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div>
+                  <h4 className="location_info_label">Address</h4>
+                  <p className="location_info_text">
+                    House No. 30A, Street 590, Toul Kork District, Phnom Penh 12101, Cambodia
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900">Address</h4>
-                <p className="text-sm text-gray-600">
-                  House No. 30A, Street 590, Toul Kork District, Phnom Penh 12101, Cambodia
-                </p>
+
+              {/* Opening Hours */}
+              <div className="location_info_item">
+                <div className="location_info_icon">
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div>
+                  <h4 className="location_info_label">Opening Hours</h4>
+                  <p className="location_info_text">Monday - Sunday: 7:00 AM - 11:00 PM</p>
+                </div>
+              </div>
+
+              {/* Phone & Contact */}
+              <div className="location_info_item">
+                <div className="location_info_icon">
+                  <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div>
+                  <h4 className="location_info_label">Contact Number</h4>
+                  <p className="location_info_text">095 600 676 / 069 955 878</p>
+                </div>
               </div>
             </div>
 
-            {/* Opening Hours */}
-            <div className="location_info_item">
-              <div className="location_info_icon">
-                <Clock className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900">Opening Hours</h4>
-                <p className="text-sm text-gray-600">Monday - Sunday: 7:00 AM - 11:00 PM</p>
-              </div>
-            </div>
-
-            {/* Phone & Contact */}
-            <div className="location_info_item">
-              <div className="location_info_icon">
-                <Phone className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900">Contact Number</h4>
-                <p className="text-sm text-gray-600">095 600 676 / 069 955 878</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons Row */}
-          <div className="location_actions_row">
+            {/* Clickable Relative Map Preview Card - Entire Box Opens Google Maps */}
             <a
               href={googleMapUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex"
+              className="map_preview_card"
             >
-              <Button className="button_pill_primary cursor-pointer flex items-center justify-center gap-2">
-                <Navigation className="w-4 h-4" />
-                View on Google Maps
-                <ExternalLink className="w-4 h-4 ml-0.5 opacity-70" />
-              </Button>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/map.png"
+                alt="590st cafe location map"
+                className="map_preview_image"
+              />
+              <div className="map_preview_overlay">
+                <div className="map_button_badge">
+                  <Navigation className="w-3.5 h-3.5" />
+                  View on Google Maps
+                  <ExternalLink className="w-3 h-3 opacity-80" />
+                </div>
+              </div>
             </a>
+          </div>
 
-            <Link href="/menu" className="inline-flex">
-              <Button className="button_pill_secondary cursor-pointer flex items-center justify-center gap-2">
+          {/* Action Row: Full-Width Explore Our Menu matching Map width */}
+          <div className="action_row_border">
+            <Link href="/menu" className="explore_menu_link">
+              <Button className="button_explore_menu">
                 Explore Our Menu
               </Button>
             </Link>

@@ -29,6 +29,11 @@ export function CheckoutpageView() {
     router.push("/payment");
   };
 
+  const handleCancelOrder = (e: React.MouseEvent) => {
+    e.preventDefault();
+    router.push("/cart");
+  };
+
   return (
     <div className="checkout_page_container font-sans">
       {/* Header & Breadcrumb */}
@@ -203,7 +208,7 @@ export function CheckoutpageView() {
                     />
                   </div>
                   <div>
-                    <h3 className="checkout_delivery_title">Store Pickup (Phnom Penh)</h3>
+                    <h3 className="checkout_delivery_title">Store Pickup</h3>
                     <p className="checkout_delivery_price">$0.00</p>
                   </div>
                 </div>
@@ -225,7 +230,7 @@ export function CheckoutpageView() {
                 <div className="checkout_delivery_card_content">
                   <div className="checkout_delivery_logo_container">
                     <Image
-                      src="/images/grab.svg"
+                      src="/images/delivery.png"
                       alt="Grab Express"
                       width={44}
                       height={28}
@@ -233,7 +238,7 @@ export function CheckoutpageView() {
                     />
                   </div>
                   <div>
-                    <h3 className="checkout_delivery_title">Grab Express (Phnom Penh)</h3>
+                    <h3 className="checkout_delivery_title">Delivery (Phnom Penh)</h3>
                     <p className="checkout_delivery_price">$1.75</p>
                   </div>
                 </div>
@@ -307,6 +312,15 @@ export function CheckoutpageView() {
             className="checkout_submit_btn"
           >
             Place Order Now
+          </button>
+
+          {/* Cancel Button Under Place Order Now */}
+          <button
+            type="button"
+            onClick={handleCancelOrder}
+            className="checkout_cancel_btn"
+          >
+            Cancel
           </button>
         </div>
       </div>

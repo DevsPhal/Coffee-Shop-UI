@@ -4,13 +4,49 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { User, Eye, EyeOff, Check, Heart, X } from "lucide-react";
-import HomepageView from "@/features/Homepage/homepageView";
+import { User, Eye, EyeOff, Check, Heart } from "lucide-react";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Forgot } from "@/components/ui/forgot";
 import { Create } from "@/components/ui/create";
 import "@/app/globals.scss";
+
+// Zod Schema for User Login Form Validation
+const userLoginSchema = z.object({
+  username: z.string().trim().min(1, { message: "Please enter your username." }),
+  password: z.string().trim().min(1, { message: "Please enter your password." }),
+});
+
+type FormErrors = {
+  username?: string;
+  password?: string;
+};
+
+// Floating Tooltip Speech-Bubble Alert Component matching target screenshot
+function TooltipAlert({ message }: { message?: string }) {
+  if (!message) return null;
+
+  return (
+    <div className="relative z-30 mt-1.5 mb-1 animate-in fade-in slide-in-from-top-1 duration-150">
+      {/* Pointer Triangle pointing UP to the input */}
+      <div className="absolute -top-[8px] left-6 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[8px] border-b-gray-400" />
+      <div className="absolute -top-[6.5px] left-[25px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[7px] border-b-white" />
+
+      {/* Speech Bubble Card */}
+      <div className="inline-flex items-center gap-2.5 bg-white border border-gray-400 rounded-md p-2.5 shadow-[0_8px_20px_rgba(0,0,0,0.18)] max-w-xs">
+        {/* Orange Exclamation Mark Badge */}
+        <div className="w-6 h-6 bg-[#f95700] text-white font-bold text-base rounded flex items-center justify-center flex-shrink-0 shadow-xs select-none">
+          !
+        </div>
+        {/* Error Message */}
+        <span className="text-xs text-gray-900 font-normal leading-tight">
+          {message}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export function LoginPageView() {
   const router = useRouter();
@@ -19,17 +55,77 @@ export function LoginPageView() {
   const [showPassword, setShowPassword] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
   const [viewMode, setViewMode] = useState<"login" | "forgot" | "create">("login");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Zod Validation Errors & Focused Input State (Starts empty so no false alerts when typing)
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [activeInput, setActiveInput] = useState<keyof FormErrors | null>(null);
+
+  // Validate fields dynamically using Zod
+  const validateField = (field: keyof FormErrors, value: string, currentUsername = username, currentPassword = password) => {
+    // If value has text, immediately hide error
+    if (value.trim().length > 0) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+      return;
+    }
+
+    const data = {
+      username: field === "username" ? value : currentUsername,
+      password: field === "password" ? value : currentPassword,
+    };
+    const result = userLoginSchema.safeParse(data);
+
+    if (!result.success) {
+      const fieldErrors = result.error.flatten().fieldErrors;
+      setErrors((prev) => ({
+        ...prev,
+        [field]: fieldErrors[field]?.[0] || "Please fill in this field.",
+      }));
+    } else {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: undefined,
+      }));
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-  };
 
-  const handleClose = () => {
-    router.push("/");
+    // Validate all fields using Zod
+    const validationResult = userLoginSchema.safeParse({ username, password });
+
+    if (!validationResult.success) {
+      const fieldErrors = validationResult.error.flatten().fieldErrors;
+      const newErrors: FormErrors = {
+        username: fieldErrors.username?.[0],
+        password: fieldErrors.password?.[0],
+      };
+      setErrors(newErrors);
+
+      if (newErrors.username) setActiveInput("username");
+      else if (newErrors.password) setActiveInput("password");
+      return;
+    }
+
+    setErrors({});
+    setToastMessage("Logging in...");
+    setTimeout(() => {
+      setToastMessage(null);
+      router.push("/profile");
+    }, 1500);
   };
 
   return (
-    <div className="login_page_wrapper font-sans">
+    <div className="login_page_wrapper font-sans relative">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-50 bg-gray-900 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in text-sm font-medium">
+          <Check className="w-4 h-4 text-emerald-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Left Side: Login Form */}
       <div className="login_form_side">
         {/* Top Left Back Button with back.svg icon */}
@@ -93,8 +189,8 @@ export function LoginPageView() {
                 Enter your credential to login
               </p>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="w-full space-y-4">
+              {/* Form with Zod Validation & Speech-Bubble Tooltip */}
+              <form onSubmit={handleSubmit} className="w-full space-y-4" noValidate>
                 {/* Username Field */}
                 <div>
                   <label className="login_input_label">
@@ -107,14 +203,21 @@ export function LoginPageView() {
                     <Input
                       type="text"
                       value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      onFocus={() => setActiveInput("username")}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setUsername(val);
+                        validateField("username", val);
+                      }}
                       placeholder="enter your username"
                       className="login_input_field"
                     />
                   </div>
-                  <p className="login_input_helper">
-                    Please enter your username
-                  </p>
+
+                  {/* Tooltip Alert Speech-Bubble (Only shows if empty error exists and field is focused/submitted) */}
+                  {activeInput === "username" && errors.username && (
+                    <TooltipAlert message={errors.username} />
+                  )}
                 </div>
 
                 {/* Password Field */}
@@ -126,7 +229,12 @@ export function LoginPageView() {
                     <Input
                       type={showPassword ? "text" : "password"}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onFocus={() => setActiveInput("password")}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPassword(val);
+                        validateField("password", val);
+                      }}
                       placeholder="enter your password"
                       className="login_input_field_pass"
                     />
@@ -142,9 +250,11 @@ export function LoginPageView() {
                       )}
                     </button>
                   </div>
-                  <p className="login_input_helper">
-                    Please enter your password
-                  </p>
+
+                  {/* Tooltip Alert Speech-Bubble */}
+                  {activeInput === "password" && errors.password && (
+                    <TooltipAlert message={errors.password} />
+                  )}
                 </div>
 
                 {/* Controls Row */}

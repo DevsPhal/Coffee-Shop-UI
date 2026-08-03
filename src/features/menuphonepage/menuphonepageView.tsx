@@ -3,9 +3,22 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { CategoryDropdown } from "@/components/ui";
 import { PRODUCTS, Product } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import "@/app/globals.scss";
+
+const CATEGORY_ICONS: Record<string, string> = {
+  iced: "/icons/iced.svg",
+  hot: "/icons/hot.svg",
+  coffee: "/icons/coffee.svg",
+  frappe: "/icons/frappe.svg",
+  signature: "/icons/signature.svg",
+  snack: "/icons/snack.svg",
+  "soft drink": "/icons/soft_drink.svg",
+  beer: "/icons/beer.svg",
+  material: "/icons/material.svg",
+};
 
 // High-resolution image fallbacks matching the exact design in the picture
 const DEFAULT_IMAGES: Record<string, string> = {
@@ -134,35 +147,60 @@ export function MenupageView() {
         {/* Header Section */}
         <div className="menu-header">
           <h1 className="menu-title">
-            Phone Screen Menu View
+            Our Full Menu
           </h1>
           <p className="menu-subtitle">
             Sleek horizontal coffee cards customized for mobile phone screens.
           </p>
         </div>
 
-        {/* Category Filter Pills */}
-        <div className="categories-pills">
+        {/* Desktop Category Filter Pills */}
+        <div className="hidden sm:flex flex-wrap items-center justify-center gap-2 sm:gap-3 my-6 px-2">
           {categories.map((cat) => {
             const isSelected = selectedCategory === cat;
             const count =
               cat === "All"
                 ? PRODUCTS.length
                 : PRODUCTS.filter((p) => p.category === cat).length;
+            const iconSrc = CATEGORY_ICONS[cat.toLowerCase()];
 
             return (
               <button
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`category-btn ${
-                  isSelected ? "selected" : "default"
-                }`}
+                className={`category_btn ${isSelected ? "active" : ""}`}
               >
-                {cat} ({count})
+                {iconSrc && (
+                  <Image
+                    src={iconSrc}
+                    alt=""
+                    width={18}
+                    height={18}
+                    className="category_btn_icon"
+                  />
+                )}
+                <span>{cat}</span>
+                <span className="category_badge">
+                  {count}
+                </span>
               </button>
             );
           })}
+        </div>
+
+        {/* Mobile Category Dropdown Selector */}
+        <div className="sm:hidden flex justify-center my-6 px-2">
+          <CategoryDropdown
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            getCategoryCount={(cat) =>
+              cat === "All"
+                ? PRODUCTS.length
+                : PRODUCTS.filter((p) => p.category === cat).length
+            }
+          />
         </div>
 
         {/* Phone Sized Cards Container */}
