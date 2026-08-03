@@ -1,9 +1,23 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { Card } from "@/components/cards/card";
+import { CategoryDropdown } from "@/components/ui";
 import { PRODUCTS } from "@/data/products";
 import "@/app/globals.scss";
+
+const CATEGORY_ICONS: Record<string, string> = {
+  iced: "/icons/iced.svg",
+  hot: "/icons/hot.svg",
+  coffee: "/icons/coffee.svg",
+  frappe: "/icons/frappe.svg",
+  signature: "/icons/signature.svg",
+  snack: "/icons/snack.svg",
+  "soft drink": "/icons/soft_drink.svg",
+  beer: "/icons/beer.svg",
+  material: "/icons/material.svg",
+};
 
 export function DrinkpageView() {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
@@ -22,6 +36,11 @@ export function DrinkpageView() {
       ? drinkProducts
       : drinkProducts.filter((item) => item.category === selectedCategory);
 
+  const getCategoryCount = (cat: string) =>
+    cat === "All"
+      ? drinkProducts.length
+      : drinkProducts.filter((p) => p.category === cat).length;
+
   return (
     <div className="menu_page_wrapper font-sans">
       <div className="menu_page_container">
@@ -35,14 +54,12 @@ export function DrinkpageView() {
           </p>
         </div>
 
-        {/* Category Filter Pills */}
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 my-8 px-2">
+        {/* Full Screen Desktop Category Filter Pills */}
+        <div className="hidden sm:flex flex-wrap items-center justify-center gap-2 sm:gap-3 my-8 px-2">
           {categories.map((cat) => {
             const isSelected = selectedCategory === cat;
-            const count =
-              cat === "All"
-                ? drinkProducts.length
-                : drinkProducts.filter((p) => p.category === cat).length;
+            const count = getCategoryCount(cat);
+            const iconSrc = CATEGORY_ICONS[cat.toLowerCase()];
 
             return (
               <button
@@ -51,6 +68,15 @@ export function DrinkpageView() {
                 onClick={() => setSelectedCategory(cat)}
                 className={`category_btn ${isSelected ? "active" : ""}`}
               >
+                {iconSrc && (
+                  <Image
+                    src={iconSrc}
+                    alt=""
+                    width={18}
+                    height={18}
+                    className="category_btn_icon"
+                  />
+                )}
                 <span>{cat}</span>
                 <span className="category_badge">
                   {count}
@@ -58,6 +84,16 @@ export function DrinkpageView() {
               </button>
             );
           })}
+        </div>
+
+        {/* Mobile Category Dropdown Selector */}
+        <div className="sm:hidden flex justify-center my-6 px-2">
+          <CategoryDropdown
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            getCategoryCount={getCategoryCount}
+          />
         </div>
 
         {/* Menu Cards Grid */}

@@ -29,7 +29,7 @@ const EVENT_ITEMS: EventItem[] = [
     title: "590St MLBB Tournament",
     description:
       "Join our exciting 590St Mobile Legends: Bang Bang tournament and win exclusive prizes!",
-    image: "/images/eventmlbb.png",
+    image: "/images/event.png",
     colSpan: "col-span-1 md:col-span-2",
     link: facebookSocialLink,
   },
@@ -38,37 +38,37 @@ const EVENT_ITEMS: EventItem[] = [
     title: "Khmer New Year Celebration",
     description:
       "Celebrate Sankranta Khmer New Year with traditional games, festive coffee specials, and joyful Khmer music!",
-    image: "/images/khmernewyear.png",
+    image: "/images/newyear.png",
     colSpan: "col-span-1",
     link: facebookSocialLink,
   },
   {
     id: "2",
-    title: "Live Acoustic Night",
+    title: "Night Enjoying Acoustic Music",
     description:
       "Enjoy relaxing acoustic music performances while sipping handcrafted coffee.",
     image:
-      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80",
+      "/images/music.png",
     colSpan: "col-span-1",
     link: facebookSocialLink,
   },
   {
     id: "4",
-    title: "Board Game Gathering",
+    title: "Chess Game Night",
     description:
       "Gather with friends for fun board game matches and special drink discounts.",
     image:
-      "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=800&q=80",
+      "/images/chess.jpg",
     colSpan: "col-span-1",
     link: facebookSocialLink,
   },
   {
     id: "6",
-    title: "Pastry & Brew Pairing",
+    title: "Brew Pairing",
     description:
       "Indulge in freshly baked French croissants paired perfectly with cold brews.",
     image:
-      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80",
+      "/images/beer.jpg",
     colSpan: "col-span-1",
     link: facebookSocialLink,
   },

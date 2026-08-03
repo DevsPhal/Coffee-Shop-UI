@@ -2,6 +2,7 @@
 
 import React from "react";
 import HeroCarousel from "./components/HeroCarousel";
+import SpecialTodaySection from "@/components/sections/SpecialTodaySection";
 import ReadyToOrderSection from "@/components/ui/ReadyToOrderSection";
 import { Card } from "@/components/cards/card";
 import { PRODUCTS } from "@/data/products";
@@ -9,11 +10,17 @@ import "@/app/globals.scss";
 
 export function HomepageView() {
   return (
-    <div className="homepage_wrapper">
-      {/* Hero / Banner View */}
+    <div className="homepage_wrapper font-sans">
+      {/* Hero 3D Coverflow Carousel */}
       <HeroCarousel />
 
-      {/* Crafted with Passion Section */}
+      {/* Special Today Section (3 Featured Cards Only) */}
+      <SpecialTodaySection
+        title="Special Today"
+        subtitle="Handcrafted daily specials picked fresh for you"
+      />
+
+      {/* Crafted with Passion Section (All Products Grid) */}
       <section className="homepage_crafted_section">
         {/* Section Header */}
         <div className="homepage_section_header">

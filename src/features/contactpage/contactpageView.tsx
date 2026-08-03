@@ -2,9 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { MapPin, Phone, Mail, Clock, Send, ExternalLink, Coffee } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Send, ExternalLink, Coffee, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import ContactForm from "./components/ContactForm";
 import "@/app/globals.scss";
 
@@ -90,12 +89,12 @@ export function ContactpageView() {
               <div>
                 <h4 className="contact_info_label">Telegram</h4>
                 <a
-                  href="https://t.me/095600676"
+                 href="tg://resolve?domain=069 955 878"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="footer_email_link"
                 >
-                  @095600676
+                  @069 955 878 
                 </a>
               </div>
             </div>
@@ -108,7 +107,7 @@ export function ContactpageView() {
               <div>
                 <h4 className="contact_info_label">Email</h4>
                 <a
-                  href="mailto:lengsokpunlork611@gmail.com"
+                 href="https://mail.google.com/mail/?view=cm&fs=1&to=lengsokpunlork611@gmail.com"
                   className="footer_email_link"
                 >
                   lengsokpunlork611@gmail.com
@@ -116,24 +115,9 @@ export function ContactpageView() {
               </div>
             </div>
           </div>
-
-          {/* Action Buttons Row */}
-          <div className="contact_actions_row">
-            <a
-              href={googleMapUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="contact_actions_item"
-            >
-              <Button className="button_pill_primary cursor-pointer w-full flex items-center justify-center gap-2">
-                <Send className="w-4 h-4" />
-                View on Google Maps
-                <ExternalLink className="w-4 h-4 ml-0.5 opacity-70" />
-              </Button>
-            </a>
-
-            <Link href="/menu" className="contact_actions_item">
-              <Button className="button_pill_secondary cursor-pointer w-full flex items-center justify-center gap-2">
+           <div className="action_row_border">
+            <Link href="/menu" className="explore_menu_link">
+              <Button className="button_explore_menu">
                 Explore Our Menu
               </Button>
             </Link>

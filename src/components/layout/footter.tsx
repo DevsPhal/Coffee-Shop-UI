@@ -71,11 +71,11 @@ export function Footer() {
               <p className="footer_contact_text">
                 Telegram:{" "}
                 <a
-                  href="https://t.me/095600676"
+                 href="tg://resolve?domain=069 955 878"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  095 600 676
+                  069 955 878
                 </a>
               </p>
             </div>
@@ -86,18 +86,18 @@ export function Footer() {
               </h3>
               <ul className="footer_list">
                 <li>
-                  <a href="tel:095600676" className="footer_link">
+                  <a href="tel:+85595600676" className="footer_link">
                     095 600 676
                   </a>
                 </li>
                 <li>
-                  <a href="tel:069955878" className="footer_link">
+                  <a href="tel:+85569955878" className="footer_link">
                     069 955 878
                   </a>
                 </li>
                 <li>
                   <a
-                    href="mailto:lengsokpunlork611@gmail.com"
+                href="https://mail.google.com/mail/?view=cm&fs=1&to=lengsokpunlork611@gmail.com"
                     className="footer_email_link"
                   >
                     lengsokpunlork611@gmail.com
