@@ -2,6 +2,7 @@ export interface Product {
   id: string;
   title: string;
   price: number;
+  originalPrice?: number;
   image?: string | null;
   description: string;
   category: string;
@@ -10,19 +11,20 @@ export interface Product {
 export const PRODUCTS: Product[] = [
   {
     id: "1",
-    title: "ESPRESSO",
-    price: 1.50,
+    title: "590 Coffee",
+    price: 2.00,
     image: null,
-    description: "Rich, bold, and concentrated shot of pure coffee essence crafted from expertly roasted beans for a intense caffeine kick.",
-    category: "Coffee",
+    description: "Crafted to fuel the modern city hustle, our signature 590 Coffee is the ultimate balance of bold energy and rich, creamy indulgence.",
+    category: "signature",
   },
+
   {
     id: "2",
-    title: "Ice Amacano",
+    title: "Amacano",
     price: 1.75,
     image: null,
     description: "Smooth espresso diluted with chilled filtered water and poured over crisp ice cubes for a clean, refreshing coffee experience.",
-    category: "Coffee",
+    category: "Hot",
   },
   {
     id: "3",
@@ -30,23 +32,23 @@ export const PRODUCTS: Product[] = [
     price: 2.00,
     image: null,
     description: "Perfect harmony of rich espresso and cold, velvety fresh milk, served over ice for a creamy and delightful flavor.",
-    category: "Coffee",
+    category: "Iced",
   },
   {
     id: "4",
-    title: "590 Coffee",
+    title: "Coca Cola",
     price: 2.00,
     image: null,
-    description: "Crafted to fuel the modern city hustle, our signature 590 Coffee is the ultimate balance of bold energy and rich, creamy indulgence. We take a deeply roasted, high-intensity espresso base and blend it seamlessly with the velvety sweetness of premium condensed milk, poured over a mountain of crushed ice.",
-    category: "Signature",
+    description: "Crafted to fuel the modern city hustle, our signature 590 Coffee is the ultimate balance of bold energy and rich, creamy indulgence.",
+    category: "Soft Drink",
   },
   {
     id: "5",
-    title: "កាហ្វេ ទឹកដោះ",
+    title: "indonesia noodle",
     price: 2.20,
     image: null,
     description: "Authentic Cambodian iced coffee crafted with strong dark roast coffee and rich sweet condensed milk served over crushed ice.",
-    category: "Signature",
+    category: "Snack",
   },
   {
     id: "6",
@@ -54,11 +56,11 @@ export const PRODUCTS: Product[] = [
     price: 2.50,
     image: null,
     description: "Freshly squeezed passion fruit juice blended with ice, delivering a vibrant, sweet-and-tangy tropical refreshment.",
-    category: "Fresh Juices",
+    category: "Material",
   },
   {
     id: "7",
-    title: "Iced Cappuccino",
+    title: "Americano",
     price: 2.20,
     image: null,
     description: "Bold espresso blended with milk and topped with fluffy cold foam, served over ice for a classic refreshing treat.",
@@ -66,19 +68,27 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: "8",
-    title: "Lemon Passion Tea",
+    title: "capuccino",
     price: 2.25,
     image: null,
     description: "Invigorating brewed tea infused with fresh passion fruit seeds and tangy lemon slice over ice.",
-    category: "Fresh Juices",
+    category: "Coffee",
   },
   {
     id: "9",
-    title: "Fresh Croissant",
+    title: "capuccino frappe",
     price: 1.80,
     image: null,
     description: "Golden, flaky, butter-layered French croissant baked fresh daily, perfect paired with your morning coffee.",
-    category: "Bakery",
+    category: "Frappe",
+  },
+  {
+    id: "10",
+    title: "Cambodia Beer",
+    price: 1.50,
+    image: null,
+    description: "Rich, bold, and concentrated shot of pure coffee essence crafted from expertly roasted beans for a intense caffeine kick.",
+    category: "Beer",
   },
 ];
 

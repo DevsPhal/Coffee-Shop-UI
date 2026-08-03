@@ -21,6 +21,8 @@ export interface CardProps {
   id?: string;
   title: string;
   price?: number;
+  originalPrice?: number;
+  category?: string;
   image?: string | null;
   href?: string;
   variant?: "default" | "phone";
@@ -34,6 +36,8 @@ export function Card({
   id,
   title,
   price = 2.0,
+  originalPrice,
+  category,
   image,
   href,
   variant = "default",
@@ -49,11 +53,17 @@ export function Card({
   const imgSrc =
     image || (id && DEFAULT_IMAGES[id]) || GENERIC_COFFEE_IMG;
 
+  // Discount percentage ONLY calculated if originalPrice is explicitly passed
+  const discountPercent =
+    originalPrice && originalPrice > price
+      ? Math.round(((originalPrice - price) / originalPrice) * 100)
+      : 0;
+
   const targetHref =
     href ||
     `/product?id=${encodeURIComponent(id || title)}&title=${encodeURIComponent(
       title
-    )}&price=${price}${imgSrc ? `&image=${encodeURIComponent(imgSrc)}` : ""}`;
+    )}&price=${price}${originalPrice ? `&originalPrice=${originalPrice}` : ""}${category ? `&category=${encodeURIComponent(category)}` : ""}${imgSrc ? `&image=${encodeURIComponent(imgSrc)}` : ""}`;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -93,7 +103,7 @@ export function Card({
     router.push("/order");
   };
 
-  // Phone screen horizontal card design (matching picture)
+  // Phone screen horizontal card design
   if (variant === "phone") {
     return (
       <div
@@ -113,6 +123,11 @@ export function Card({
             sizes="(max-width: 640px) 80px, 88px"
             className="object-cover transition-transform duration-300 hover:scale-105"
           />
+          {discountPercent > 0 && (
+            <span className="discount_badge">
+              -{discountPercent}%
+            </span>
+          )}
         </Link>
 
         {/* Middle Details */}
@@ -141,8 +156,15 @@ export function Card({
             Price
           </div>
 
-          <div className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">
-            $ {price.toFixed(2)}
+          <div className="price_container">
+            {originalPrice && originalPrice > price && (
+              <span className="price_original">
+                ${originalPrice.toFixed(2)}
+              </span>
+            )}
+            <span className="price_current">
+              ${price.toFixed(2)}
+            </span>
           </div>
         </div>
 
@@ -164,9 +186,9 @@ export function Card({
 
   // Default Grid Card
   return (
-    <div className="card_item">
+    <div className="card_item relative">
       <Link href={targetHref} className="block cursor-pointer group">
-        <div className="card_image_box group-hover:opacity-90 transition-opacity">
+        <div className="card_image_box group-hover:opacity-90 transition-opacity relative">
           <Image
             src={imgSrc}
             alt={title}
@@ -174,15 +196,31 @@ export function Card({
             unoptimized
             className="card_image object-cover"
           />
+
+          {/* Discount Badge ONLY shown if originalPrice prop is passed */}
+          {discountPercent > 0 && (
+            <span className="discount_badge">
+              -{discountPercent}% OFF
+            </span>
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-2 mb-4">
           <h3 className="card_title group-hover:underline mb-0">
             {title}
           </h3>
-          <span className="text-lg font-bold text-gray-900 shrink-0">
-            ${price.toFixed(2)}
-          </span>
+
+          {/* Discount Price & Strikethrough Original Price using globals.scss classes */}
+          <div className="price_container">
+            {originalPrice && originalPrice > price && (
+              <span className="price_original">
+                ${originalPrice.toFixed(2)}
+              </span>
+            )}
+            <span className="price_current">
+              ${price.toFixed(2)}
+            </span>
+          </div>
         </div>
       </Link>
 
