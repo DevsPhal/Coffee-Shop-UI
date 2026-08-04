@@ -3,7 +3,9 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { KeyRound, LogOut, Edit3, X, Check, ShieldCheck, Mail, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import "@/app/globals.scss";
 
 export interface UserProfileData {
@@ -14,12 +16,14 @@ export interface UserProfileData {
 }
 
 export function UserprofilepageView() {
+  const router = useRouter();
+  const { logout } = useAuth();
   const [profile, setProfile] = useState<UserProfileData>({
-    userId: "sreypich123",
-    name: "sreypich",
-    email: "sreypich@gmail.com",
+    userId: "001",
+    name: "Ream",
+    email: "Ream123@gmail.com",
     avatarUrl:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+      "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
   });
 
   const [activeTab, setActiveTab] = useState<"about" | "orders" | "settings">("about");
@@ -82,11 +86,15 @@ export function UserprofilepageView() {
 
   const handleLogout = () => {
     setIsLogoutModalOpen(false);
+    logout();
     showToast("You have logged out.");
+    setTimeout(() => {
+      router.push("/login");
+    }, 1000);
   };
 
   return (
-    <div className="user-profile-container">
+    <div className="user_profile_container">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50 bg-gray-900 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in text-sm font-medium">
@@ -95,7 +103,7 @@ export function UserprofilepageView() {
         </div>
       )}
 
-      <div className="user-profile-wrapper">
+      <div className="user_profile_wrapper">
         {/* Top Header & Breadcrumbs */}
         <div className="product_detail_header">
           <h1 className="product_detail_title">User Profile</h1>
@@ -110,16 +118,16 @@ export function UserprofilepageView() {
         </div>
 
         {/* User Profile Main Card */}
-        <div className="user-profile-card">
+        <div className="user_profile_card">
           {/* Left Avatar Side */}
-          <div className="user-profile-avatar-side">
-            <div className="user-profile-avatar-box group">
+          <div className="user_profile_avatar_side">
+            <div className="user_profile_avatar_box group">
               <Image
                 src={profile.avatarUrl}
                 alt={profile.name}
                 fill
                 unoptimized
-                className="user-profile-avatar-img"
+                className="user_profile_avatar_img"
               />
               <button
                 type="button"
@@ -137,26 +145,26 @@ export function UserprofilepageView() {
           </div>
 
           {/* Right Content Side */}
-          <div className="user-profile-content-side">
+          <div className="user_profile_content_side">
             <div>
               {/* Header Row: Username + Reset Password Button */}
-              <div className="user-profile-header-row">
-                <h2 className="user-profile-username">{profile.name}</h2>
+              <div className="user_profile_header_row">
+                <h2 className="user_profile_username">{profile.name}</h2>
                 <button
                   type="button"
                   onClick={() => setIsResetPasswordOpen(true)}
-                  className="user-profile-reset-btn"
+                  className="user_profile_reset_btn"
                 >
                   reset password
                 </button>
               </div>
 
               {/* Tabs Bar */}
-              <div className="user-profile-tabs">
+              <div className="user_profile_tabs">
                 <button
                   type="button"
                   onClick={() => setActiveTab("about")}
-                  className={`user-profile-tab-item ${
+                  className={`user_profile_tab_item ${
                     activeTab === "about" ? "" : "text-gray-500 border-transparent"
                   }`}
                 >
@@ -166,20 +174,20 @@ export function UserprofilepageView() {
 
               {/* Profile Details List */}
               {activeTab === "about" && (
-                <div className="user-profile-details">
-                  <div className="user-profile-detail-row">
-                    <span className="user-profile-detail-label">User Id</span>
-                    <span className="user-profile-detail-value">{profile.userId}</span>
+                <div className="user_profile_details">
+                  <div className="user_profile_detail_row">
+                    <span className="user_profile_detail_label">User Id</span>
+                    <span className="user_profile_detail_value">{profile.userId}</span>
                   </div>
 
-                  <div className="user-profile-detail-row">
-                    <span className="user-profile-detail-label">Name</span>
-                    <span className="user-profile-detail-value">{profile.name}</span>
+                  <div className="user_profile_detail_row">
+                    <span className="user_profile_detail_label">Name</span>
+                    <span className="user_profile_detail_value">{profile.name}</span>
                   </div>
 
-                  <div className="user-profile-detail-row">
-                    <span className="user-profile-detail-label">Email</span>
-                    <span className="user-profile-detail-value">{profile.email}</span>
+                  <div className="user_profile_detail_row">
+                    <span className="user_profile_detail_label">Email</span>
+                    <span className="user_profile_detail_value">{profile.email}</span>
                   </div>
                 </div>
               )}
@@ -190,7 +198,7 @@ export function UserprofilepageView() {
               <button
                 type="button"
                 onClick={() => setIsLogoutModalOpen(true)}
-                className="user-profile-logout-btn"
+                className="user_profile_logout_btn"
               >
                 Log Out
               </button>
@@ -213,17 +221,17 @@ export function UserprofilepageView() {
 
       {/* Reset Password Modal */}
       {isResetPasswordOpen && (
-        <div className="modal-backdrop" onClick={() => setIsResetPasswordOpen(false)}>
+        <div className="modal_backdrop" onClick={() => setIsResetPasswordOpen(false)}>
           <div
-            className="modal-card max-w-md"
+            className="modal_card max-w-md"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
-              className="modal-close-btn"
+              className="modal_close_btn"
               onClick={() => setIsResetPasswordOpen(false)}
             >
-              ✕
+              
             </button>
 
             <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
@@ -313,17 +321,17 @@ export function UserprofilepageView() {
 
       {/* Edit Profile Modal */}
       {isEditProfileOpen && (
-        <div className="modal-backdrop" onClick={() => setIsEditProfileOpen(false)}>
+        <div className="modal_backdrop" onClick={() => setIsEditProfileOpen(false)}>
           <div
-            className="modal-card max-w-md"
+            className="modal_card max-w-md"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
-              className="modal-close-btn"
+              className="modal_close_btn"
               onClick={() => setIsEditProfileOpen(false)}
             >
-              ✕
+              
             </button>
 
             <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
@@ -411,9 +419,9 @@ export function UserprofilepageView() {
 
       {/* Logout Confirmation Modal */}
       {isLogoutModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsLogoutModalOpen(false)}>
+        <div className="modal_backdrop" onClick={() => setIsLogoutModalOpen(false)}>
           <div
-            className="modal-card max-w-sm text-center"
+            className="modal_card max-w-sm text-center"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-3">

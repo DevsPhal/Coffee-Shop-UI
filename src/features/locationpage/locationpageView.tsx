@@ -2,12 +2,36 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, Phone, ExternalLink, Navigation, Coffee } from "lucide-react";
 import "@/app/globals.scss";
 
 export function LocationpageView() {
+  const router = useRouter();
   const googleMapUrl = "https://maps.app.goo.gl/DKbvJw3Hz2tsCriQA?g_st=it";
+
+  const [menuHref, setMenuHref] = React.useState("/menu");
+
+  React.useEffect(() => {
+    const updateHref = () => {
+      if (window.innerWidth < 768) {
+        setMenuHref("/menuphone");
+      } else {
+        setMenuHref("/menu");
+      }
+    };
+    updateHref();
+    window.addEventListener("resize", updateHref);
+    return () => window.removeEventListener("resize", updateHref);
+  }, []);
+
+  const handleExploreMenuClick = (e: React.MouseEvent) => {
+    if (window.innerWidth < 768) {
+      e.preventDefault();
+      router.push("/menuphone");
+    }
+  };
 
   return (
     <div className="product_detail_container font-sans">
@@ -116,7 +140,11 @@ export function LocationpageView() {
 
           {/* Action Row: Full-Width Explore Our Menu matching Map width */}
           <div className="action_row_border">
-            <Link href="/menu" className="explore_menu_link">
+            <Link
+              href={menuHref}
+              onClick={handleExploreMenuClick}
+              className="explore_menu_link"
+            >
               <Button className="button_explore_menu">
                 Explore Our Menu
               </Button>

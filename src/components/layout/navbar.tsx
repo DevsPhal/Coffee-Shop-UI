@@ -15,6 +15,7 @@ import {
 import "@/app/globals.scss";
 
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -22,15 +23,6 @@ const navLinks = [
   { label: "Events", href: "/events" },
   { label: "Location", href: "/location" },
   { label: "Contact Us", href: "/contact" },
-];
-
-const mobileNavItems = [
-  { label: "Home", href: "/", icon: "/icons/home.svg" },
-  { label: "Menu", href: "/menuphone", icon: "/icons/menu.svg" },
-  { label: "Events", href: "/events", icon: "/icons/event.svg" },
-  { label: "Location", href: "/location", icon: "/icons/location.svg" },
-  { label: "Contact", href: "/contact", icon: "/icons/contact.svg" },
-  { label: "Login", href: "/login", icon: "/icons/login.svg" },
 ];
 
 const languages = [
@@ -42,6 +34,20 @@ export function Navbar() {
   const pathname = usePathname();
   const [selectedLanguage, setSelectedLanguage] = useState(languages[0]);
   const { openCart, totalCount } = useCart();
+  const { isLoggedIn } = useAuth();
+
+  const mobileNavItems = [
+    { label: "Home", href: "/", icon: "/icons/home.svg" },
+    { label: "Menu", href: "/menuphone", icon: "/icons/menu.svg" },
+    { label: "Events", href: "/events", icon: "/icons/event.svg" },
+    { label: "Location", href: "/location", icon: "/icons/location.svg" },
+    { label: "Contact", href: "/contact", icon: "/icons/contact.svg" },
+    {
+      label: isLoggedIn ? "Profile" : "Login",
+      href: isLoggedIn ? "/userprofile" : "/login",
+      icon: isLoggedIn ? "/icons/user.svg" : "/icons/login.svg",
+    },
+  ];
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -52,6 +58,7 @@ export function Navbar() {
     if (href === "/") return pathname === "/";
     if (href === "/menuphone") return pathname === "/menuphone" || pathname === "/menu";
     if (href === "/events") return pathname.startsWith("/events") || pathname.startsWith("/event");
+    if (href === "/userprofile") return pathname === "/userprofile" || pathname === "/profile";
     return pathname.startsWith(href);
   };
 
@@ -141,20 +148,37 @@ export function Navbar() {
               </span>
             </button>
 
-            {/* Login Button with login.svg icon */}
-            <Link href="/login" className="hidden sm:inline-flex">
-              <Button className="button_nav_login flex items-center gap-2">
+            {/* Login / User Profile Button */}
+            {isLoggedIn ? (
+              <Link
+                href="/userprofile"
+                className="hidden sm:inline-flex items-center justify-center p-2 rounded-full hover:bg-gray-100 transition-colors"
+                title="User Profile"
+              >
                 <Image
-                  src="/icons/login.svg"
-                  alt="Login"
-                  width={18}
-                  height={18}
+                  src="/icons/user.svg"
+                  alt="User Profile"
+                  width={24}
+                  height={24}
                   unoptimized
-                  className="brightness-0 invert"
+                  className="w-6 h-6 object-contain"
                 />
-                <span>Login</span>
-              </Button>
-            </Link>
+              </Link>
+            ) : (
+              <Link href="/login" className="hidden sm:inline-flex">
+                <Button className="button_nav_login flex items-center gap-2">
+                  <Image
+                    src="/icons/login.svg"
+                    alt="Login"
+                    width={18}
+                    height={18}
+                    unoptimized
+                    className="brightness-0 invert"
+                  />
+                  <span>Login</span>
+                </Button>
+              </Link>
+            )}
           </div>
         </nav>
       </header>
@@ -166,25 +190,25 @@ export function Navbar() {
             const active = isMobileNavActive(item.href);
 
             return (
-             <Link
-  key={item.label}
-  href={item.href}
-  className={`nav-link ${active ? "active" : ""}`}
->
-  <div className="icon-wrapper">
-    <Image
-      src={item.icon}
-      alt={item.label}
-      width={22}
-      height={22}
-      unoptimized
-      className={`nav-icon ${active ? "active" : ""}`}
-    />
-  </div>
-  <span className="nav-label">
-    {item.label}
-  </span>
-</Link>
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`nav-link ${active ? "active" : ""}`}
+              >
+                <div className="icon-wrapper">
+                  <Image
+                    src={item.icon}
+                    alt={item.label}
+                    width={22}
+                    height={22}
+                    unoptimized
+                    className={`nav-icon ${active ? "active" : ""}`}
+                  />
+                </div>
+                <span className="nav-label">
+                  {item.label}
+                </span>
+              </Link>
             );
           })}
         </div>

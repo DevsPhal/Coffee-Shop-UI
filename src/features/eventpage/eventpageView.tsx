@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import "@/app/globals.scss";
 
 interface EventItem {
@@ -30,7 +29,7 @@ const EVENT_ITEMS: EventItem[] = [
     description:
       "Join our exciting 590St Mobile Legends: Bang Bang tournament and win exclusive prizes!",
     image: "/images/event.png",
-    colSpan: "col-span-1 md:col-span-2",
+    colSpan: "span_col_2",
     link: facebookSocialLink,
   },
   {
@@ -39,7 +38,7 @@ const EVENT_ITEMS: EventItem[] = [
     description:
       "Celebrate Sankranta Khmer New Year with traditional games, festive coffee specials, and joyful Khmer music!",
     image: "/images/newyear.png",
-    colSpan: "col-span-1",
+    colSpan: "span_col_1",
     link: facebookSocialLink,
   },
   {
@@ -47,9 +46,8 @@ const EVENT_ITEMS: EventItem[] = [
     title: "Night Enjoying Acoustic Music",
     description:
       "Enjoy relaxing acoustic music performances while sipping handcrafted coffee.",
-    image:
-      "/images/music.png",
-    colSpan: "col-span-1",
+    image: "/images/music.png",
+    colSpan: "span_col_1",
     link: facebookSocialLink,
   },
   {
@@ -57,9 +55,8 @@ const EVENT_ITEMS: EventItem[] = [
     title: "Chess Game Night",
     description:
       "Gather with friends for fun board game matches and special drink discounts.",
-    image:
-      "/images/chess.jpg",
-    colSpan: "col-span-1",
+    image: "/images/chess.jpg",
+    colSpan: "span_col_1",
     link: facebookSocialLink,
   },
   {
@@ -67,9 +64,8 @@ const EVENT_ITEMS: EventItem[] = [
     title: "Brew Pairing",
     description:
       "Indulge in freshly baked French croissants paired perfectly with cold brews.",
-    image:
-      "/images/beer.jpg",
-    colSpan: "col-span-1",
+    image: "/images/beer.jpg",
+    colSpan: "span_col_1",
     link: facebookSocialLink,
   },
   {
@@ -78,7 +74,7 @@ const EVENT_ITEMS: EventItem[] = [
     description:
       "Relax, work, or hang out in a cozy atmosphere with free high-speed Wi-Fi.",
     image: "/images/590st.jpg",
-    colSpan: "col-span-1 md:col-span-2",
+    colSpan: "span_col_2",
     link: facebookSocialLink,
   },
 ];
@@ -87,15 +83,15 @@ export function EventpageView() {
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
 
   return (
-    <div className="events-container">
-      <div className="events-wrapper">
-        <div className="header-section">
-          <h1 className="header-title">Events at 590st Cafe</h1>
-          <p className="header-description">
+    <div className="events_container">
+      <div className="events_wrapper">
+        <div className="header_section">
+          <h1 className="header_title">Events at 590st Cafe</h1>
+          <p className="header_description">
             Discover our vibrant community gatherings, esports tournaments, live coffee brewing sessions, and special celebrations at 590st Cafe.
           </p>
         </div>
-        <div className="bento-grid">
+        <div className="bento_grid">
           {EVENT_ITEMS.map((item) => {
             const targetLink = item.link || facebookSocialLink;
 
@@ -107,12 +103,12 @@ export function EventpageView() {
                   fill
                   unoptimized
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                  className="card-image"
+                  className="card_image"
                 />
-                <div className="card-overlay" />
-                <div className="card-content">
-                  <h3 className="card-title">{item.title}</h3>
-                  <p className="card-description">{item.description}</p>
+                <div className="card_overlay" />
+                <div className="card_content">
+                  <h3 className="card_title">{item.title}</h3>
+                  <p className="card_description">{item.description}</p>
                 </div>
               </>
             );
@@ -124,7 +120,7 @@ export function EventpageView() {
                   href={targetLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`event-card ${item.colSpan || "span-col-1"} block`}
+                  className={`event_card ${item.colSpan || "span_col_1"}`}
                 >
                   {cardContent}
                 </a>
@@ -135,7 +131,7 @@ export function EventpageView() {
               <div
                 key={item.id}
                 onClick={() => setSelectedEvent(item)}
-                className={`event-card ${item.colSpan || "span-col-1"}`}
+                className={`event_card ${item.colSpan || "span_col_1"}`}
               >
                 {cardContent}
               </div>
@@ -146,49 +142,43 @@ export function EventpageView() {
 
       {selectedEvent && (
         <div
-          className="modal-backdrop"
+          className="modal_backdrop"
           onClick={() => setSelectedEvent(null)}
         >
           <div
-            className="modal-container"
+            className="modal_container"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={() => setSelectedEvent(null)}
-              className="modal-close-btn"
+              className="modal_close-btn"
             >
               ✕
             </button>
 
-            <div className="modal-image-wrapper">
+            <div className="modal_image-wrapper">
               <Image
                 src={selectedEvent.image}
                 alt={selectedEvent.title}
                 fill
                 unoptimized
-                className="modal-image"
+                className="modal_image"
               />
             </div>
 
-            <div className="modal-body">
-              <h2 className="modal-title">{selectedEvent.title}</h2>
-              <p className="modal-description">{selectedEvent.description}</p>
+            <div className="modal_body">
+              <h2 className="modal_title">{selectedEvent.title}</h2>
+              <p className="modal_description">{selectedEvent.description}</p>
             </div>
 
-            <div className="modal-footer">
+            <div className="modal_footer">
               {(selectedEvent.link || facebookSocialLink) && (
                 <a
                   href={selectedEvent.link || facebookSocialLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="modal-action-btn mr-2"
-                  style={{
-                    backgroundColor: "#1877F2",
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                  }}
+                  className="modal_action_btn modal_action_facebook"
                 >
                   View on Facebook
                 </a>
@@ -196,7 +186,7 @@ export function EventpageView() {
               <button
                 type="button"
                 onClick={() => setSelectedEvent(null)}
-                className="modal-action-btn"
+                className="modal_action_btn"
               >
                 Close
               </button>
