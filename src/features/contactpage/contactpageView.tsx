@@ -1,14 +1,37 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { MapPin, Phone, Mail, Clock, Send, ExternalLink, Coffee, Navigation } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { MapPin, Phone, Mail, Clock, Send, Coffee } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ContactForm from "./components/ContactForm";
 import "@/app/globals.scss";
 
 export function ContactpageView() {
+  const router = useRouter();
   const googleMapUrl = "https://maps.app.goo.gl/DKbvJw3Hz2tsCriQA?g_st=it";
+  const [menuHref, setMenuHref] = useState("/menu");
+
+  useEffect(() => {
+    const updateHref = () => {
+      if (window.innerWidth < 768) {
+        setMenuHref("/menuphone");
+      } else {
+        setMenuHref("/menu");
+      }
+    };
+    updateHref();
+    window.addEventListener("resize", updateHref);
+    return () => window.removeEventListener("resize", updateHref);
+  }, []);
+
+  const handleExploreMenuClick = (e: React.MouseEvent) => {
+    if (window.innerWidth < 768) {
+      e.preventDefault();
+      router.push("/menuphone");
+    }
+  };
 
   return (
     <div className="product_detail_container font-sans">
@@ -89,7 +112,7 @@ export function ContactpageView() {
               <div>
                 <h4 className="contact_info_label">Telegram</h4>
                 <a
-                 href="tg://resolve?domain=069 955 878"
+                  href="tg://resolve?domain=069 955 878"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="footer_email_link"
@@ -107,7 +130,7 @@ export function ContactpageView() {
               <div>
                 <h4 className="contact_info_label">Email</h4>
                 <a
-                 href="https://mail.google.com/mail/?view=cm&fs=1&to=lengsokpunlork611@gmail.com"
+                  href="https://mail.google.com/mail/?view=cm&fs=1&to=lengsokpunlork611@gmail.com"
                   className="footer_email_link"
                 >
                   lengsokpunlork611@gmail.com
@@ -115,8 +138,13 @@ export function ContactpageView() {
               </div>
             </div>
           </div>
-           <div className="action_row_border">
-            <Link href="/menu" className="explore_menu_link">
+
+          <div className="action_row_border">
+            <Link
+              href={menuHref}
+              onClick={handleExploreMenuClick}
+              className="explore_menu_link"
+            >
               <Button className="button_explore_menu">
                 Explore Our Menu
               </Button>
