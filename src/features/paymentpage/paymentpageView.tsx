@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import "@/app/globals.scss";
 
 export function PaymentpageView() {
+  const router = useRouter();
   const { subtotal } = useCart();
   const displayAmount = subtotal > 0 ? subtotal : 6.2;
 
@@ -27,7 +29,29 @@ export function PaymentpageView() {
   return (
     <div className="payment_page_container">
       <div>
-        <h1 className="payment_page_title">Scan QR</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="payment_page_title mb-0">Scan QR</h1>
+          <button
+            onClick={() => router.push("/checkoutdone")}
+            type="button"
+            className="px-4 py-2 bg-[#900C3F] hover:bg-[#700931] text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+          >
+            <span>Test Screen</span>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M14 5l7 7m0 0l-7 7m7-7H3"
+              />
+            </svg>
+          </button>
+        </div>
 
         <div className="payment_page_status_bar">
           <span className="payment_page_brand_label">ABA KHQR</span>
@@ -67,7 +91,11 @@ export function PaymentpageView() {
             <p className="payment_page_amount">${displayAmount.toFixed(2)}</p>
           </div>
 
-          <div className="payment_page_qr_container">
+          <div
+            onClick={() => window.location.href = "/checkoutdone"}
+            className="payment_page_qr_container cursor-pointer transition-transform hover:scale-105 active:scale-95"
+            title="Click to complete payment"
+          >
             <div className="payment_page_qr_wrapper">
               <Image
                 src="/images/KHQR.svg"

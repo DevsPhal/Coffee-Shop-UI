@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Forgot } from "@/components/ui/forgot";
 import { Create } from "@/components/ui/create";
+import { useAuth } from "@/context/AuthContext";
 import "@/app/globals.scss";
 
 // Zod Schema for User Login Form Validation
@@ -50,6 +51,7 @@ function TooltipAlert({ message }: { message?: string }) {
 
 export function LoginPageView() {
   const router = useRouter();
+  const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -109,10 +111,11 @@ export function LoginPageView() {
     }
 
     setErrors({});
+    login();
     setToastMessage("Logging in...");
     setTimeout(() => {
       setToastMessage(null);
-      router.push("/profile");
+      router.push("/");
     }, 1500);
   };
 
