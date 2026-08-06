@@ -311,7 +311,7 @@ export function LoginPageView() {
       </div>
 
       {/* Right Side: slideshowloginscreen.svg */}
-      <div className="login_slideshow_side">
+      <div className="login_slideshow_side hidden lg:flex">
         <div className="relative w-full h-full min-h-[500px] flex items-center justify-center">
           <Image
             src="/images/slideshowloginscreen.svg"

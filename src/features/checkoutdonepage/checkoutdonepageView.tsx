@@ -18,6 +18,7 @@ export function CheckoutdonepageView() {
 
   const [callStaffModal, setCallStaffModal] = useState(false);
   const [staffCalled, setStaffCalled] = useState(false);
+  
 
   // Compute total or use fallback to match exact design image
   const displayItems =

@@ -109,7 +109,7 @@ export function ProductpageView({
   return (
     <div className="product_detail_container font-sans">
       {/* Header & Breadcrumb Section */}
-      <div className="product_detail_header">
+      <div className="product_detail_header block mb-6" style={{ display: "block" }}>
         <h1 className="product_detail_title">Product Detail</h1>
 
         {/* Clickable Breadcrumbs: Products » Category » Product Title */}
@@ -132,14 +132,14 @@ export function ProductpageView({
       {/* Main 2-Column Product Detail Layout */}
       <div className="product_detail_grid">
         {/* Left Column: Image Box */}
-        <div className="product_image_container">
+        <div className="product_image_container" suppressHydrationWarning>
           {displayImage ? (
             <Image
               src={displayImage}
               alt={displayTitle}
               fill
               className="object-cover"
-              priority
+              loading="eager"
             />
           ) : (
             <div className="product_image_placeholder">
@@ -156,12 +156,12 @@ export function ProductpageView({
         </div>
 
         {/* Right Column: Product Information Box Card */}
-        <div className="product_info_box">
+        <div className="product_info_box" suppressHydrationWarning>
           {/* Header Row: Title & Right-Aligned Price */}
           <div className="product_info_header">
             <div>
               <h2 className="product_name">{displayTitle}</h2>
-              
+
               {/* Clickable Category Badge */}
               <div className="category_badge_wrapper">
                 <Link href={`/menu?category=${encodeURIComponent(displayCategory)}`}>

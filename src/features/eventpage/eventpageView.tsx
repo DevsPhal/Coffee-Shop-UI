@@ -107,7 +107,7 @@ export function EventpageView() {
                 />
                 <div className="card_overlay" />
                 <div className="card_content">
-                  <h3 className="card_title">{item.title}</h3>
+                  <h3 className="card_title text-white font-bold text-lg" style={{ color: "#ffffff" }}>{item.title}</h3>
                   <p className="card_description">{item.description}</p>
                 </div>
               </>

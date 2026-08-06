@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { CategoryDropdown } from "@/components/ui";
@@ -129,6 +130,25 @@ export function MenupageView() {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedId, setSelectedId] = useState<string>("1");
   const [activeModalProduct, setActiveModalProduct] = useState<Product | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (activeModalProduct) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, [activeModalProduct]);
 
   const categories = [
     "All",
@@ -224,8 +244,8 @@ export function MenupageView() {
 
       </div>
 
-      {/* Product Detail Modal */}
-      {activeModalProduct && (
+      {/* Product Detail Modal (Rendered on document.body via Portal) */}
+      {activeModalProduct && mounted && createPortal(
         <div
           className="modal-backdrop"
           onClick={() => setActiveModalProduct(null)}
@@ -281,7 +301,8 @@ export function MenupageView() {
               </Link>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
