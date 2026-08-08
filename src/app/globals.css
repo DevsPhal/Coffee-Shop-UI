@@ -210,3 +210,96 @@
       sans-serif;
   }
 }
+@keyframes appear {
+  from { 
+    opacity: 0;
+    scale: 0.95;
+  }
+  to { 
+    opacity: 1; 
+    scale: 1;
+  }
+}
+
+/* Modern Clean CSS Scroll Animation */
+.animate-appear,
+.scroll-appear,
+section,
+footer,
+.card_item,
+.phone-card,
+.event_card,
+.menu-header,
+.menu-view-container,
+.events_container,
+.events_wrapper,
+.header_section,
+.homepage_section_header,
+.about_page_image_box,
+.about_page_content,
+.product_image_container,
+.product_info_box,
+.order_page_summary_card {
+  animation: appear linear both;
+  animation-timeline: view();
+  animation-range: entry 0% cover 25%;
+}
+
+/* Fallback for browsers without animation-timeline support */
+@supports not (animation-timeline: view()) {
+  .animate-appear,
+  .scroll-appear,
+  section,
+  footer,
+  .card_item,
+  .phone-card,
+  .event_card,
+  .menu-header,
+  .menu-view-container,
+  .events_container,
+  .events_wrapper,
+  .header_section,
+  .homepage_section_header,
+  .about_page_image_box,
+  .about_page_content,
+  .product_image_container,
+  .product_info_box,
+  .order_page_summary_card {
+    opacity: 0;
+    scale: 0.95;
+    transition: opacity 0.5s ease-out, scale 0.5s ease-out;
+  }
+
+  .animate-appear.in-view,
+  .scroll-appear.in-view,
+  section.in-view,
+  footer.in-view,
+  .card_item.in-view,
+  .phone-card.in-view,
+  .event_card.in-view,
+  .menu-header.in-view,
+  .menu-view-container.in-view,
+  .events_container.in-view,
+  .events_wrapper.in-view,
+  .header_section.in-view,
+  .homepage_section_header.in-view,
+  .about_page_image_box.in-view,
+  .about_page_content.in-view,
+  .product_image_container.in-view,
+  .product_info_box.in-view,
+  .order_page_summary_card.in-view {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+

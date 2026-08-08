@@ -135,7 +135,7 @@ export function Card({
           <div className="flex items-center gap-1.5 flex-wrap">
             <Link
               href={targetHref}
-              className="text-[#931B42] font-bold text-base sm:text-[17px] leading-snug tracking-tight truncate hover:underline"
+              className="text-[#111827] font-bold text-base sm:text-[17px] leading-snug tracking-tight truncate hover:underline"
             >
               {title}
             </Link>

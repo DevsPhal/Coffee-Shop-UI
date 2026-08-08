@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User } from "lucide-react";
+import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import "@/app/globals.scss";
 
@@ -12,19 +12,23 @@ export interface UserProfileData {
   userId: string;
   name: string;
   email: string;
+  phone?: string;
   avatarUrl: string;
 }
 
 export function UserprofilepageView() {
   const router = useRouter();
-  const { logout } = useAuth();
-  const [profile, setProfile] = useState<UserProfileData>({
-    userId: "001",
-    name: "Ream",
-    email: "Ream123@gmail.com",
+  const { logout, user, updateUser } = useAuth();
+
+  const profile: UserProfileData = {
+    userId: user?.userId || "001",
+    name: user?.name || "Ream",
+    email: user?.email || "Ream123@gmail.com",
+    phone: user?.phone || "011111111",
     avatarUrl:
+      user?.avatarUrl ||
       "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
-  });
+  };
 
   const [activeTab, setActiveTab] = useState<"about" | "orders" | "settings">("about");
 
@@ -79,10 +83,11 @@ export function UserprofilepageView() {
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    setProfile({ ...editForm });
+    updateUser(editForm);
     setIsEditProfileOpen(false);
     showToast("Profile information updated!");
   };
+
 
   const handleLogout = () => {
     setIsLogoutModalOpen(false);
@@ -126,6 +131,7 @@ export function UserprofilepageView() {
                 src={profile.avatarUrl}
                 alt={profile.name}
                 fill
+                priority
                 unoptimized
                 className="user_profile_avatar_img"
               />
@@ -171,7 +177,6 @@ export function UserprofilepageView() {
                   About
                 </button>
               </div>
-
               {/* Profile Details List */}
               {activeTab === "about" && (
                 <div className="user_profile_details">
@@ -189,6 +194,13 @@ export function UserprofilepageView() {
                     <span className="user_profile_detail_label">Email</span>
                     <span className="user_profile_detail_value">{profile.email}</span>
                   </div>
+
+                  {profile.phone && (
+                    <div className="user_profile_detail_row">
+                      <span className="user_profile_detail_label">Phone Number</span>
+                      <span className="user_profile_detail_value">{profile.phone}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -223,7 +235,8 @@ export function UserprofilepageView() {
       {isResetPasswordOpen && (
         <div className="modal_backdrop" onClick={() => setIsResetPasswordOpen(false)}>
           <div
-            className="modal_card max-w-md"
+            className="modal_card max-w-md text-left"
+            style={{ textAlign: "left" }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -231,34 +244,34 @@ export function UserprofilepageView() {
               className="modal_close_btn"
               onClick={() => setIsResetPasswordOpen(false)}
             >
-              
+              ✕
             </button>
 
-            <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+            <div className="flex items-center gap-3 pb-2 border-b border-gray-100 text-left">
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg flex-shrink-0">
                 <KeyRound className="w-5 h-5" />
               </div>
-              <div>
+              <div className="text-left">
                 <h3 className="font-bold text-gray-900 text-lg">Reset Password</h3>
                 <p className="text-xs text-gray-500">Update your account security password</p>
               </div>
             </div>
 
-            <form onSubmit={handleResetPasswordSubmit} className="space-y-4 pt-2">
+            <form onSubmit={handleResetPasswordSubmit} className="space-y-4 pt-2 text-left">
               {passError && (
-                <div className="p-3 bg-red-50 text-red-600 text-xs rounded-lg border border-red-100 font-medium">
+                <div className="p-3 bg-red-50 text-red-600 text-xs rounded-lg border border-red-100 font-medium text-left">
                   {passError}
                 </div>
               )}
               {passSuccess && (
-                <div className="p-3 bg-emerald-50 text-emerald-600 text-xs rounded-lg border border-emerald-100 font-medium flex items-center gap-2">
+                <div className="p-3 bg-emerald-50 text-emerald-600 text-xs rounded-lg border border-emerald-100 font-medium flex items-center gap-2 text-left">
                   <ShieldCheck className="w-4 h-4" />
                   <span>{passSuccess}</span>
                 </div>
               )}
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
+              <div className="text-left">
+                <label className="block text-xs font-semibold text-gray-700 mb-1 text-left" style={{ textAlign: "left" }}>
                   Current Password
                 </label>
                 <input
@@ -266,13 +279,14 @@ export function UserprofilepageView() {
                   value={passwords.current}
                   onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
                   placeholder="Enter current password"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left"
+                  style={{ width: "100%", boxSizing: "border-box", textAlign: "left" }}
                   required
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
+              <div className="text-left">
+                <label className="block text-xs font-semibold text-gray-700 mb-1 text-left" style={{ textAlign: "left" }}>
                   New Password
                 </label>
                 <input
@@ -280,13 +294,14 @@ export function UserprofilepageView() {
                   value={passwords.newPass}
                   onChange={(e) => setPasswords({ ...passwords, newPass: e.target.value })}
                   placeholder="At least 6 characters"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left"
+                  style={{ width: "100%", boxSizing: "border-box", textAlign: "left" }}
                   required
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
+              <div className="text-left">
+                <label className="block text-xs font-semibold text-gray-700 mb-1 text-left" style={{ textAlign: "left" }}>
                   Confirm New Password
                 </label>
                 <input
@@ -294,7 +309,8 @@ export function UserprofilepageView() {
                   value={passwords.confirmPass}
                   onChange={(e) => setPasswords({ ...passwords, confirmPass: e.target.value })}
                   placeholder="Re-enter new password"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left"
+                  style={{ width: "100%", boxSizing: "border-box", textAlign: "left" }}
                   required
                 />
               </div>
@@ -319,11 +335,12 @@ export function UserprofilepageView() {
         </div>
       )}
 
-      {/* Edit Profile Modal */}
+      {/* Edit Profile Modal (Full Width Landscape Split Layout) */}
       {isEditProfileOpen && (
         <div className="modal_backdrop" onClick={() => setIsEditProfileOpen(false)}>
           <div
-            className="modal_card max-w-md"
+            className="modal_card bg-white rounded-2xl p-6 shadow-2xl relative text-left"
+            style={{ maxWidth: "680px", width: "92%", textAlign: "left" }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -331,73 +348,119 @@ export function UserprofilepageView() {
               className="modal_close_btn"
               onClick={() => setIsEditProfileOpen(false)}
             >
-              
+              ✕
             </button>
 
-            <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+            <div className="flex items-center gap-3 pb-3 border-b border-gray-100 mb-5 text-left">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl flex-shrink-0">
                 <User className="w-5 h-5" />
               </div>
-              <div>
+              <div className="text-left">
                 <h3 className="font-bold text-gray-900 text-lg">Edit Profile</h3>
                 <p className="text-xs text-gray-500">Update your public profile details</p>
               </div>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-4 pt-2">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  User Id
-                </label>
-                <input
-                  type="text"
-                  value={editForm.userId}
-                  onChange={(e) => setEditForm({ ...editForm, userId: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+            <form onSubmit={handleSaveProfile} className="space-y-5 text-left">
+              {/* Split 2-Column Layout */}
+              <div className="flex flex-col md:flex-row gap-6 items-stretch w-full text-left">
+                {/* LEFT SIDE: Photo Only */}
+                <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-200 flex flex-col items-center justify-center text-center w-full md:w-[180px] flex-shrink-0">
+                  <span className="block text-xs font-semibold text-gray-700 mb-3">
+                    Profile Picture
+                  </span>
+
+                  <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow-md mb-3 bg-gray-200 flex-shrink-0">
+                    <Image
+                      src={editForm.avatarUrl}
+                      alt="Avatar Preview"
+                      fill
+                      priority
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+
+                  <label
+                    htmlFor="avatar-file-upload"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-gray-800 text-xs font-semibold rounded-lg border border-gray-300 shadow-xs hover:bg-gray-100 transition-colors cursor-pointer w-full justify-center"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Choose Photo</span>
+                  </label>
+                  <input
+                    type="file"
+                    id="avatar-file-upload"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          if (reader.result) {
+                            setEditForm((prev) => ({ ...prev, avatarUrl: reader.result as string }));
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <span className="text-[10px] text-gray-500 mt-2">
+                    File Explorer / Phone
+                  </span>
+                </div>
+
+                {/* RIGHT SIDE: User Id, Display Name, Email Address (Stretches Full Width & Left Aligned) */}
+                <div className="space-y-4 flex flex-col justify-center flex-1 min-w-0 text-left">
+                  <div className="w-full text-left">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5 text-left" style={{ textAlign: "left" }}>
+                      User Id
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.userId}
+                      onChange={(e) => setEditForm({ ...editForm, userId: e.target.value })}
+                      className="w-full block px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left"
+                      style={{ width: "100%", boxSizing: "border-box", textAlign: "left" }}
+                      required
+                    />
+                  </div>
+
+                  <div className="w-full text-left">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5 text-left" style={{ textAlign: "left" }}>
+                      Display Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      className="w-full block px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left"
+                      style={{ width: "100%", boxSizing: "border-box", textAlign: "left" }}
+                      required
+                    />
+                  </div>
+
+                  <div className="w-full text-left">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5 text-left" style={{ textAlign: "left" }}>
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                      className="w-full block px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left"
+                      style={{ width: "100%", boxSizing: "border-box", textAlign: "left" }}
+                      required
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Display Name
-                </label>
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Avatar Image URL
-                </label>
-                <input
-                  type="url"
-                  value={editForm.avatarUrl}
-                  onChange={(e) => setEditForm({ ...editForm, avatarUrl: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setIsEditProfileOpen(false)}
@@ -407,7 +470,7 @@ export function UserprofilepageView() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors border-none cursor-pointer"
+                  className="px-6 py-2.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors border-none cursor-pointer"
                 >
                   Save Changes
                 </button>
@@ -416,6 +479,7 @@ export function UserprofilepageView() {
           </div>
         </div>
       )}
+
 
       {/* Logout Confirmation Modal */}
       {isLogoutModalOpen && (

@@ -112,7 +112,7 @@ export default function HeroCarousel() {
                       src={slide.image}
                       alt={slide.title || `Slide ${index + 1}`}
                       fill
-                      priority={index === 0}
+                      loading="eager"
                       className="hero_slide_image"
                     />
 

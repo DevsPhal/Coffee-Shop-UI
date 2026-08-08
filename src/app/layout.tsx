@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
+import ScrollObserver from "@/components/common/ScrollObserver";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,9 +18,13 @@ export default function RootLayout({
     <html lang="en" className="h-full antialiased font-sans">
       <body className="min-h-full flex flex-col font-sans">
         <AuthProvider>
-          <CartProvider>{children}</CartProvider>
+          <CartProvider>
+            <ScrollObserver />
+            {children}
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>
   );
 }
+

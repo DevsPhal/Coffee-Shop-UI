@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { User, Mail, Eye, EyeOff, UserPlus, Phone } from "lucide-react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/context/AuthContext";
 import "@/app/globals.scss";
 
 const createSchema = z.object({
@@ -55,14 +57,15 @@ function TooltipAlert({ message }: { message?: string }) {
 }
 
 export function Create({ onBackToLogin }: CreateProps) {
+  const router = useRouter();
+  const { signup } = useAuth();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
-  // Zod Errors & Active Focused Input (Starts empty so typing never triggers false alert)
+  // Zod Errors & Active Focused Input
   const [errors, setErrors] = useState<FormErrors>({});
   const [activeInput, setActiveInput] = useState<keyof FormErrors | null>(null);
 
@@ -74,7 +77,6 @@ export function Create({ onBackToLogin }: CreateProps) {
     currentPhone = phone,
     currentPassword = password
   ) => {
-    // If value has text, immediately hide error alert
     if (value.trim().length > 0) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
       return;
@@ -125,8 +127,18 @@ export function Create({ onBackToLogin }: CreateProps) {
     }
 
     setErrors({});
-    setSubmitted(true);
+
+    // Register user in AuthContext & save profile data
+    signup({
+      name: username,
+      email: email,
+      phone: phone,
+    });
+
+    // Navigate to user profile page
+    router.push("/userprofile");
   };
+
 
   return (
     <div className="w-full space-y-4">
@@ -142,24 +154,8 @@ export function Create({ onBackToLogin }: CreateProps) {
         Enter your details below to create your account
       </p>
 
-      {submitted ? (
-        <div className="p-4 rounded-lg bg-teal-50 border border-teal-200 text-center space-y-3">
-          <p className="text-xs font-semibold text-teal-800">
-            Account Created Successfully!
-          </p>
-          <p className="text-[11px] text-teal-600">
-            Welcome, <span className="font-medium">{username}</span>! You can now log in with your credentials.
-          </p>
-          <Button
-            type="button"
-            onClick={onBackToLogin}
-            className="login_submit_button mt-2"
-          >
-            Go to Login
-          </Button>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="w-full space-y-3" noValidate>
+      <form onSubmit={handleSubmit} className="w-full space-y-3" noValidate>
+
           <div>
             <label className="login_input_label">
               Username
@@ -288,7 +284,6 @@ export function Create({ onBackToLogin }: CreateProps) {
             </button>
           </div>
         </form>
-      )}
     </div>
   );
 }
