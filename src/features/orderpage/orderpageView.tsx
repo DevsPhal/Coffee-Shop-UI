@@ -3,11 +3,22 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import "@/app/globals.scss";
 
 export function OrderpageView() {
+  const router = useRouter();
   const { items, updateQuantity, subtotal } = useCart();
+
+  const handleContinueShopping = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (typeof window !== "undefined" && window.innerWidth <= 768) {
+      router.push("/menuphone");
+    } else {
+      router.push("/menu");
+    }
+  };
 
   return (
     <div className="order_page_container">
@@ -53,7 +64,8 @@ export function OrderpageView() {
           </p>
           <Link
             href="/menu"
-            className="order_page_empty_btn"
+            onClick={handleContinueShopping}
+            className="order_page_empty_btn cursor-pointer"
           >
             Explore Menu
           </Link>
@@ -153,7 +165,8 @@ export function OrderpageView() {
             <div className="order_page_summary_actions">
               <Link
                 href="/menu"
-                className="order_page_btn_continue"
+                onClick={handleContinueShopping}
+                className="order_page_btn_continue cursor-pointer"
               >
                 Continue Shopping
               </Link>

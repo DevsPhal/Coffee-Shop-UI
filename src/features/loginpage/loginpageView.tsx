@@ -11,12 +11,21 @@ import { Input } from "@/components/ui/input";
 import { Forgot } from "@/components/ui/forgot";
 import { Create } from "@/components/ui/create";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 
 // Zod Schema for User Login Form Validation
 const userLoginSchema = z.object({
-  username: z.string().trim().min(1, { message: "Please enter your username." }),
-  password: z.string().trim().min(1, { message: "Please enter your password." }),
+  username: z
+    .string()
+    .trim()
+    .min(1, { message: "Please enter your username." })
+    .min(3, { message: "Username must be at least 3 characters." }),
+  password: z
+    .string()
+    .trim()
+    .min(1, { message: "Please enter your password." })
+    .min(3, { message: "Password must be at least 3 characters." }),
 });
 
 type FormErrors = {
@@ -24,30 +33,7 @@ type FormErrors = {
   password?: string;
 };
 
-// Floating Tooltip Speech-Bubble Alert Component matching target screenshot
-function TooltipAlert({ message }: { message?: string }) {
-  if (!message) return null;
-
-  return (
-    <div className="relative z-30 mt-1.5 mb-1 animate-in fade-in slide-in-from-top-1 duration-150">
-      {/* Pointer Triangle pointing UP to the input */}
-      <div className="absolute -top-[8px] left-6 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[8px] border-b-gray-400" />
-      <div className="absolute -top-[6.5px] left-[25px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[7px] border-b-white" />
-
-      {/* Speech Bubble Card */}
-      <div className="inline-flex items-center gap-2.5 bg-white border border-gray-400 rounded-md p-2.5 shadow-[0_8px_20px_rgba(0,0,0,0.18)] max-w-xs">
-        {/* Orange Exclamation Mark Badge */}
-        <div className="w-6 h-6 bg-[#f95700] text-white font-bold text-base rounded flex items-center justify-center flex-shrink-0 shadow-xs select-none">
-          !
-        </div>
-        {/* Error Message */}
-        <span className="text-xs text-gray-900 font-normal leading-tight">
-          {message}
-        </span>
-      </div>
-    </div>
-  );
-}
+import { TooltipAlert } from "@/components/ui/tooltip-alert";
 
 export function LoginPageView() {
   const router = useRouter();
@@ -57,31 +43,23 @@ export function LoginPageView() {
   const [showPassword, setShowPassword] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
   const [viewMode, setViewMode] = useState<"login" | "forgot" | "create">("login");
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Zod Validation Errors & Focused Input State (Starts empty so no false alerts when typing)
   const [errors, setErrors] = useState<FormErrors>({});
   const [activeInput, setActiveInput] = useState<keyof FormErrors | null>(null);
 
-  // Validate fields dynamically using Zod
-  const validateField = (field: keyof FormErrors, value: string, currentUsername = username, currentPassword = password) => {
-    // If value has text, immediately hide error
-    if (value.trim().length > 0) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-      return;
-    }
-
-    const data = {
-      username: field === "username" ? value : currentUsername,
-      password: field === "password" ? value : currentPassword,
-    };
-    const result = userLoginSchema.safeParse(data);
-
-    if (!result.success) {
-      const fieldErrors = result.error.flatten().fieldErrors;
+  // Validate fields dynamically using Zod & min 3 characters check
+  const validateField = (field: keyof FormErrors, value: string) => {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
       setErrors((prev) => ({
         ...prev,
-        [field]: fieldErrors[field]?.[0] || "Please fill in this field.",
+        [field]: field === "username" ? "Please enter your username." : "Please enter your password.",
+      }));
+    } else if (trimmed.length < 3) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: field === "username" ? "Username must be at least 3 characters." : "Password must be at least 3 characters.",
       }));
     } else {
       setErrors((prev) => ({
@@ -94,40 +72,37 @@ export function LoginPageView() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate all fields using Zod
-    const validationResult = userLoginSchema.safeParse({ username, password });
+    const uTrim = username.trim();
+    const pTrim = password.trim();
 
-    if (!validationResult.success) {
-      const fieldErrors = validationResult.error.flatten().fieldErrors;
-      const newErrors: FormErrors = {
-        username: fieldErrors.username?.[0],
-        password: fieldErrors.password?.[0],
-      };
-      setErrors(newErrors);
+    let uErr: string | undefined = undefined;
+    let pErr: string | undefined = undefined;
 
-      if (newErrors.username) setActiveInput("username");
-      else if (newErrors.password) setActiveInput("password");
+    if (uTrim.length === 0) uErr = "Please enter your username.";
+    else if (uTrim.length < 3) uErr = "Username must be at least 3 characters.";
+
+    if (pTrim.length === 0) pErr = "Please enter your password.";
+    else if (pTrim.length < 3) pErr = "Password must be at least 3 characters.";
+
+    if (uErr || pErr) {
+      setErrors({ username: uErr, password: pErr });
+      if (uErr) setActiveInput("username");
+      else if (pErr) setActiveInput("password");
+
+      toast.add({
+        type: "error",
+        description: uErr || pErr || "Please fix validation errors.",
+      });
       return;
     }
 
     setErrors({});
     login();
-    setToastMessage("Logging in...");
-    setTimeout(() => {
-      setToastMessage(null);
-      router.push("/");
-    }, 1500);
+    router.push("/");
   };
 
   return (
     <div className="login_page_wrapper font-sans relative">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-6 right-6 z-50 bg-gray-900 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in text-sm font-medium">
-          <Check className="w-4 h-4 text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       {/* Left Side: Login Form */}
       <div className="login_form_side">
@@ -206,7 +181,10 @@ export function LoginPageView() {
                     <Input
                       type="text"
                       value={username}
-                      onFocus={() => setActiveInput("username")}
+                      onFocus={() => {
+                        setActiveInput("username");
+                        validateField("username", username);
+                      }}
                       onChange={(e) => {
                         const val = e.target.value;
                         setUsername(val);
@@ -232,7 +210,10 @@ export function LoginPageView() {
                     <Input
                       type={showPassword ? "text" : "password"}
                       value={password}
-                      onFocus={() => setActiveInput("password")}
+                      onFocus={() => {
+                        setActiveInput("password");
+                        validateField("password", password);
+                      }}
                       onChange={(e) => {
                         const val = e.target.value;
                         setPassword(val);

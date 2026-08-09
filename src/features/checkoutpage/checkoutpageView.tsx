@@ -5,7 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { toast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
+import { Modal, ModalContent } from "@/components/ui/modal";
 import { AlertCircle } from "lucide-react";
 import "@/app/globals.scss";
 
@@ -28,6 +30,14 @@ export function CheckoutpageView() {
 
   const handlePlaceOrderNow = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (items.length === 0) {
+      toast.add({
+        type: "error",
+        description: "Your cart is empty! Please add items before placing order.",
+        priority: "high",
+      });
+      return;
+    }
     router.push("/payment");
   };
 
@@ -38,6 +48,10 @@ export function CheckoutpageView() {
 
   const handleConfirmCancel = () => {
     setShowCancelModal(false);
+    toast.add({
+      type: "warning",
+      description: "Checkout has been cancelled.",
+    });
     router.push("/cart");
   };
 
@@ -333,43 +347,41 @@ export function CheckoutpageView() {
       </div>
 
       {/* CANCEL CONFIRMATION ALERT MODAL */}
-      {showCancelModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 sm:p-7 text-center shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            {/* Top Icon Circle */}
-            <div className="w-14 h-14 rounded-full bg-orange-100/90 text-[#e65100] flex items-center justify-center mx-auto mb-4 shadow-xs">
-              <AlertCircle className="w-8 h-8 stroke-[2.5]" />
-            </div>
-
-            {/* Question Text */}
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight mb-1">
-              Are you sure to cancel?
-            </h3>
-            <p className="text-xs sm:text-sm text-gray-500 mb-6 font-medium">
-              Your order information will be lost.
-            </p>
-
-            {/* Action Buttons: Yes / No */}
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setShowCancelModal(false)}
-                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-2xl text-sm sm:text-base transition-colors cursor-pointer active:scale-95"
-              >
-                No
-              </button>
-
-              <button
-                type="button"
-                onClick={handleConfirmCancel}
-                className="w-full bg-[#e65100] hover:bg-[#d84800] text-white font-bold py-3 rounded-2xl text-sm sm:text-base transition-colors cursor-pointer active:scale-95 shadow-md"
-              >
-                Yes
-              </button>
-            </div>
+      <Modal open={showCancelModal} onOpenChange={setShowCancelModal}>
+        <ModalContent className="max-w-sm p-6 text-center rounded-2xl border border-gray-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)]" showCloseButton={false}>
+          {/* Refined Top Warning Badge */}
+          <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3.5 shadow-2xs">
+            <AlertCircle className="w-6 h-6 stroke-[2.2]" />
           </div>
-        </div>
-      )}
+
+          {/* Question & Description */}
+          <h3 className="text-lg font-semibold text-gray-900 tracking-tight mb-1">
+            Are you sure to cancel?
+          </h3>
+          <p className="text-xs sm:text-sm text-gray-500 font-normal mb-6 leading-normal">
+            Your order information will be lost.
+          </p>
+
+          {/* Professional Action Buttons */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => setShowCancelModal(false)}
+              className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-2.5 px-4 rounded-xl text-sm border border-gray-200 transition-all cursor-pointer shadow-2xs active:scale-[0.98]"
+            >
+              No
+            </button>
+
+            <button
+              type="button"
+              onClick={handleConfirmCancel}
+              className="w-full bg-[#f95700] hover:bg-[#e04e00] text-white font-medium py-2.5 px-4 rounded-xl text-sm transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+            >
+              Yes
+            </button>
+          </div>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import ScrollObserver from "@/components/common/ScrollObserver";
+import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({
           <CartProvider>
             <ScrollObserver />
             {children}
+            <Toaster />
           </CartProvider>
         </AuthProvider>
       </body>

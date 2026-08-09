@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { toast } from "@/components/ui/toast";
+import { Modal, ModalContent } from "@/components/ui/modal";
 import {
   Check,
   Receipt,
@@ -18,6 +20,16 @@ export function CheckoutdonepageView() {
 
   const [callStaffModal, setCallStaffModal] = useState(false);
   const [staffCalled, setStaffCalled] = useState(false);
+  const hasToastedRef = useRef(false);
+
+  useEffect(() => {
+    if (hasToastedRef.current) return;
+    hasToastedRef.current = true;
+    toast.add({
+      type: "success",
+      description: "Checkout complete! Order #1 is confirmed and being prepared.",
+    });
+  }, []);
   
 
   // Compute total or use fallback to match exact design image
@@ -297,25 +309,23 @@ export function CheckoutdonepageView() {
       </div>
 
       {/* CALL STAFF CONFIRMATION MODAL */}
-      {callStaffModal && (
-        <div className="modal_overlay">
-          <div className="modal_card">
-            <div className="modal_icon_badge">
-              <CheckCircle2 className="w-7 h-7" />
-            </div>
-            <h3 className="modal_title">Staff Notified!</h3>
-            <p className="modal_description">
-              A staff member will arrive at table <span className="value_brand">G01</span> shortly.
-            </p>
-            <button
-              onClick={() => setCallStaffModal(false)}
-              className="btn_modal_close"
-            >
-              OK, Got it
-            </button>
+      <Modal open={callStaffModal} onOpenChange={setCallStaffModal}>
+        <ModalContent className="max-w-sm p-6 text-center rounded-2xl" showCloseButton={false}>
+          <div className="modal_icon_badge">
+            <CheckCircle2 className="w-7 h-7" />
           </div>
-        </div>
-      )}
+          <h3 className="modal_title">Staff Notified!</h3>
+          <p className="modal_description">
+            A staff member will arrive at table <span className="value_brand">G01</span> shortly.
+          </p>
+          <button
+            onClick={() => setCallStaffModal(false)}
+            className="btn_modal_close"
+          >
+            OK, Got it
+          </button>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { toast } from "@/components/ui/toast";
 
 export interface UserData {
   userId: string;
@@ -66,6 +67,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // fallback
     }
+
+    toast.add({
+      type: "success",
+      description: "Successfully logged in!",
+    });
   };
 
   const signup = (userData: { name: string; email: string; phone?: string }) => {
@@ -86,6 +92,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // fallback
     }
+
+    toast.add({
+      type: "success",
+      description: "Account created successfully!",
+    });
   };
 
   const updateUser = (userData: Partial<UserData>) => {
@@ -108,6 +119,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // fallback
     }
+
+    toast.add({
+      type: "info",
+      description: "You have logged out.",
+    });
   };
 
   return (
