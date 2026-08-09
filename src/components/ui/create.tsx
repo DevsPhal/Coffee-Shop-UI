@@ -31,30 +31,7 @@ interface CreateProps {
   onBackToLogin: () => void;
 }
 
-// Floating Tooltip Speech-Bubble Alert Component matching target screenshot
-function TooltipAlert({ message }: { message?: string }) {
-  if (!message) return null;
-
-  return (
-    <div className="relative z-30 mt-1.5 mb-1 animate-in fade-in slide-in-from-top-1 duration-150">
-      {/* Pointer Triangle pointing UP to the input */}
-      <div className="absolute -top-[8px] left-6 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[8px] border-b-gray-400" />
-      <div className="absolute -top-[6.5px] left-[25px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[7px] border-b-white" />
-
-      {/* Speech Bubble Card */}
-      <div className="inline-flex items-center gap-2.5 bg-white border border-gray-400 rounded-md p-2.5 shadow-[0_8px_20px_rgba(0,0,0,0.18)] max-w-xs">
-        {/* Orange Exclamation Mark Badge */}
-        <div className="w-6 h-6 bg-[#f95700] text-white font-bold text-base rounded flex items-center justify-center flex-shrink-0 shadow-xs select-none">
-          !
-        </div>
-        {/* Error Message */}
-        <span className="text-xs text-gray-900 font-normal leading-tight">
-          {message}
-        </span>
-      </div>
-    </div>
-  );
-}
+import { TooltipAlert } from "@/components/ui/tooltip-alert";
 
 export function Create({ onBackToLogin }: CreateProps) {
   const router = useRouter();
@@ -69,32 +46,29 @@ export function Create({ onBackToLogin }: CreateProps) {
   const [errors, setErrors] = useState<FormErrors>({});
   const [activeInput, setActiveInput] = useState<keyof FormErrors | null>(null);
 
-  const validateField = (
-    field: keyof FormErrors,
-    value: string,
-    currentUsername = username,
-    currentEmail = email,
-    currentPhone = phone,
-    currentPassword = password
-  ) => {
-    if (value.trim().length > 0) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-      return;
-    }
-
-    const data = {
-      username: field === "username" ? value : currentUsername,
-      email: field === "email" ? value : currentEmail,
-      phone: field === "phone" ? value : currentPhone,
-      password: field === "password" ? value : currentPassword,
-    };
-    const result = createSchema.safeParse(data);
-
-    if (!result.success) {
-      const fieldErrors = result.error.flatten().fieldErrors;
+  const validateField = (field: keyof FormErrors, value: string) => {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      const emptyMessages: Record<keyof FormErrors, string> = {
+        username: "Please enter your username.",
+        email: "Please enter your email.",
+        phone: "Please enter your phone number.",
+        password: "Please enter your password.",
+      };
       setErrors((prev) => ({
         ...prev,
-        [field]: fieldErrors[field]?.[0] || "Please fill in this field.",
+        [field]: emptyMessages[field],
+      }));
+    } else if (field !== "email" && trimmed.length < 3) {
+      const minMessages: Record<keyof FormErrors, string> = {
+        username: "Username must be at least 3 characters.",
+        email: "Please enter a valid email address.",
+        phone: "Phone number must be at least 3 characters.",
+        password: "Password must be at least 3 characters.",
+      };
+      setErrors((prev) => ({
+        ...prev,
+        [field]: minMessages[field],
       }));
     } else {
       setErrors((prev) => ({
@@ -167,7 +141,12 @@ export function Create({ onBackToLogin }: CreateProps) {
               <Input
                 type="text"
                 value={username}
-                onFocus={() => setActiveInput("username")}
+                onFocus={() => {
+                  setActiveInput("username");
+                  if (!username.trim()) {
+                    setErrors((prev) => ({ ...prev, username: "Please enter your username." }));
+                  }
+                }}
                 onChange={(e) => {
                   const val = e.target.value;
                   setUsername(val);
@@ -192,7 +171,12 @@ export function Create({ onBackToLogin }: CreateProps) {
               <Input
                 type="email"
                 value={email}
-                onFocus={() => setActiveInput("email")}
+                onFocus={() => {
+                  setActiveInput("email");
+                  if (!email.trim()) {
+                    setErrors((prev) => ({ ...prev, email: "Please enter your email." }));
+                  }
+                }}
                 onChange={(e) => {
                   const val = e.target.value;
                   setEmail(val);
@@ -217,7 +201,12 @@ export function Create({ onBackToLogin }: CreateProps) {
               <Input
                 type="tel"
                 value={phone}
-                onFocus={() => setActiveInput("phone")}
+                onFocus={() => {
+                  setActiveInput("phone");
+                  if (!phone.trim()) {
+                    setErrors((prev) => ({ ...prev, phone: "Please enter your phone number." }));
+                  }
+                }}
                 onChange={(e) => {
                   const val = e.target.value;
                   setPhone(val);
@@ -239,7 +228,12 @@ export function Create({ onBackToLogin }: CreateProps) {
               <Input
                 type={showPassword ? "text" : "password"}
                 value={password}
-                onFocus={() => setActiveInput("password")}
+                onFocus={() => {
+                  setActiveInput("password");
+                  if (!password.trim()) {
+                    setErrors((prev) => ({ ...prev, password: "Please enter your password." }));
+                  }
+                }}
                 onChange={(e) => {
                   const val = e.target.value;
                   setPassword(val);

@@ -9,13 +9,15 @@ import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Forgot } from "@/components/ui/forgot";
 import { Create } from "@/components/ui/create";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 
 // Zod Schema for Admin Login Form Validation
 const adminLoginSchema = z.object({
-  role: z.string().trim().min(1, { message: "Please fill in this field." }),
-  username: z.string().trim().min(1, { message: "Please fill in this field." }),
-  password: z.string().trim().min(1, { message: "Please fill in this field." }),
+  role: z.string().trim().min(1, { message: "Please select your position/role." }),
+  username: z.string().trim().min(1, { message: "Please enter your username." }),
+  password: z.string().trim().min(1, { message: "Please enter your password." }),
 });
 
 type FormErrors = {
@@ -24,65 +26,44 @@ type FormErrors = {
   password?: string;
 };
 
-// Floating Tooltip Speech-Bubble Alert Component matching target screenshot
-function TooltipAlert({ message }: { message?: string }) {
-  if (!message) return null;
-
-  return (
-    <div className="relative z-30 mt-1.5 mb-1 animate-in fade-in slide-in-from-top-1 duration-150">
-      {/* Pointer Triangle pointing UP to the input */}
-      <div className="absolute -top-[8px] left-6 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[8px] border-b-gray-400" />
-      <div className="absolute -top-[6.5px] left-[25px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[7px] border-b-white" />
-
-      {/* Speech Bubble Card */}
-      <div className="inline-flex items-center gap-2.5 bg-white border border-gray-400 rounded-md p-2.5 shadow-[0_8px_20px_rgba(0,0,0,0.18)] max-w-xs">
-        {/* Orange Exclamation Mark Badge */}
-        <div className="w-6 h-6 bg-[#f95700] text-white font-bold text-base rounded flex items-center justify-center flex-shrink-0 shadow-xs select-none">
-          !
-        </div>
-        {/* Error Message */}
-        <span className="text-xs text-gray-900 font-normal leading-tight">
-          {message}
-        </span>
-      </div>
-    </div>
-  );
-}
+import { TooltipAlert } from "@/components/ui/tooltip-alert";
 
 export function AdminloginpageView() {
   const router = useRouter();
+  const { login } = useAuth();
   const [role, setRole] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
   const [viewMode, setViewMode] = useState<"login" | "forgot" | "create">("login");
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Zod Validation Errors & Active Input State (Starts empty so no false alerts when typing)
   const [errors, setErrors] = useState<FormErrors>({});
   const [activeInput, setActiveInput] = useState<keyof FormErrors | null>(null);
 
   // Validate fields dynamically using Zod
-  const validateField = (field: keyof FormErrors, value: string, currentRole = role, currentUsername = username, currentPassword = password) => {
-    // If value has text, immediately hide error alert
-    if (value.trim().length > 0) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-      return;
-    }
-
-    const data = {
-      role: field === "role" ? value : currentRole,
-      username: field === "username" ? value : currentUsername,
-      password: field === "password" ? value : currentPassword,
-    };
-    const result = adminLoginSchema.safeParse(data);
-
-    if (!result.success) {
-      const fieldErrors = result.error.flatten().fieldErrors;
+  const validateField = (field: keyof FormErrors, value: string) => {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      const emptyMessages: Record<keyof FormErrors, string> = {
+        role: "Please select your position/role.",
+        username: "Please enter your username.",
+        password: "Please enter your password.",
+      };
       setErrors((prev) => ({
         ...prev,
-        [field]: fieldErrors[field]?.[0] || "Please fill in this field.",
+        [field]: emptyMessages[field],
+      }));
+    } else if (field !== "role" && trimmed.length < 3) {
+      const minMessages: Record<keyof FormErrors, string> = {
+        role: "Please select your position/role.",
+        username: "Username must be at least 3 characters.",
+        password: "Password must be at least 3 characters.",
+      };
+      setErrors((prev) => ({
+        ...prev,
+        [field]: minMessages[field],
       }));
     } else {
       setErrors((prev) => ({
@@ -110,15 +91,18 @@ export function AdminloginpageView() {
       if (newErrors.role) setActiveInput("role");
       else if (newErrors.username) setActiveInput("username");
       else if (newErrors.password) setActiveInput("password");
+
+      toast.add({
+        type: "error",
+        description: "Admin login failed! Please check required fields.",
+        priority: "high",
+      });
       return;
     }
 
     setErrors({});
-    setToastMessage(`Logging in as ${role}...`);
-    setTimeout(() => {
-      setToastMessage(null);
-      router.push("/profile");
-    }, 1500);
+    login();
+    router.push("/userprofile");
   };
 
   const handleBack = () => {
@@ -127,13 +111,6 @@ export function AdminloginpageView() {
 
   return (
     <div className="min-h-screen w-full bg-white flex flex-col items-center justify-between p-4 sm:p-6 md:p-8 font-sans relative">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-6 right-6 z-50 bg-gray-900 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in text-sm font-medium">
-          <Check className="w-4 h-4 text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       {/* Top Left Back Button */}
       <div className="w-full max-w-md flex justify-start pt-2">
@@ -234,7 +211,12 @@ export function AdminloginpageView() {
                   <Input
                     type="text"
                     value={username}
-                    onFocus={() => setActiveInput("username")}
+                    onFocus={() => {
+                      setActiveInput("username");
+                      if (!username.trim()) {
+                        setErrors((prev) => ({ ...prev, username: "Please enter your username." }));
+                      }
+                    }}
                     onChange={(e) => {
                       const val = e.target.value;
                       setUsername(val);
@@ -258,7 +240,12 @@ export function AdminloginpageView() {
                   <Input
                     type={showPassword ? "text" : "password"}
                     value={password}
-                    onFocus={() => setActiveInput("password")}
+                    onFocus={() => {
+                      setActiveInput("password");
+                      if (!password.trim()) {
+                        setErrors((prev) => ({ ...prev, password: "Please enter your password." }));
+                      }
+                    }}
                     onChange={(e) => {
                       const val = e.target.value;
                       setPassword(val);
