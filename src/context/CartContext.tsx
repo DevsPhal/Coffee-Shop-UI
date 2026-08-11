@@ -24,26 +24,7 @@ interface CartContextType {
   totalCount: number;
 }
 
-const defaultItems: CartItem[] = [
-  {
-    id: "1",
-    title: "កាហ្វេហ្វ៊ែន ទឹកកក",
-    price: 2.0,
-    quantity: 1,
-  },
-  {
-    id: "2",
-    title: "តែក្រហម ទឹកដោះគោ",
-    price: 2.0,
-    quantity: 1,
-  },
-  {
-    id: "3",
-    title: "កាហ្វេហ្វ៊ែន ទឹកដោះគោ",
-    price: 2.2,
-    quantity: 1,
-  },
-];
+const defaultItems: CartItem[] = [];
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 

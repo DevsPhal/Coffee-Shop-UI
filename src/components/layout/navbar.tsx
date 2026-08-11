@@ -3,19 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import "@/app/globals.scss";
 
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage, Language } from "@/components/ui/translatetokhmer";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -32,18 +27,34 @@ const languages = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const [selectedLanguage, setSelectedLanguage] = useState(languages[0]);
+  const { language, setLanguage, t } = useLanguage();
+  const [isLangOpen, setIsLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+
+  const selectedLanguage = languages.find((l) => l.code === language) || languages[0];
   const { openCart, totalCount } = useCart();
   const { isLoggedIn } = useAuth();
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (langRef.current && !langRef.current.contains(event.target as Node)) {
+        setIsLangOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   const mobileNavItems = [
-    { label: "Home", href: "/", icon: "/icons/home.svg" },
-    { label: "Menu", href: "/menuphone", icon: "/icons/menu.svg" },
-    { label: "Events", href: "/events", icon: "/icons/event.svg" },
-    { label: "Location", href: "/location", icon: "/icons/location.svg" },
-    { label: "Contact", href: "/contact", icon: "/icons/contact.svg" },
+    { key: "Home", href: "/", icon: "/icons/home.svg" },
+    { key: "Menu", href: "/menuphone", icon: "/icons/menu.svg" },
+    { key: "Events", href: "/events", icon: "/icons/event.svg" },
+    { key: "Location", href: "/location", icon: "/icons/location.svg" },
+    { key: "Contact", href: "/contact", icon: "/icons/contact.svg" },
     {
-      label: isLoggedIn ? "Profile" : "Login",
+      key: isLoggedIn ? "Profile" : "Login",
       href: isLoggedIn ? "/userprofile" : "/login",
       icon: isLoggedIn ? "/icons/user.svg" : "/icons/login.svg",
     },
@@ -56,9 +67,9 @@ export function Navbar() {
 
   const isMobileNavActive = (href: string) => {
     if (href === "/") return pathname === "/";
-    if (href === "/menuphone") return pathname === "/menuphone" || pathname === "/menu";
+    if (href === "/menuphone") return pathname === "/menuphone" || pathname === "/menu" || pathname.startsWith("/product");
     if (href === "/events") return pathname.startsWith("/events") || pathname.startsWith("/event");
-    if (href === "/userprofile") return pathname === "/userprofile" || pathname === "/profile";
+    if (href === "/userprofile" || href === "/login") return pathname.startsWith("/userprofile") || pathname.startsWith("/profile") || pathname.startsWith("/login");
     return pathname.startsWith(href);
   };
 
@@ -84,51 +95,60 @@ export function Navbar() {
                   href={href}
                   className={`nav_link ${isActive(href) ? "active" : ""}`}
                 >
-                  {label}
+                  {t(label)}
                 </Link>
               </li>
             ))}
           </ul>
 
           <div className="flex items-center gap-3 sm:gap-4 lg:gap-6">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <button
-                    type="button"
-                    className="nav_lang_btn flex items-center gap-2"
-                    aria-label="Select language"
-                  >
-                    <Image
-                      src={selectedLanguage.flag}
-                      alt={selectedLanguage.label}
-                      width={24}
-                      height={16}
-                      className="h-5 w-5 rounded-lg object-cover"
-                    />
-                    <ChevronDown className="h-3 w-3 text-gray-700" />
-                  </button>
-                }
-              />
-              <DropdownMenuContent align="end" className="min-w-[130px]">
-                {languages.map((language) => (
-                  <DropdownMenuItem
-                    key={language.code}
-                    onClick={() => setSelectedLanguage(language)}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <Image
-                      src={language.flag}
-                      alt={language.label}
-                      width={24}
-                      height={16}
-                      className="h-5 w-5 rounded-lg object-cover"
-                    />
-                    <span>{language.label}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Language Switcher Dropdown */}
+            <div ref={langRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setIsLangOpen((prev) => !prev)}
+                className="nav_lang_btn flex items-center gap-2 cursor-pointer border border-gray-200 rounded-lg px-2 py-1 bg-white hover:bg-gray-50 transition-colors"
+                aria-label="Select language"
+              >
+                <Image
+                  src={selectedLanguage.flag}
+                  alt={selectedLanguage.label}
+                  width={24}
+                  height={16}
+                  className="h-5 w-5 rounded-lg object-cover"
+                />
+                <ChevronDown className={`h-3 w-3 text-gray-700 transition-transform ${isLangOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {isLangOpen && (
+                <div className="absolute right-0 mt-2 min-w-[130px] rounded-lg bg-white p-1 shadow-lg ring-1 ring-black/10 z-50 animate-in fade-in-0 zoom-in-95">
+                  {languages.map((languageItem) => (
+                    <button
+                      key={languageItem.code}
+                      type="button"
+                      onClick={() => {
+                        setLanguage(languageItem.code as Language);
+                        setIsLangOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors cursor-pointer text-left ${
+                        language === languageItem.code
+                          ? "bg-gray-100 font-semibold text-primary"
+                          : "hover:bg-gray-50 text-gray-700"
+                      }`}
+                    >
+                      <Image
+                        src={languageItem.flag}
+                        alt={languageItem.label}
+                        width={24}
+                        height={16}
+                        className="h-5 w-5 rounded-lg object-cover shrink-0"
+                      />
+                      <span>{languageItem.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <button
               type="button"
@@ -175,7 +195,7 @@ export function Navbar() {
                     unoptimized
                     className="brightness-0 invert"
                   />
-                  <span>Login</span>
+                  <span>{t("Login")}</span>
                 </Button>
               </Link>
             )}
@@ -191,23 +211,24 @@ export function Navbar() {
 
             return (
               <Link
-                key={item.label}
+                key={item.key}
                 href={item.href}
-                className={`nav-link ${active ? "active" : ""}`}
+                className={`flex items-center justify-center p-2.5 rounded-full transition-all duration-200 ${
+                  active ? "bg-[#A1255B]/15 scale-110" : "hover:bg-gray-100"
+                }`}
               >
-                <div className="icon-wrapper">
+                <div className="icon-wrapper flex items-center justify-center">
                   <Image
                     src={item.icon}
-                    alt={item.label}
-                    width={22}
-                    height={22}
+                    alt={t(item.key)}
+                    width={24}
+                    height={24}
                     unoptimized
-                    className={`nav-icon ${active ? "active" : ""}`}
+                    className={`nav-icon transition-all duration-200 ${
+                      active ? "active-mobile-icon" : "opacity-60 hover:opacity-100"
+                    }`}
                   />
                 </div>
-                <span className="nav-label">
-                  {item.label}
-                </span>
               </Link>
             );
           })}

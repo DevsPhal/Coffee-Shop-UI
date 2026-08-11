@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { LanguageProvider } from "@/components/ui/translatetokhmer";
 import ScrollObserver from "@/components/common/ScrollObserver";
 import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
@@ -20,13 +21,16 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans">
         <AuthProvider>
           <CartProvider>
-            <ScrollObserver />
-            {children}
-            <Toaster />
+            <LanguageProvider>
+              <ScrollObserver />
+              {children}
+              <Toaster />
+            </LanguageProvider>
           </CartProvider>
         </AuthProvider>
       </body>
     </html>
   );
 }
+
 
