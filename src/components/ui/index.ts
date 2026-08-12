@@ -8,4 +8,6 @@ export * from "./toast";
 export * from "./toast-types";
 export * from "./modal";
 export * from "./tooltip-alert";
+export * from "./translatetokhmer";
+
 
