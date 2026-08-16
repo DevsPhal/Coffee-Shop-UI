@@ -7,47 +7,52 @@ import { useCart } from "@/context/CartContext";
 import "@/app/globals.scss";
 
 export function CartDrawer() {
-  const { isOpen, closeCart, items, updateQuantity, clearCart, subtotal } = useCart();
-
-  const handleClearAndDeleteAll = () => {
-    clearCart();
-    closeCart();
-  };
+  const { isOpen, closeCart, items, updateQuantity, subtotal } = useCart();
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeCart();
+      }
+    };
+
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
     } else {
       document.body.style.overflow = "unset";
     }
+
     return () => {
       document.body.style.overflow = "unset";
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, closeCart]);
 
   if (!isOpen) return null;
 
   return (
     <div className="cart_drawer_wrapper">
-      {/* Backdrop overlay */}
+      {/* Backdrop overlay - clicking closes the cart and returns to page */}
       <div
         className="cart_drawer_backdrop"
         onClick={closeCart}
         aria-hidden="true"
       />
 
-      {/* Drawer Panel */}
-      <div className="cart_drawer_panel_container">
-        <div className="cart_drawer_panel">
+      {/* Drawer Panel Container - clicking padding closes cart */}
+      <div className="cart_drawer_panel_container" onClick={closeCart}>
+        {/* Drawer Panel - prevent clicks inside from closing */}
+        <div className="cart_drawer_panel" onClick={(e) => e.stopPropagation()}>
           {/* Header */}
           <div className="cart_drawer_header">
             <h2 className="cart_drawer_title">Shopping Cart</h2>
             <button
               type="button"
-              onClick={handleClearAndDeleteAll}
+              onClick={closeCart}
               className="cart_drawer_close_btn"
-              aria-label="Clear cart and close"
-              title="Delete all data and close"
+              aria-label="Close cart"
+              title="Close cart"
             >
               <svg
                 width="20"

@@ -6,19 +6,51 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import "@/app/globals.scss";
 
+import { forgotPasswordSchema } from "@/lib/authSchema";
+import { TooltipAlert } from "@/components/ui/tooltip-alert";
+import { toast } from "@/components/ui/toast";
+
 interface ForgotProps {
   onBackToLogin: () => void;
 }
 
 export function Forgot({ onBackToLogin }: ForgotProps) {
   const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | undefined>(undefined);
   const [submitted, setSubmitted] = useState(false);
+
+  const validateField = (val: string) => {
+    if (!val.trim()) {
+      setError(undefined);
+      return;
+    }
+    const result = forgotPasswordSchema.safeParse({ email: val.trim() });
+    if (!result.success) {
+      setError(result.error.issues[0]?.message);
+    } else {
+      setError(undefined);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      setSubmitted(true);
+    const result = forgotPasswordSchema.safeParse({ email: email.trim() });
+    if (!result.success) {
+      const errMsg = result.error.issues[0]?.message || "Please enter a valid email address.";
+      setError(errMsg);
+      toast.add({
+        type: "warning",
+        description: errMsg,
+      });
+      return;
     }
+
+    setError(undefined);
+    setSubmitted(true);
+    toast.add({
+      type: "success",
+      description: `Reset link sent to ${email.trim()}! Check your inbox.`,
+    });
   };
 
   return (
@@ -67,13 +99,20 @@ export function Forgot({ onBackToLogin }: ForgotProps) {
               </span>
               <Input
                 type="email"
-                required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onFocus={() => {
+                  if (email.trim()) validateField(email);
+                }}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setEmail(val);
+                  validateField(val);
+                }}
                 placeholder="enter your email address"
                 className="login_input_field"
               />
             </div>
+            {error && <TooltipAlert message={error} />}
             <p className="login_input_helper">
               Please enter your registered email address
             </p>

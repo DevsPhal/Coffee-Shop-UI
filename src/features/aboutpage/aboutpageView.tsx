@@ -99,11 +99,12 @@ export function AboutpageView() {
 
     {/* Bento Gallery Grid Section */}
     <div className="bento-grid">
-      {ABOUT_ITEMS.map((item) => (
+      {ABOUT_ITEMS.map((item, index) => (
         <div
           key={item.id}
           onClick={() => setSelectedItem(item)}
           className={`about-card ${item.colSpan || "span-col-1"}`}
+          style={{ "--item-index": index } as React.CSSProperties}
         >
           {/* Image */}
           <Image

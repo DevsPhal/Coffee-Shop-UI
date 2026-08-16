@@ -14,19 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 
-// Zod Schema for User Login Form Validation
-const userLoginSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(1, { message: "Please enter your username." })
-    .min(3, { message: "Username must be at least 3 characters." }),
-  password: z
-    .string()
-    .trim()
-    .min(1, { message: "Please enter your password." })
-    .min(3, { message: "Password must be at least 3 characters." }),
-});
+import { userLoginSchema } from "@/lib/authSchema";
 
 type FormErrors = {
   username?: string;
@@ -35,31 +23,32 @@ type FormErrors = {
 
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 
-export function LoginPageView() {
+interface LoginPageViewProps {
+  initialViewMode?: "login" | "forgot" | "create";
+}
+
+export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps = {}) {
   const router = useRouter();
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [keepLoggedIn, setKeepLoggedIn] = useState(true);
-  const [viewMode, setViewMode] = useState<"login" | "forgot" | "create">("login");
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
+  const [viewMode, setViewMode] = useState<"login" | "forgot" | "create">(initialViewMode);
 
-  // Zod Validation Errors & Focused Input State (Starts empty so no false alerts when typing)
+  // Zod Validation Errors & Focused Input State
   const [errors, setErrors] = useState<FormErrors>({});
   const [activeInput, setActiveInput] = useState<keyof FormErrors | null>(null);
 
-  // Validate fields dynamically using Zod & min 3 characters check
+  // Validate fields dynamically using Zod schema
   const validateField = (field: keyof FormErrors, value: string) => {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) {
+    const fieldSchema = userLoginSchema.shape[field];
+    const result = fieldSchema.safeParse(value);
+
+    if (!result.success) {
       setErrors((prev) => ({
         ...prev,
-        [field]: field === "username" ? "Please enter your username." : "Please enter your password.",
-      }));
-    } else if (trimmed.length < 3) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: field === "username" ? "Username must be at least 3 characters." : "Password must be at least 3 characters.",
+        [field]: result.error.issues[0]?.message,
       }));
     } else {
       setErrors((prev) => ({
@@ -72,32 +61,33 @@ export function LoginPageView() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const uTrim = username.trim();
-    const pTrim = password.trim();
+    // Full form validation using Zod Schema
+    const validationResult = userLoginSchema.safeParse({ username, password });
 
-    let uErr: string | undefined = undefined;
-    let pErr: string | undefined = undefined;
-
-    if (uTrim.length === 0) uErr = "Please enter your username.";
-    else if (uTrim.length < 3) uErr = "Username must be at least 3 characters.";
-
-    if (pTrim.length === 0) pErr = "Please enter your password.";
-    else if (pTrim.length < 3) pErr = "Password must be at least 3 characters.";
-
-    if (uErr || pErr) {
-      setErrors({ username: uErr, password: pErr });
-      if (uErr) setActiveInput("username");
-      else if (pErr) setActiveInput("password");
+    if (!validationResult.success) {
+      const fieldErrors = validationResult.error.flatten().fieldErrors;
+      const newErrors: FormErrors = {
+        username: fieldErrors.username?.[0],
+        password: fieldErrors.password?.[0],
+      };
+      setErrors(newErrors);
+      if (newErrors.username) setActiveInput("username");
+      else if (newErrors.password) setActiveInput("password");
 
       toast.add({
-        type: "error",
-        description: uErr || pErr || "Please fix validation errors.",
+        type: "warning",
+        description: newErrors.username || newErrors.password || "Please fix validation errors.",
       });
       return;
     }
 
     setErrors({});
-    login();
+    const res = login({ identifier: username.trim(), password: password.trim(), keepLoggedIn });
+    if (!res.success) {
+      setErrors({ username: res.message || "Account not found. Please sign up first." });
+      setActiveInput("username");
+      return;
+    }
     router.push("/");
   };
 
@@ -183,7 +173,7 @@ export function LoginPageView() {
                       value={username}
                       onFocus={() => {
                         setActiveInput("username");
-                        validateField("username", username);
+                        if (username.trim()) validateField("username", username);
                       }}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -195,8 +185,8 @@ export function LoginPageView() {
                     />
                   </div>
 
-                  {/* Tooltip Alert Speech-Bubble (Only shows if empty error exists and field is focused/submitted) */}
-                  {activeInput === "username" && errors.username && (
+                  {/* Zod Error Tooltip Alert */}
+                  {errors.username && (
                     <TooltipAlert message={errors.username} />
                   )}
                 </div>
@@ -212,7 +202,7 @@ export function LoginPageView() {
                       value={password}
                       onFocus={() => {
                         setActiveInput("password");
-                        validateField("password", password);
+                        if (password.trim()) validateField("password", password);
                       }}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -235,8 +225,8 @@ export function LoginPageView() {
                     </button>
                   </div>
 
-                  {/* Tooltip Alert Speech-Bubble */}
-                  {activeInput === "password" && errors.password && (
+                  {/* Zod Error Tooltip Alert */}
+                  {errors.password && (
                     <TooltipAlert message={errors.password} />
                   )}
                 </div>

@@ -2,25 +2,17 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Mail, Eye, EyeOff, UserPlus, Phone } from "lucide-react";
-import { z } from "zod";
+import { User, Mail, Eye, EyeOff, UserPlus, Phone, ShieldCheck, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import "@/app/globals.scss";
 
-const createSchema = z.object({
-  username: z.string().trim().min(1, { message: "Please enter your username." }),
-  email: z
-    .string()
-    .trim()
-    .min(1, { message: "Please enter your email." })
-    .email({ message: "Please enter a valid email address." }),
-  phone: z.string().trim().min(1, { message: "Please enter your phone number." }),
-  password: z.string().trim().min(1, { message: "Please enter a password." }),
-});
+import { signUpSchema, adminSignUpSchema } from "@/lib/authSchema";
+import { TooltipAlert } from "@/components/ui/tooltip-alert";
 
 type FormErrors = {
+  role?: string;
   username?: string;
   email?: string;
   phone?: string;
@@ -29,13 +21,14 @@ type FormErrors = {
 
 interface CreateProps {
   onBackToLogin: () => void;
+  isAdmin?: boolean;
+  defaultRole?: string;
 }
 
-import { TooltipAlert } from "@/components/ui/tooltip-alert";
-
-export function Create({ onBackToLogin }: CreateProps) {
+export function Create({ onBackToLogin, isAdmin = false, defaultRole = "Admin" }: CreateProps) {
   const router = useRouter();
   const { signup } = useAuth();
+  const [role, setRole] = useState(defaultRole);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -44,31 +37,23 @@ export function Create({ onBackToLogin }: CreateProps) {
 
   // Zod Errors & Active Focused Input
   const [errors, setErrors] = useState<FormErrors>({});
-  const [activeInput, setActiveInput] = useState<keyof FormErrors | null>(null);
+  const [, setActiveInput] = useState<keyof FormErrors | null>(null);
 
   const validateField = (field: keyof FormErrors, value: string) => {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) {
-      const emptyMessages: Record<keyof FormErrors, string> = {
-        username: "Please enter your username.",
-        email: "Please enter your email.",
-        phone: "Please enter your phone number.",
-        password: "Please enter your password.",
-      };
+    if (!value.trim()) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+      return;
+    }
+    const schemaToUse = isAdmin ? adminSignUpSchema : signUpSchema;
+    // @ts-ignore dynamic field access
+    const fieldSchema = schemaToUse.shape[field];
+    if (!fieldSchema) return;
+    const result = fieldSchema.safeParse(value);
+
+    if (!result.success) {
       setErrors((prev) => ({
         ...prev,
-        [field]: emptyMessages[field],
-      }));
-    } else if (field !== "email" && trimmed.length < 3) {
-      const minMessages: Record<keyof FormErrors, string> = {
-        username: "Username must be at least 3 characters.",
-        email: "Please enter a valid email address.",
-        phone: "Phone number must be at least 3 characters.",
-        password: "Password must be at least 3 characters.",
-      };
-      setErrors((prev) => ({
-        ...prev,
-        [field]: minMessages[field],
+        [field]: result.error.issues[0]?.message,
       }));
     } else {
       setErrors((prev) => ({
@@ -82,18 +67,25 @@ export function Create({ onBackToLogin }: CreateProps) {
     e.preventDefault();
 
     // Validate with Zod
-    const validationResult = createSchema.safeParse({ username, email, phone, password });
+    const schemaToUse = isAdmin ? adminSignUpSchema : signUpSchema;
+    const formData = isAdmin
+      ? { role, username, email, phone, password }
+      : { username, email, phone, password };
+
+    const validationResult = schemaToUse.safeParse(formData);
 
     if (!validationResult.success) {
       const fieldErrors = validationResult.error.flatten().fieldErrors;
       const newErrors: FormErrors = {
+        role: fieldErrors.role?.[0],
         username: fieldErrors.username?.[0],
         email: fieldErrors.email?.[0],
         phone: fieldErrors.phone?.[0],
         password: fieldErrors.password?.[0],
       };
       setErrors(newErrors);
-      if (newErrors.username) setActiveInput("username");
+      if (newErrors.role) setActiveInput("role");
+      else if (newErrors.username) setActiveInput("username");
       else if (newErrors.email) setActiveInput("email");
       else if (newErrors.phone) setActiveInput("phone");
       else if (newErrors.password) setActiveInput("password");
@@ -103,16 +95,22 @@ export function Create({ onBackToLogin }: CreateProps) {
     setErrors({});
 
     // Register user in AuthContext & save profile data
-    signup({
+    const res = signup({
       name: username,
       email: email,
       phone: phone,
+      password: password,
     });
+
+    if (!res.success) {
+      setErrors({ username: res.message });
+      setActiveInput("username");
+      return;
+    }
 
     // Navigate to user profile page
     router.push("/userprofile");
   };
-
 
   return (
     <div className="w-full space-y-4">
@@ -122,162 +120,192 @@ export function Create({ onBackToLogin }: CreateProps) {
         </div>
       </div>
       <h1 className="login_title">
-        Create an account
+        {isAdmin ? "Create an admin account" : "Create an account"}
       </h1>
       <p className="login_subtitle">
         Enter your details below to create your account
       </p>
 
       <form onSubmit={handleSubmit} className="w-full space-y-3" noValidate>
-
+        {/* Optional Role Selection for Admin Sign Up */}
+        {isAdmin && (
           <div>
             <label className="login_input_label">
-              Username
+              Role
             </label>
             <div className="relative flex items-center">
               <span className="absolute left-3 text-gray-400 pointer-events-none">
-                <User className="w-4 h-4" />
+                <ShieldCheck className="w-4 h-4 text-gray-400" />
               </span>
-              <Input
-                type="text"
-                value={username}
+              <select
+                value={role}
                 onFocus={() => {
-                  setActiveInput("username");
-                  if (!username.trim()) {
-                    setErrors((prev) => ({ ...prev, username: "Please enter your username." }));
-                  }
+                  setActiveInput("role");
+                  if (!role) validateField("role", role);
                 }}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setUsername(val);
-                  validateField("username", val);
+                  setRole(val);
+                  validateField("role", val);
                 }}
-                placeholder="enter your username"
-                className="login_input_field"
-              />
-            </div>
-            {activeInput === "username" && errors.username && (
-              <TooltipAlert message={errors.username} />
-            )}
-          </div>
-          <div>
-            <label className="login_input_label">
-              Email
-            </label>
-            <div className="relative flex items-center">
-              <span className="absolute left-3 text-gray-400 pointer-events-none">
-                <Mail className="w-4 h-4" />
-              </span>
-              <Input
-                type="email"
-                value={email}
-                onFocus={() => {
-                  setActiveInput("email");
-                  if (!email.trim()) {
-                    setErrors((prev) => ({ ...prev, email: "Please enter your email." }));
-                  }
-                }}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setEmail(val);
-                  validateField("email", val);
-                }}
-                placeholder="enter your email address"
-                className="login_input_field"
-              />
-            </div>
-            {activeInput === "email" && errors.email && (
-              <TooltipAlert message={errors.email} />
-            )}
-          </div>
-          <div>
-            <label className="login_input_label">
-              Phone Number
-            </label>
-            <div className="relative flex items-center">
-              <span className="absolute left-3 text-gray-400 pointer-events-none">
-                <Phone className="w-4 h-4" />
-              </span>
-              <Input
-                type="tel"
-                value={phone}
-                onFocus={() => {
-                  setActiveInput("phone");
-                  if (!phone.trim()) {
-                    setErrors((prev) => ({ ...prev, phone: "Please enter your phone number." }));
-                  }
-                }}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setPhone(val);
-                  validateField("phone", val);
-                }}
-                placeholder="enter your phone number"
-                className="login_input_field"
-              />
-            </div>
-            {activeInput === "phone" && errors.phone && (
-              <TooltipAlert message={errors.phone} />
-            )}
-          </div>
-          <div>
-            <label className="login_input_label">
-              Password
-            </label>
-            <div className="relative flex items-center">
-              <Input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onFocus={() => {
-                  setActiveInput("password");
-                  if (!password.trim()) {
-                    setErrors((prev) => ({ ...prev, password: "Please enter your password." }));
-                  }
-                }}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setPassword(val);
-                  validateField("password", val);
-                }}
-                placeholder="create a strong password"
-                className="login_input_field_pass"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                className="login_select_field"
               >
-                {showPassword ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
+                <option value="" disabled hidden>
+                  enter your role
+                </option>
+                <option value="Admin">Admin</option>
+                <option value="Barista">Barista</option>
+              </select>
+              <span className="absolute right-3 text-gray-400 pointer-events-none">
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </span>
             </div>
-            {activeInput === "password" && errors.password && (
-              <TooltipAlert message={errors.password} />
+            {errors.role && (
+              <TooltipAlert message={errors.role} />
             )}
           </div>
-          <Button
-            type="submit"
-            className="login_submit_button mt-2"
-          >
-            Sign Up
-          </Button>
-          <div className="text-center pt-1">
-            <span className="text-xs text-gray-600">
-              Already have an account?
+        )}
+
+        <div>
+          <label className="login_input_label">
+            Username
+          </label>
+          <div className="relative flex items-center">
+            <span className="absolute left-3 text-gray-400 pointer-events-none">
+              <User className="w-4 h-4 text-gray-400" />
             </span>
-            &nbsp;
+            <Input
+              type="text"
+              value={username}
+              onFocus={() => {
+                setActiveInput("username");
+                if (username.trim()) validateField("username", username);
+              }}
+              onChange={(e) => {
+                const val = e.target.value;
+                setUsername(val);
+                validateField("username", val);
+              }}
+              placeholder="enter your username"
+              className="login_input_field"
+            />
+          </div>
+          {errors.username && (
+            <TooltipAlert message={errors.username} />
+          )}
+        </div>
+        <div>
+          <label className="login_input_label">
+            Email
+          </label>
+          <div className="relative flex items-center">
+            <span className="absolute left-3 text-gray-400 pointer-events-none">
+              <Mail className="w-4 h-4 text-gray-400" />
+            </span>
+            <Input
+              type="email"
+              value={email}
+              onFocus={() => {
+                setActiveInput("email");
+                if (email.trim()) validateField("email", email);
+              }}
+              onChange={(e) => {
+                const val = e.target.value;
+                setEmail(val);
+                validateField("email", val);
+              }}
+              placeholder="enter your email address"
+              className="login_input_field"
+            />
+          </div>
+          {errors.email && (
+            <TooltipAlert message={errors.email} />
+          )}
+        </div>
+        <div>
+          <label className="login_input_label">
+            Phone Number
+          </label>
+          <div className="relative flex items-center">
+            <span className="absolute left-3 text-gray-400 pointer-events-none">
+              <Phone className="w-4 h-4 text-gray-400" />
+            </span>
+            <Input
+              type="tel"
+              value={phone}
+              onFocus={() => {
+                setActiveInput("phone");
+                if (phone.trim()) validateField("phone", phone);
+              }}
+              onChange={(e) => {
+                const val = e.target.value;
+                setPhone(val);
+                validateField("phone", val);
+              }}
+              placeholder="enter your phone number"
+              className="login_input_field"
+            />
+          </div>
+          {errors.phone && (
+            <TooltipAlert message={errors.phone} />
+          )}
+        </div>
+        <div>
+          <label className="login_input_label">
+            Password
+          </label>
+          <div className="relative flex items-center">
+            <Input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onFocus={() => {
+                setActiveInput("password");
+                if (password.trim()) validateField("password", password);
+              }}
+              onChange={(e) => {
+                const val = e.target.value;
+                setPassword(val);
+                validateField("password", val);
+              }}
+              placeholder="create a strong password"
+              className="login_input_field_pass"
+            />
             <button
               type="button"
-              onClick={onBackToLogin}
-              className="login_forgot_link cursor-pointer border-none bg-transparent"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer border-none bg-transparent"
             >
-              Log in
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
             </button>
           </div>
-        </form>
+          {errors.password && (
+            <TooltipAlert message={errors.password} />
+          )}
+        </div>
+        <Button
+          type="submit"
+          className="login_submit_button mt-2"
+        >
+          Sign Up
+        </Button>
+        <div className="text-center pt-1">
+          <span className="text-xs text-gray-600 font-medium">
+            Already have an account?
+          </span>
+          &nbsp;
+          <button
+            type="button"
+            onClick={onBackToLogin}
+            className="login_forgot_link cursor-pointer border-none bg-transparent"
+          >
+            Log in
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
