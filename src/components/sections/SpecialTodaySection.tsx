@@ -11,10 +11,13 @@ export interface SpecialTodaySectionProps {
 }
 
 // Special discount prices mapping for Special Today section ONLY
-const SPECIAL_TODAY_DISCOUNTS: Record<string, { price: number; originalPrice: number }> = {
-  "1": { price: 1.50, originalPrice: 2.00 }, // ESPRESSO
-  "2": { price: 1.75, originalPrice: 2.25 }, // Ice Amacano
-  "3": { price: 2.00, originalPrice: 2.50 }, // Ice Latte
+const SPECIAL_TODAY_DISCOUNTS: Record<
+  string,
+  { price: number; originalPrice: number; promoEndDate?: string; promoDaysLeft?: string }
+> = {
+  "1": { price: 1.50, originalPrice: 2.00, promoEndDate: "2026-08-17", promoDaysLeft: "2 days left" }, // 2 days left -> RED (< 5 days)
+  "2": { price: 1.75, originalPrice: 2.25, promoEndDate: "2026-08-22", promoDaysLeft: "7 days left" }, // 7 days left -> YELLOW (5-10 days)
+  "3": { price: 2.00, originalPrice: 2.50, promoEndDate: "2026-08-29", promoDaysLeft: "14 days left" }, // 14 days left -> GREEN (> 10 days)
 };
 
 export function SpecialTodaySection({
@@ -42,6 +45,8 @@ export function SpecialTodaySection({
           const discountInfo = SPECIAL_TODAY_DISCOUNTS[item.id];
           const displayPrice = discountInfo ? discountInfo.price : item.price;
           const displayOriginalPrice = discountInfo ? discountInfo.originalPrice : undefined;
+          const promoEndDate = discountInfo?.promoEndDate || item.promoEndDate;
+          const promoDaysLeft = discountInfo?.promoDaysLeft || item.promoDaysLeft;
 
           return (
             <Card
@@ -50,6 +55,8 @@ export function SpecialTodaySection({
               title={item.title}
               price={displayPrice}
               originalPrice={displayOriginalPrice}
+              promoEndDate={promoEndDate}
+              promoDaysLeft={promoDaysLeft}
               image={item.image}
             />
           );

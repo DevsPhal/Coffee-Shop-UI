@@ -3,6 +3,8 @@ export interface Product {
   title: string;
   price: number;
   originalPrice?: number;
+  promoEndDate?: string;
+  promoDaysLeft?: string;
   image?: string | null;
   description: string;
   category: string;
@@ -21,7 +23,7 @@ export const PRODUCTS: Product[] = [
   {
     id: "2",
     title: "Amacano",
-    price: 1.75,
+    price: 2.25,
     image: "/images/americano.jpg",
     description: "Smooth espresso diluted with chilled filtered water and poured over crisp ice cubes for a clean, refreshing coffee experience.",
     category: "Hot",
@@ -29,7 +31,7 @@ export const PRODUCTS: Product[] = [
   {
     id: "3",
     title: "Ice Latte",
-    price: 2.00,
+    price: 2.50,
     image: "/images/iced_latte.jpg",
     description: "Perfect harmony of rich espresso and cold, velvety fresh milk, served over ice for a creamy and delightful flavor.",
     category: "Iced",
@@ -91,6 +93,28 @@ export const PRODUCTS: Product[] = [
     category: "Beer",
   },
 ];
+
+export const DEFAULT_IMAGES: Record<string, string> = {
+  "1": "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&w=400&q=80",
+  "2": "/images/americano.jpg",
+  "3": "/images/iced_latte.jpg",
+  "4": "/images/coca.jpg",
+  "5": "/images/indomie.jpg",
+  "6": "/images/passion.jpg",
+  "7": "/images/black_coffee.jpg",
+  "8": "/images/cappucino.jpg",
+  "9": "/images/cappucino_frappee.jpg",
+  "10": "/images/cambodia_beer.jpg",
+};
+
+export const GENERIC_COFFEE_IMG =
+  "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=400&q=80";
+
+export function getResolvedProductImage(id?: string, image?: string | null): string {
+  if (image && image.trim() !== "") return image;
+  if (id && DEFAULT_IMAGES[id]) return DEFAULT_IMAGES[id];
+  return GENERIC_COFFEE_IMG;
+}
 
 export function getProductByIdOrTitle(id?: string, title?: string): Product | undefined {
   if (id) {

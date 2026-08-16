@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import "@/app/globals.scss";
@@ -24,6 +24,19 @@ export function ReadyToOrderSection({
   secondaryBtnHref = "/about",
   className = "",
 }: ReadyToOrderSectionProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const targetPrimaryHref = isMobile && primaryBtnHref === "/menu" ? "/menuphone" : primaryBtnHref;
+
   return (
     <section className={`ready_to_order_section ${className}`}>
       {/* Heading */}
@@ -39,7 +52,7 @@ export function ReadyToOrderSection({
       {/* Action Buttons */}
       <div className="ready_to_order_actions">
         {/* Primary Button */}
-        <Link href={primaryBtnHref}>
+        <Link href={targetPrimaryHref}>
           <Button className="button_pill_primary">
             {primaryBtnText}
           </Button>

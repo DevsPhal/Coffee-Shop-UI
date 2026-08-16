@@ -6,7 +6,11 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
-import { getProductByIdOrTitle, PRODUCTS } from "@/data/products";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "@/components/ui/toast";
+import { getProductByIdOrTitle, PRODUCTS, getResolvedProductImage } from "@/data/products";
+import { Clock } from "lucide-react";
+import { calculatePromoTimeLeft } from "@/lib/promoValidation";
 import "@/app/globals.scss";
 
 export interface ProductpageViewProps {
@@ -14,6 +18,8 @@ export interface ProductpageViewProps {
   title?: string;
   price?: number;
   originalPrice?: number;
+  promoEndDate?: string | Date;
+  promoDaysLeft?: string;
   description?: string;
   category?: string;
   image?: string | null;
@@ -26,6 +32,8 @@ export function ProductpageView({
   title: propTitle,
   price: propPrice,
   originalPrice: propOriginalPrice,
+  promoEndDate: propPromoEndDate,
+  promoDaysLeft: propPromoDaysLeft,
   description: propDescription,
   category: propCategory,
   image: propImage,
@@ -35,6 +43,12 @@ export function ProductpageView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { addItem } = useCart();
+  const { isLoggedIn } = useAuth();
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Read search params as fallback if props aren't provided
   const queryId = searchParams.get("id") || undefined;
@@ -45,6 +59,8 @@ export function ProductpageView({
   const queryOriginalPrice = searchParams.get("originalPrice")
     ? parseFloat(searchParams.get("originalPrice")!)
     : undefined;
+  const queryPromoEndDate = searchParams.get("promoEndDate") || undefined;
+  const queryPromoDaysLeft = searchParams.get("promoDaysLeft") || undefined;
   const queryImage = searchParams.get("image") || undefined;
   const queryDescription = searchParams.get("description") || undefined;
   const queryCategory = searchParams.get("category") || undefined;
@@ -56,27 +72,44 @@ export function ProductpageView({
   const matchedProduct =
     getProductByIdOrTitle(effectiveId, effectiveTitle) || PRODUCTS[0];
 
+  const displayId = effectiveId || matchedProduct.id;
   const displayTitle = propTitle || queryTitle || matchedProduct.title;
   const displayPrice = propPrice ?? queryPrice ?? matchedProduct.price;
   const displayOriginalPrice =
     propOriginalPrice ?? queryOriginalPrice ?? matchedProduct.originalPrice;
+
+  const displayPromoEndDate = propPromoEndDate || queryPromoEndDate || matchedProduct.promoEndDate;
+  const displayPromoDaysLeft = propPromoDaysLeft || queryPromoDaysLeft || matchedProduct.promoDaysLeft;
 
   const discountPercent =
     displayOriginalPrice && displayOriginalPrice > displayPrice
       ? Math.round(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100)
       : 0;
 
+  // Zod Date Validation & Countdown Calculation
+  const promoResult = calculatePromoTimeLeft(displayPromoEndDate, displayPromoDaysLeft);
+  const isPromotion =
+    (discountPercent > 0 || (displayOriginalPrice !== undefined && displayOriginalPrice > displayPrice)) &&
+    promoResult.isValid;
+
   const displayDescription =
     propDescription || queryDescription || matchedProduct.description;
   const displayCategory =
     propCategory || queryCategory || matchedProduct.category || "Coffee";
-  const displayImage =
-    propImage !== undefined
-      ? propImage
-      : queryImage || matchedProduct.image || null;
-  const displayId = effectiveId || matchedProduct.id;
+  const displayImage = getResolvedProductImage(
+    displayId,
+    propImage !== undefined ? propImage : queryImage || matchedProduct.image
+  );
 
   const handleAddToCart = () => {
+    if (!isLoggedIn) {
+      toast.add({
+        type: "warning",
+        description: "Please log in to your account first.",
+      });
+      router.push("/login");
+      return;
+    }
     if (onAddToCart) {
       onAddToCart();
     } else {
@@ -90,6 +123,14 @@ export function ProductpageView({
   };
 
   const handleBuyNow = () => {
+    if (!isLoggedIn) {
+      toast.add({
+        type: "warning",
+        description: "Please log in to your account first.",
+      });
+      router.push("/login");
+      return;
+    }
     if (onBuyNow) {
       onBuyNow();
     } else {
@@ -107,7 +148,7 @@ export function ProductpageView({
   };
 
   return (
-    <div className="product_detail_container font-sans">
+    <div className="product_detail_container font-sans" suppressHydrationWarning>
       {/* Header & Breadcrumb Section */}
       <div className="product_detail_header block mb-6" style={{ display: "block" }}>
         <h1 className="product_detail_title">Product Detail</h1>
@@ -138,6 +179,7 @@ export function ProductpageView({
               src={displayImage}
               alt={displayTitle}
               fill
+              unoptimized
               className="object-cover"
               loading="eager"
             />
@@ -152,6 +194,17 @@ export function ProductpageView({
             <span className="product_discount_badge">
               -{discountPercent}% OFF
             </span>
+          )}
+
+          {/* Promo Clock Badge on Product Image Top Right */}
+          {isPromotion && (
+            <div
+              className={`promo_clock_badge promo_clock_detail_badge promo_clock_${promoResult.status}`}
+              title={`Promotion ends in ${promoResult.displayText}`}
+            >
+              <Clock className="w-4 h-4 shrink-0" />
+              <span className="promo_clock_text">{promoResult.displayText}</span>
+            </div>
           )}
         </div>
 

@@ -1,18 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import { User, Mail, Phone, MessageSquare, Send, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TooltipAlert } from "@/components/ui/tooltip-alert";
+import { useContactStore } from "@/store/useContactStore";
+import { useAuth } from "@/context/AuthContext";
 import "@/app/globals.scss";
-
-interface FormData {
-  name: string;
-  email: string;
-  phone: string;
-  subject: string;
-  message: string;
-}
 
 const SUBJECT_OPTIONS = [
   "General Inquiry",
@@ -23,65 +18,43 @@ const SUBJECT_OPTIONS = [
 ];
 
 export function ContactForm() {
-  const [formData, setFormData] = useState<FormData>({
-    name: "",
-    email: "",
-    phone: "",
-    subject: "General Inquiry",
-    message: "",
-  });
+  const { user, updateUser } = useAuth();
+  const {
+    formData,
+    isSubmitting,
+    isSubmitted,
+    errors,
+    setField,
+    setTopic,
+    prefillUser,
+    validateField,
+    resetForm,
+    submitMessage,
+  } = useContactStore();
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (user) {
+      prefillUser(user);
+    }
+  }, [user, prefillUser]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (error) setError(null);
+    const fieldKey = name as keyof typeof formData;
+    setField(fieldKey, value);
+    validateField(fieldKey, value);
   };
 
-  const handleSubjectSelect = (subject: string) => {
-    setFormData((prev) => ({ ...prev, subject }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.name.trim()) {
-      setError("Please enter your full name.");
-      return;
+    if (user && updateUser) {
+      updateUser({
+        name: formData.fullName ? formData.fullName : user.name,
+        email: formData.email ? formData.email : user.email,
+        phone: formData.phone ? formData.phone : user.phone,
+      });
     }
-    if (!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-    if (!formData.message.trim()) {
-      setError("Please enter your message.");
-      return;
-    }
-
-    setError(null);
-    setIsSubmitting(true);
-
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setIsSubmitted(true);
-    }, 1000);
-  };
-
-  const handleReset = () => {
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      subject: "General Inquiry",
-      message: "",
-    });
-    setIsSubmitted(false);
-    setError(null);
+    await submitMessage(user);
   };
 
   if (isSubmitted) {
@@ -93,12 +66,12 @@ export function ContactForm() {
         <div>
           <h3 className="contact_form_success_title">Message Sent!</h3>
           <p className="contact_form_success_desc">
-            Thank you, <strong>{formData.name}</strong>. We've received your message regarding <span>"{formData.subject}"</span> and will respond to <u>{formData.email}</u> shortly.
+            Thank you, <strong suppressHydrationWarning>{formData.fullName}</strong>. We've received your message regarding <span suppressHydrationWarning>"{formData.topic}"</span> and will respond to <u suppressHydrationWarning>{formData.email}</u> shortly.
           </p>
         </div>
         <div className="contact_form_submit_wrapper">
           <Button
-            onClick={handleReset}
+            onClick={resetForm}
             className="button_pill_primary cursor-pointer"
           >
             Send Another Message
@@ -111,23 +84,24 @@ export function ContactForm() {
   return (
     <div className="contact_page_form_card">
       <div className="contact_form_header">
+        {user && (
+          <div className="mb-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-[#A1255B] bg-[#fff1f2] border border-[#fecdd3] rounded-full" suppressHydrationWarning>
+              <User className="w-3.5 h-3.5" />
+              Connected with {user.name}
+            </span>
+          </div>
+        )}
         <h2 className="contact_form_title">Send Us a Message</h2>
         <p className="contact_form_subtitle">
           Have a question, catering request, or feedback? Fill out the form below and we'll get back to you!
         </p>
       </div>
 
-      {error && (
-        <div className="contact_form_alert_error">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
       <form onSubmit={handleSubmit} className="contact_form_stack">
-        {/* Name Input */}
+        {/* Full Name Input */}
         <div>
-          <label htmlFor="contact-name" className="contact_form_label">
+          <label htmlFor="contact-fullName" className="contact_form_label">
             Full Name <span className="contact_form_required">*</span>
           </label>
           <div className="contact_form_input_wrapper">
@@ -135,20 +109,22 @@ export function ContactForm() {
               <User className="w-4 h-4" />
             </div>
             <Input
-              id="contact-name"
+              id="contact-fullName"
               type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleInputChange}
               placeholder="e.g. Sok Sovann"
               className="contact_form_input"
+              aria-invalid={!!errors.fullName}
             />
           </div>
+          {errors.fullName && <TooltipAlert message={errors.fullName} />}
         </div>
 
         {/* Email & Phone Row */}
         <div className="contact_form_row">
-          {/* Email */}
+          {/* Email Address */}
           <div>
             <label htmlFor="contact-email" className="contact_form_label">
               Email Address <span className="contact_form_required">*</span>
@@ -162,14 +138,16 @@ export function ContactForm() {
                 type="email"
                 name="email"
                 value={formData.email}
-                onChange={handleChange}
+                onChange={handleInputChange}
                 placeholder="your.email@example.com"
                 className="contact_form_input"
+                aria-invalid={!!errors.email}
               />
             </div>
+            {errors.email && <TooltipAlert message={errors.email} />}
           </div>
 
-          {/* Phone */}
+          {/* Phone / Telegram */}
           <div>
             <label htmlFor="contact-phone" className="contact_form_label">
               Phone / Telegram <span className="contact_form_optional">(Optional)</span>
@@ -182,28 +160,30 @@ export function ContactForm() {
                 id="contact-phone"
                 type="tel"
                 name="phone"
-                value={formData.phone}
-                onChange={handleChange}
+                value={formData.phone || ""}
+                onChange={handleInputChange}
                 placeholder="095 600 676"
                 className="contact_form_input"
+                aria-invalid={!!errors.phone}
               />
             </div>
+            {errors.phone && <TooltipAlert message={errors.phone} />}
           </div>
         </div>
 
-        {/* Topic / Subject Pills */}
+        {/* Select Topic Pills */}
         <div>
           <label className="contact_form_label">
             Select Topic
           </label>
           <div className="contact_form_topic_list">
             {SUBJECT_OPTIONS.map((sub) => {
-              const active = formData.subject === sub;
+              const active = formData.topic === sub;
               return (
                 <button
                   key={sub}
                   type="button"
-                  onClick={() => handleSubjectSelect(sub)}
+                  onClick={() => setTopic(sub)}
                   className={`contact_form_topic_btn ${active ? "active" : ""}`}
                 >
                   {sub}
@@ -211,6 +191,7 @@ export function ContactForm() {
               );
             })}
           </div>
+          {errors.topic && <TooltipAlert message={errors.topic} />}
         </div>
 
         {/* Message Input */}
@@ -227,11 +208,13 @@ export function ContactForm() {
               name="message"
               rows={3}
               value={formData.message}
-              onChange={handleChange}
+              onChange={handleInputChange}
               placeholder="Tell us what you're looking for or share your thoughts..."
               className="contact_form_textarea"
+              aria-invalid={!!errors.message}
             />
           </div>
+          {errors.message && <TooltipAlert message={errors.message} />}
         </div>
 
         {/* Submit Button */}

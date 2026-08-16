@@ -24,6 +24,10 @@ export function Footer() {
   const pathname = usePathname();
   const { t } = useLanguage();
 
+  if (pathname === "/payment" || pathname?.startsWith("/payment")) {
+    return null;
+  }
+
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
@@ -112,7 +116,7 @@ export function Footer() {
         </div>
 
         <div className="footer_bottom_row">
-          <p className="footer_copyright_text">{t("copyright-© 2026 590stcafe.shop")}</p>
+          <p className="footer_copyright_text" suppressHydrationWarning>{t("copyright-© 2026 590stcafe.shop")}</p>
 
           <div className="footer_social_links">
             {socialLinks.map(({ label, href, icon }) => (

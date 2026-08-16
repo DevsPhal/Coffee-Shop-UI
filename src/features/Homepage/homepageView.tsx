@@ -40,6 +40,8 @@ export function HomepageView() {
               id={item.id}
               title={item.title}
               price={item.price}
+              originalPrice={item.originalPrice}
+              promoDaysLeft={item.promoDaysLeft}
               image={item.image}
             />
           ))}

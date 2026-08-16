@@ -112,6 +112,8 @@ export function MenupageView() {
               title={item.title}
               price={item.price}
               originalPrice={item.originalPrice}
+              promoEndDate={item.promoEndDate}
+              promoDaysLeft={item.promoDaysLeft}
               category={item.category}
               image={item.image}
             />

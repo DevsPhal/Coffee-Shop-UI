@@ -34,7 +34,7 @@ export function ContactpageView() {
   };
 
   return (
-    <div className="product_detail_container font-sans">
+    <div className="contact_page_container font-sans">
       {/* Header & Breadcrumbs matching Location & Product Detail style */}
       <div className="product_detail_header">
         <h1 className="product_detail_title">Contact Us</h1>

@@ -1,43 +1,155 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
 import { Modal, ModalContent } from "@/components/ui/modal";
+import { TooltipAlert } from "@/components/ui/tooltip-alert";
+import { shippingInformationSchema } from "@/lib/authSchema";
 import { AlertCircle } from "lucide-react";
 import "@/app/globals.scss";
 
 export function CheckoutpageView() {
   const router = useRouter();
   const { items, subtotal } = useCart();
+  const { user, updateUser } = useAuth();
+
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [capital, setCapital] = useState("Phnom Penh");
-  const [district, setDistrict] = useState("Songkat BKK1 - Khan Jomkar Mon");
+  const [district, setDistrict] = useState("Khan Boeng Keng Kang");
   const [zipCode, setZipCode] = useState("120000");
   const [address, setAddress] = useState("");
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "grab">("pickup");
   const [showCancelModal, setShowCancelModal] = useState(false);
 
+  const [errors, setErrors] = useState<{
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    capital?: string;
+    district?: string;
+    zipCode?: string;
+    address?: string;
+  }>({});
+
+  // Automatically pre-fill shipping fields from logged-in user profile
+  useEffect(() => {
+    if (user) {
+      if (user.name) setFullName((prev) => (prev ? prev : user.name));
+      if (user.email) setEmail((prev) => (prev ? prev : user.email));
+      if (user.phone) setPhone((prev) => (prev ? prev : user.phone));
+      if (user.capital) setCapital((prev) => (prev ? prev : user.capital));
+      if (user.district) setDistrict((prev) => (prev ? prev : user.district));
+      if (user.zipCode) setZipCode((prev) => (prev ? prev : user.zipCode));
+      if (user.address) setAddress((prev) => (prev ? prev : user.address));
+    }
+  }, [user]);
+
   const deliveryFee = deliveryMethod === "grab" ? 1.75 : 0.0;
   const grandTotal = subtotal + deliveryFee;
+
+  const validateSingleField = (
+    field: "fullName" | "email" | "phone" | "address" | "capital" | "district" | "zipCode",
+    val?: string
+  ) => {
+    const stringVal = (val || "").trim();
+    const res = shippingInformationSchema.shape[field].safeParse(stringVal);
+    if (!res.success) {
+      setErrors((prev) => ({ ...prev, [field]: res.error.issues[0]?.message }));
+    } else {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  };
 
   const handlePlaceOrderNow = (e: React.MouseEvent) => {
     e.preventDefault();
     if (items.length === 0) {
       toast.add({
-        type: "error",
+        type: "warning",
         description: "Your cart is empty! Please add items before placing order.",
-        priority: "high",
       });
       return;
     }
+
+    // Validate Shipping Information with Zod Schema
+    const validationResult = shippingInformationSchema.safeParse({
+      fullName: (fullName || "").trim(),
+      email: (email || "").trim(),
+      phone: (phone || "").trim(),
+      capital: (capital || "").trim(),
+      district: (district || "").trim(),
+      zipCode: (zipCode || "").trim(),
+      address: (address || "").trim(),
+    });
+
+    if (!validationResult.success) {
+      const fieldErrors = validationResult.error.flatten().fieldErrors;
+      const newErrors = {
+        fullName: fieldErrors.fullName?.[0],
+        email: fieldErrors.email?.[0],
+        phone: fieldErrors.phone?.[0],
+        capital: fieldErrors.capital?.[0],
+        district: fieldErrors.district?.[0],
+        zipCode: fieldErrors.zipCode?.[0],
+        address: fieldErrors.address?.[0],
+      };
+      setErrors(newErrors);
+
+      const firstErr =
+        newErrors.fullName ||
+        newErrors.email ||
+        newErrors.phone ||
+        newErrors.capital ||
+        newErrors.district ||
+        newErrors.zipCode ||
+        newErrors.address ||
+        "Please complete shipping information.";
+
+      toast.add({
+        type: "warning",
+        description: firstErr,
+      });
+      return;
+    }
+
+    setErrors({});
+
+    // Update & sync shipping information to user profile if user is logged in
+    if (user && updateUser) {
+      updateUser({
+        name: (fullName || "").trim() || user.name,
+        email: (email || "").trim() || user.email,
+        phone: (phone || "").trim() || user.phone,
+        capital: (capital || "").trim() || user.capital,
+        district: (district || "").trim() || user.district,
+        zipCode: (zipCode || "").trim() || user.zipCode,
+        address: (address || "").trim() || user.address,
+      });
+    }
+
+    try {
+      localStorage.setItem(
+        "checkout_delivery",
+        JSON.stringify({
+          method: deliveryMethod,
+          fee: deliveryFee,
+          customerName: (fullName || "").trim() || user?.name || "Guest",
+        })
+      );
+    } catch {}
     router.push("/payment");
   };
 
@@ -95,10 +207,14 @@ export function CheckoutpageView() {
                   <Input
                     type="text"
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    onChange={(e) => {
+                      setFullName(e.target.value);
+                      validateSingleField("fullName", e.target.value);
+                    }}
                     placeholder="Enter your Name"
                     className="checkout_input"
                   />
+                  {errors.fullName && <TooltipAlert message={errors.fullName} />}
                 </div>
 
                 <div>
@@ -106,10 +222,14 @@ export function CheckoutpageView() {
                   <Input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      validateSingleField("email", e.target.value);
+                    }}
                     placeholder="Enter your email"
                     className="checkout_input"
                   />
+                  {errors.email && <TooltipAlert message={errors.email} />}
                 </div>
               </div>
 
@@ -127,14 +247,18 @@ export function CheckoutpageView() {
                       />
                       <span className="checkout_phone_code">+855</span>
                     </div>
-                    <Input
+                    <input
                       type="tel"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => {
+                        setPhone(e.target.value);
+                        validateSingleField("phone", e.target.value);
+                      }}
                       placeholder="enter your phone number"
                       className="checkout_phone_field"
                     />
                   </div>
+                  {errors.phone && <TooltipAlert message={errors.phone} />}
                 </div>
 
                 <div>
@@ -143,33 +267,39 @@ export function CheckoutpageView() {
                     <select
                       value={capital}
                       onChange={(e) => setCapital(e.target.value)}
-                      className="checkout_select"
+                      disabled
+                      className="checkout_select checkout_input_disabled cursor-not-allowed opacity-75 bg-gray-50 pr-4"
                     >
                       <option value="Phnom Penh">Phnom Penh</option>
-                      <option value="Siem Reap">Siem Reap</option>
-                      <option value="Battambang">Battambang</option>
                     </select>
-                    <div className="checkout_select_icon">
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
                   </div>
+                  {errors.capital && <TooltipAlert message={errors.capital} />}
                 </div>
               </div>
 
               <div className="checkout_form_row">
                 <div>
-                  <label className="checkout_field_label">City or District</label>
-                  <div className="checkout_select_wrapper">
+                  <label className="checkout_field_label">District</label>
+                  <div className="checkout_select_wrapper min-w-0 w-full max-w-full overflow-hidden">
                     <select
                       value={district}
                       onChange={(e) => setDistrict(e.target.value)}
-                      className="checkout_select"
+                      className="checkout_select min-w-0 w-full max-w-full truncate"
                     >
-                      <option value="Songkat BKK1 - Khan Jomkar Mon">Songkat BKK1 - Khan Jomkar Mon</option>
-                      <option value="Sangkat Toul Kork">Sangkat Toul Kork</option>
-                      <option value="Sangkat Daun Penh">Sangkat Daun Penh</option>
+                      <option value="Khan Boeng Keng Kang">Khan Boeng Keng Kang</option>
+                      <option value="Khan Chamkar Mon">Khan Chamkar Mon</option>
+                      <option value="Khan Chbar Ampov">Khan Chbar Ampov</option>
+                      <option value="Khan Chroy Changvar">Khan Chroy Changvar</option>
+                      <option value="Khan Dangkao">Khan Dangkao</option>
+                      <option value="Khan Daun Penh">Khan Daun Penh</option>
+                      <option value="Khan Kambol">Khan Kambol</option>
+                      <option value="Khan Meanchey">Khan Meanchey</option>
+                      <option value="Khan Prampir Makara">Khan Prampir Makara</option>
+                      <option value="Khan Prek Pnov">Khan Prek Pnov</option>
+                      <option value="Khan Pur Senchey">Khan Pur Senchey</option>
+                      <option value="Khan Russei Keo">Khan Russei Keo</option>
+                      <option value="Khan Sen Sok">Khan Sen Sok</option>
+                      <option value="Khan Tuol Kouk">Khan Tuol Kouk</option>
                     </select>
                     <div className="checkout_select_icon">
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -177,6 +307,7 @@ export function CheckoutpageView() {
                       </svg>
                     </div>
                   </div>
+                  {errors.district && <TooltipAlert message={errors.district} />}
                 </div>
 
                 <div>
@@ -188,8 +319,9 @@ export function CheckoutpageView() {
                     className="checkout_input checkout_input_disabled"
                   />
                   <p className="checkout_help_text">
-                    For Cambodia, Input 120000 if you dont know
+                    For Cambodia, Input 120000 if you don&apos;t know
                   </p>
+                  {errors.zipCode && <TooltipAlert message={errors.zipCode} />}
                 </div>
               </div>
 
@@ -198,10 +330,14 @@ export function CheckoutpageView() {
                 <Input
                   type="text"
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) => {
+                    setAddress(e.target.value);
+                    validateSingleField("address", e.target.value);
+                  }}
                   placeholder="enter your address"
                   className="checkout_input"
                 />
+                {errors.address && <TooltipAlert message={errors.address} />}
               </div>
             </div>
           </div>
@@ -279,9 +415,9 @@ export function CheckoutpageView() {
           <h2 className="checkout_summary_title">Order Summary</h2>
 
           {/* Purchased Items List */}
-          <div className="checkout_summary_items_list">
+          <div className="checkout_summary_items_list" suppressHydrationWarning>
             {items.length === 0 ? (
-              <p className="checkout_summary_empty">No items in your cart.</p>
+              <p className="checkout_summary_empty" suppressHydrationWarning>No items in your cart.</p>
             ) : (
               items.map((item) => (
                 <div key={item.id} className="checkout_item_row">
@@ -298,31 +434,31 @@ export function CheckoutpageView() {
                     </div>
                     <div className="checkout_item_details">
                       <h3 className="checkout_item_title">{item.title}</h3>
-                      <p className="checkout_item_price">${item.price.toFixed(2)}</p>
+                      <p className="checkout_item_price" suppressHydrationWarning>${item.price.toFixed(2)}</p>
                     </div>
                   </div>
 
-                  <span className="checkout_item_qty">Quantity: {item.quantity}</span>
+                  <span className="checkout_item_qty" suppressHydrationWarning>Quantity: {item.quantity}</span>
                 </div>
               ))
             )}
           </div>
 
           {/* Pricing Breakdown */}
-          <div className="checkout_summary_breakdown">
+          <div className="checkout_summary_breakdown" suppressHydrationWarning>
             <div className="checkout_summary_line">
               <span className="checkout_summary_label">Subtotal:</span>
-              <span className="checkout_summary_value">${subtotal.toFixed(2)}</span>
+              <span className="checkout_summary_value" suppressHydrationWarning>${subtotal.toFixed(2)}</span>
             </div>
 
             <div className="checkout_summary_line">
               <span className="checkout_summary_label">Delivery:</span>
-              <span className="checkout_summary_value">${deliveryFee.toFixed(2)}</span>
+              <span className="checkout_summary_value" suppressHydrationWarning>${deliveryFee.toFixed(2)}</span>
             </div>
 
             <div className="checkout_summary_line_total">
               <span className="checkout_summary_label_bold">Total:</span>
-              <span className="checkout_summary_value">${grandTotal.toFixed(2)}</span>
+              <span className="checkout_summary_value" suppressHydrationWarning>${grandTotal.toFixed(2)}</span>
             </div>
           </div>
 

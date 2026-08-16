@@ -43,6 +43,16 @@ const SLIDES = [
 export default function HeroCarousel() {
   const [api, setApi] = useState<CarouselApi>();
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Configure continuous autoplay that loops indefinitely without stopping
   const plugin = React.useRef(
@@ -132,7 +142,7 @@ export default function HeroCarousel() {
 
                       {/* Buy Now Button */}
                       <Link
-                        href={slide.href}
+                        href={isMobile && slide.href === "/menu" ? "/menuphone" : slide.href}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Button className="hero_buy_btn">
