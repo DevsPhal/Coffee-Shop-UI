@@ -130,13 +130,14 @@ export function CheckoutdonepageView() {
 
   const effectiveStep = isMounted ? currentStep : 2;
 
-  // Auto advance step 2 (Preparing) to step 3 (Ready / Completed)
+  // Auto advance step 2 (Preparing) to step 3 (Ready / Completed) after 5 minutes
   useEffect(() => {
     if (selectedOrder?.status === "Completed") {
       setCurrentStep(3);
       return;
     }
 
+    // 5 minutes timer (5 * 60 * 1000 = 300,000 ms) before marking order as Ready!
     const timer = setTimeout(() => {
       setCurrentStep(3);
       toast.add({
@@ -151,7 +152,7 @@ export function CheckoutdonepageView() {
           ),
         }));
       }
-    }, 6000);
+    }, 5 * 60 * 1000);
 
     return () => clearTimeout(timer);
   }, [selectedOrder]);

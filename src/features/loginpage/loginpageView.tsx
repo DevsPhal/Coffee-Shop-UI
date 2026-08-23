@@ -233,10 +233,14 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
 
                 {/* Controls Row */}
                 <div className="login_controls_row">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <label
+                    onClick={() => setKeepLoggedIn(!keepLoggedIn)}
+                    className="flex items-center gap-2 cursor-pointer select-none"
+                  >
                     <div
-                      onClick={() => setKeepLoggedIn(!keepLoggedIn)}
                       className={`login_checkbox_box ${keepLoggedIn ? "checked" : ""}`}
+                      role="checkbox"
+                      aria-checked={keepLoggedIn}
                     >
                       {keepLoggedIn && <Check className="w-3 h-3 stroke-[3]" />}
                     </div>

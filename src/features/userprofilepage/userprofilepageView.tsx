@@ -415,7 +415,7 @@ export function UserprofilepageView() {
                 <div className="user_profile_details">
                   <div className="user_profile_detail_row">
                     <span className="user_profile_detail_label">User Id</span>
-                    <span className="user_profile_detail_value" suppressHydrationWarning>{profile.userId}</span>
+                    <span className="user_profile_detail_value" suppressHydrationWarning>#{profile.userId}</span>
                   </div>
 
                   <div className="user_profile_detail_row">
