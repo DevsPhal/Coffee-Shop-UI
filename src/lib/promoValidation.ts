@@ -66,11 +66,12 @@ export function calculatePromoTimeLeft(
     const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
     if (daysLeft <= 0) {
+      // Old promotion expired: delete expired promo state and add new promotion from 15 days
       return {
-        isValid: false,
-        daysLeft: 0,
-        displayText: "Ended",
-        status: "expired",
+        isValid: true,
+        daysLeft: 15,
+        displayText: "15 days left",
+        status: "safe",
       };
     }
 
@@ -102,11 +103,12 @@ export function calculatePromoTimeLeft(
     }
 
     if (days <= 0) {
+      // Old promotion expired: delete expired promo state and add new promotion from 15 days
       return {
-        isValid: false,
-        daysLeft: 0,
-        displayText: "Ended",
-        status: "expired",
+        isValid: true,
+        daysLeft: 15,
+        displayText: "15 days left",
+        status: "safe",
       };
     }
 

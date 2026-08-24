@@ -65,12 +65,29 @@ export function CheckoutpageView() {
     field: "fullName" | "email" | "phone" | "address" | "capital" | "district" | "zipCode",
     val?: string
   ) => {
+    if (deliveryMethod === "pickup" && ["capital", "district", "zipCode", "address"].includes(field)) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+      return;
+    }
     const stringVal = (val || "").trim();
     const res = shippingInformationSchema.shape[field].safeParse(stringVal);
     if (!res.success) {
       setErrors((prev) => ({ ...prev, [field]: res.error.issues[0]?.message }));
     } else {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleSelectDeliveryMethod = (method: "pickup" | "grab") => {
+    setDeliveryMethod(method);
+    if (method === "pickup") {
+      setErrors((prev) => ({
+        ...prev,
+        capital: undefined,
+        district: undefined,
+        zipCode: undefined,
+        address: undefined,
+      }));
     }
   };
 
@@ -85,7 +102,12 @@ export function CheckoutpageView() {
     }
 
     // Validate Shipping Information with Zod Schema
-    const validationResult = shippingInformationSchema.safeParse({
+    const schemaToValidate =
+      deliveryMethod === "pickup"
+        ? shippingInformationSchema.pick({ fullName: true, email: true, phone: true })
+        : shippingInformationSchema;
+
+    const validationResult = schemaToValidate.safeParse({
       fullName: (fullName || "").trim(),
       email: (email || "").trim(),
       phone: (phone || "").trim(),
@@ -101,10 +123,14 @@ export function CheckoutpageView() {
         fullName: fieldErrors.fullName?.[0],
         email: fieldErrors.email?.[0],
         phone: fieldErrors.phone?.[0],
-        capital: fieldErrors.capital?.[0],
-        district: fieldErrors.district?.[0],
-        zipCode: fieldErrors.zipCode?.[0],
-        address: fieldErrors.address?.[0],
+        ...(deliveryMethod === "grab"
+          ? {
+              capital: fieldErrors.capital?.[0],
+              district: fieldErrors.district?.[0],
+              zipCode: fieldErrors.zipCode?.[0],
+              address: fieldErrors.address?.[0],
+            }
+          : {}),
       };
       setErrors(newErrors);
 
@@ -112,10 +138,9 @@ export function CheckoutpageView() {
         newErrors.fullName ||
         newErrors.email ||
         newErrors.phone ||
-        newErrors.capital ||
-        newErrors.district ||
-        newErrors.zipCode ||
-        newErrors.address ||
+        (deliveryMethod === "grab"
+          ? newErrors.capital || newErrors.district || newErrors.zipCode || newErrors.address
+          : undefined) ||
         "Please complete shipping information.";
 
       toast.add({
@@ -133,10 +158,14 @@ export function CheckoutpageView() {
         name: (fullName || "").trim() || user.name,
         email: (email || "").trim() || user.email,
         phone: (phone || "").trim() || user.phone,
-        capital: (capital || "").trim() || user.capital,
-        district: (district || "").trim() || user.district,
-        zipCode: (zipCode || "").trim() || user.zipCode,
-        address: (address || "").trim() || user.address,
+        ...(deliveryMethod === "grab"
+          ? {
+              capital: (capital || "").trim() || user.capital,
+              district: (district || "").trim() || user.district,
+              zipCode: (zipCode || "").trim() || user.zipCode,
+              address: (address || "").trim() || user.address,
+            }
+          : {}),
       });
     }
 
@@ -233,112 +262,145 @@ export function CheckoutpageView() {
                 </div>
               </div>
 
-              <div className="checkout_form_row">
-                <div>
-                  <label className="checkout_field_label">Phone Number</label>
-                  <div className="checkout_phone_input_wrapper">
-                    <div className="checkout_phone_prefix">
-                      <Image
-                        src="/images/cambodia.svg"
-                        alt="Cambodia"
-                        width={20}
-                        height={14}
-                        className="checkout_phone_flag"
+              {deliveryMethod === "pickup" ? (
+                <div className="checkout_form_row">
+                  <div>
+                    <label className="checkout_field_label">Phone Number</label>
+                    <div className="checkout_phone_input_wrapper">
+                      <div className="checkout_phone_prefix">
+                        <Image
+                          src="/images/cambodia.svg"
+                          alt="Cambodia"
+                          width={20}
+                          height={14}
+                          className="checkout_phone_flag"
+                        />
+                        <span className="checkout_phone_code">+855</span>
+                      </div>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => {
+                          setPhone(e.target.value);
+                          validateSingleField("phone", e.target.value);
+                        }}
+                        placeholder="enter your phone number"
+                        className="checkout_phone_field"
                       />
-                      <span className="checkout_phone_code">+855</span>
                     </div>
-                    <input
-                      type="tel"
-                      value={phone}
+                    {errors.phone && <TooltipAlert message={errors.phone} />}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="checkout_form_row">
+                    <div>
+                      <label className="checkout_field_label">Phone Number</label>
+                      <div className="checkout_phone_input_wrapper">
+                        <div className="checkout_phone_prefix">
+                          <Image
+                            src="/images/cambodia.svg"
+                            alt="Cambodia"
+                            width={20}
+                            height={14}
+                            className="checkout_phone_flag"
+                          />
+                          <span className="checkout_phone_code">+855</span>
+                        </div>
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => {
+                            setPhone(e.target.value);
+                            validateSingleField("phone", e.target.value);
+                          }}
+                          placeholder="enter your phone number"
+                          className="checkout_phone_field"
+                        />
+                      </div>
+                      {errors.phone && <TooltipAlert message={errors.phone} />}
+                    </div>
+
+                    <div>
+                      <label className="checkout_field_label">Capital</label>
+                      <div className="checkout_select_wrapper">
+                        <select
+                          value={capital}
+                          onChange={(e) => setCapital(e.target.value)}
+                          disabled
+                          className="checkout_select checkout_input_disabled cursor-not-allowed opacity-75 bg-gray-50 pr-4"
+                        >
+                          <option value="Phnom Penh">Phnom Penh</option>
+                        </select>
+                      </div>
+                      {errors.capital && <TooltipAlert message={errors.capital} />}
+                    </div>
+                  </div>
+
+                  <div className="checkout_form_row">
+                    <div>
+                      <label className="checkout_field_label">District</label>
+                      <div className="checkout_select_wrapper min-w-0 w-full max-w-full overflow-hidden">
+                        <select
+                          value={district}
+                          onChange={(e) => setDistrict(e.target.value)}
+                          className="checkout_select min-w-0 w-full max-w-full truncate"
+                        >
+                          <option value="Khan Boeng Keng Kang">Khan Boeng Keng Kang</option>
+                          <option value="Khan Chamkar Mon">Khan Chamkar Mon</option>
+                          <option value="Khan Chbar Ampov">Khan Chbar Ampov</option>
+                          <option value="Khan Chroy Changvar">Khan Chroy Changvar</option>
+                          <option value="Khan Dangkao">Khan Dangkao</option>
+                          <option value="Khan Daun Penh">Khan Daun Penh</option>
+                          <option value="Khan Kambol">Khan Kambol</option>
+                          <option value="Khan Meanchey">Khan Meanchey</option>
+                          <option value="Khan Prampir Makara">Khan Prampir Makara</option>
+                          <option value="Khan Prek Pnov">Khan Prek Pnov</option>
+                          <option value="Khan Pur Senchey">Khan Pur Senchey</option>
+                          <option value="Khan Russei Keo">Khan Russei Keo</option>
+                          <option value="Khan Sen Sok">Khan Sen Sok</option>
+                          <option value="Khan Tuol Kouk">Khan Tuol Kouk</option>
+                        </select>
+                        <div className="checkout_select_icon">
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      </div>
+                      {errors.district && <TooltipAlert message={errors.district} />}
+                    </div>
+
+                    <div>
+                      <label className="checkout_field_label">Zip Code</label>
+                      <Input
+                        type="text"
+                        value={zipCode}
+                        onChange={(e) => setZipCode(e.target.value)}
+                        className="checkout_input checkout_input_disabled"
+                      />
+                      <p className="checkout_help_text">
+                        For Cambodia, Input 120000 if you don&apos;t know
+                      </p>
+                      {errors.zipCode && <TooltipAlert message={errors.zipCode} />}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="checkout_field_label">Address</label>
+                    <Input
+                      type="text"
+                      value={address}
                       onChange={(e) => {
-                        setPhone(e.target.value);
-                        validateSingleField("phone", e.target.value);
+                        setAddress(e.target.value);
+                        validateSingleField("address", e.target.value);
                       }}
-                      placeholder="enter your phone number"
-                      className="checkout_phone_field"
+                      placeholder="enter your address"
+                      className="checkout_input"
                     />
+                    {errors.address && <TooltipAlert message={errors.address} />}
                   </div>
-                  {errors.phone && <TooltipAlert message={errors.phone} />}
-                </div>
-
-                <div>
-                  <label className="checkout_field_label">Capital</label>
-                  <div className="checkout_select_wrapper">
-                    <select
-                      value={capital}
-                      onChange={(e) => setCapital(e.target.value)}
-                      disabled
-                      className="checkout_select checkout_input_disabled cursor-not-allowed opacity-75 bg-gray-50 pr-4"
-                    >
-                      <option value="Phnom Penh">Phnom Penh</option>
-                    </select>
-                  </div>
-                  {errors.capital && <TooltipAlert message={errors.capital} />}
-                </div>
-              </div>
-
-              <div className="checkout_form_row">
-                <div>
-                  <label className="checkout_field_label">District</label>
-                  <div className="checkout_select_wrapper min-w-0 w-full max-w-full overflow-hidden">
-                    <select
-                      value={district}
-                      onChange={(e) => setDistrict(e.target.value)}
-                      className="checkout_select min-w-0 w-full max-w-full truncate"
-                    >
-                      <option value="Khan Boeng Keng Kang">Khan Boeng Keng Kang</option>
-                      <option value="Khan Chamkar Mon">Khan Chamkar Mon</option>
-                      <option value="Khan Chbar Ampov">Khan Chbar Ampov</option>
-                      <option value="Khan Chroy Changvar">Khan Chroy Changvar</option>
-                      <option value="Khan Dangkao">Khan Dangkao</option>
-                      <option value="Khan Daun Penh">Khan Daun Penh</option>
-                      <option value="Khan Kambol">Khan Kambol</option>
-                      <option value="Khan Meanchey">Khan Meanchey</option>
-                      <option value="Khan Prampir Makara">Khan Prampir Makara</option>
-                      <option value="Khan Prek Pnov">Khan Prek Pnov</option>
-                      <option value="Khan Pur Senchey">Khan Pur Senchey</option>
-                      <option value="Khan Russei Keo">Khan Russei Keo</option>
-                      <option value="Khan Sen Sok">Khan Sen Sok</option>
-                      <option value="Khan Tuol Kouk">Khan Tuol Kouk</option>
-                    </select>
-                    <div className="checkout_select_icon">
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  </div>
-                  {errors.district && <TooltipAlert message={errors.district} />}
-                </div>
-
-                <div>
-                  <label className="checkout_field_label">Zip Code</label>
-                  <Input
-                    type="text"
-                    value={zipCode}
-                    onChange={(e) => setZipCode(e.target.value)}
-                    className="checkout_input checkout_input_disabled"
-                  />
-                  <p className="checkout_help_text">
-                    For Cambodia, Input 120000 if you don&apos;t know
-                  </p>
-                  {errors.zipCode && <TooltipAlert message={errors.zipCode} />}
-                </div>
-              </div>
-
-              <div>
-                <label className="checkout_field_label">Address</label>
-                <Input
-                  type="text"
-                  value={address}
-                  onChange={(e) => {
-                    setAddress(e.target.value);
-                    validateSingleField("address", e.target.value);
-                  }}
-                  placeholder="enter your address"
-                  className="checkout_input"
-                />
-                {errors.address && <TooltipAlert message={errors.address} />}
-              </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -349,7 +411,7 @@ export function CheckoutpageView() {
             <div className="checkout_delivery_options">
               {/* Store Pickup Option */}
               <div
-                onClick={() => setDeliveryMethod("pickup")}
+                onClick={() => handleSelectDeliveryMethod("pickup")}
                 className={`checkout_delivery_card ${
                   deliveryMethod === "pickup" ? "checkout_delivery_card_active" : ""
                 }`}
@@ -379,7 +441,7 @@ export function CheckoutpageView() {
 
               {/* Grab Express Option */}
               <div
-                onClick={() => setDeliveryMethod("grab")}
+                onClick={() => handleSelectDeliveryMethod("grab")}
                 className={`checkout_delivery_card ${
                   deliveryMethod === "grab" ? "checkout_delivery_card_active" : ""
                 }`}

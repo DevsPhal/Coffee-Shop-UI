@@ -129,7 +129,7 @@ export function Card({
             sizes="(max-width: 640px) 80px, 88px"
             className="object-cover transition-transform duration-300 hover:scale-105"
           />
-          {discountPercent > 0 && (
+          {discountPercent > 0 && isPromotion && (
             <span className="discount_badge">
               -{discountPercent}%
             </span>
@@ -172,7 +172,7 @@ export function Card({
           </div>
 
           <div className="price_container">
-            {originalPrice && originalPrice > price && (
+            {originalPrice && originalPrice > price && isPromotion && (
               <span className="price_original">
                 ${originalPrice.toFixed(2)}
               </span>
@@ -213,7 +213,7 @@ export function Card({
           />
 
           {/* Discount Badge ONLY shown if originalPrice prop is passed */}
-          {discountPercent > 0 && (
+          {discountPercent > 0 && isPromotion && (
             <span className="discount_badge">
               -{discountPercent}% OFF
             </span>
@@ -238,7 +238,7 @@ export function Card({
 
           {/* Discount Price & Strikethrough Original Price using globals.scss classes */}
           <div className="price_container">
-            {originalPrice && originalPrice > price && (
+            {originalPrice && originalPrice > price && isPromotion && (
               <span className="price_original">
                 ${originalPrice.toFixed(2)}
               </span>
