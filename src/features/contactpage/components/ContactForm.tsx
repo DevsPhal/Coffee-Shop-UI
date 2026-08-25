@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { useContactStore } from "@/store/useContactStore";
 import { useAuth } from "@/context/AuthContext";
+import { cleanPhoneInput } from "@/lib/phoneUtils";
 import "@/app/globals.scss";
 
 const SUBJECT_OPTIONS = [
@@ -41,8 +42,9 @@ export function ContactForm() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     const fieldKey = name as keyof typeof formData;
-    setField(fieldKey, value);
-    validateField(fieldKey, value);
+    const finalVal = name === "phone" ? cleanPhoneInput(value) : value;
+    setField(fieldKey, finalVal);
+    validateField(fieldKey, finalVal);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -10,6 +10,7 @@ import "@/app/globals.scss";
 
 import { signUpSchema, adminSignUpSchema } from "@/lib/authSchema";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
+import { cleanPhoneInput } from "@/lib/phoneUtils";
 
 type FormErrors = {
   role?: string;
@@ -238,7 +239,7 @@ export function Create({ onBackToLogin, isAdmin = false, defaultRole = "Admin" }
                 if (phone.trim()) validateField("phone", phone);
               }}
               onChange={(e) => {
-                const val = e.target.value;
+                const val = cleanPhoneInput(e.target.value);
                 setPhone(val);
                 validateField("phone", val);
               }}

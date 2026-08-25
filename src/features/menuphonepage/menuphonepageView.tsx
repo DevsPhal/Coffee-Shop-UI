@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { CategoryDropdown } from "@/components/ui";
 import { PRODUCTS, Product, getResolvedProductImage } from "@/data/products";
 import { useCart } from "@/context/CartContext";
@@ -136,6 +137,8 @@ export function PhoneCard({
 }
 
 export function MenupageView() {
+  const searchParams = useSearchParams();
+  const queryCategory = searchParams.get("category");
   const { openCart, addItem, subtotal, totalCount } = useCart();
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -146,6 +149,17 @@ export function MenupageView() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const categories = [
+    "All",
+    ...Array.from(new Set(PRODUCTS.map((p) => p.category).filter(Boolean))),
+  ];
+
+  useEffect(() => {
+    if (queryCategory && categories.includes(queryCategory)) {
+      setSelectedCategory(queryCategory);
+    }
+  }, [queryCategory]);
 
   useEffect(() => {
     if (activeModalProduct) {
@@ -160,11 +174,6 @@ export function MenupageView() {
       document.documentElement.style.overflow = "";
     };
   }, [activeModalProduct]);
-
-  const categories = [
-    "All",
-    ...Array.from(new Set(PRODUCTS.map((p) => p.category).filter(Boolean))),
-  ];
 
   const filteredProducts = PRODUCTS.filter((item) => {
     const matchesCategory =

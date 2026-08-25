@@ -45,10 +45,19 @@ export function ProductpageView({
   const { addItem } = useCart();
   const { isLoggedIn } = useAuth();
   const [isMounted, setIsMounted] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
     setIsMounted(true);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  const menuBaseUrl = isMobile ? "/menuphone" : "/menu";
 
   // Read search params as fallback if props aren't provided
   const queryId = searchParams.get("id") || undefined;
@@ -155,12 +164,12 @@ export function ProductpageView({
 
         {/* Clickable Breadcrumbs: Products » Category » Product Title */}
         <nav className="product_detail_breadcrumb" aria-label="Breadcrumb">
-          <Link href="/menu" className="breadcrumb_link">
+          <Link href={menuBaseUrl} className="breadcrumb_link">
             Products
           </Link>
           <span className="breadcrumb_separator">»</span>
           <Link
-            href={`/menu?category=${encodeURIComponent(displayCategory)}`}
+            href={`${menuBaseUrl}?category=${encodeURIComponent(displayCategory)}`}
             className="breadcrumb_link"
           >
             {displayCategory}
@@ -217,7 +226,7 @@ export function ProductpageView({
 
               {/* Clickable Category Badge */}
               <div className="category_badge_wrapper">
-                <Link href={`/menu?category=${encodeURIComponent(displayCategory)}`}>
+                <Link href={`${menuBaseUrl}?category=${encodeURIComponent(displayCategory)}`}>
                   <span className="category_badge">
                     {displayCategory}
                   </span>
