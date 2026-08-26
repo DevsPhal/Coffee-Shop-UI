@@ -1099,21 +1099,8 @@
 .btn_modal_close { width: 100%; background-color: #0f172a; color: #ffffff; font-weight: 700; padding: 12px 24px; border-radius: 14px; font-size: 0.875rem; border: none; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); &:hover { background-color: #000000; transform: translateY(-1px); } &:active { transform: scale(0.98); } }
 /* Translucent blurred background for mobile bottom navigation bar in both portrait & landscape */
 .mobile_nav_bottom_bar {
-  background: rgba(255, 255, 255, 0.45) !important;
-  background-color: rgba(255, 255, 255, 0.45) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.4) !important;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05) !important;
-
-  @media (orientation: landscape) and (max-height: 600px) {
-    background: rgba(255, 255, 255, 0.35) !important;
-    background-color: rgba(255, 255, 255, 0.35) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    border-top: none !important;
-    box-shadow: none !important;
-  }
+  background: rgba(255, 255, 255, 0.45) !important; background-color: rgba(255, 255, 255, 0.45) !important;  backdrop-filter: blur(16px) !important;  -webkit-backdrop-filter: blur(16px) !important; border-top: 1px solid rgba(255, 255, 255, 0.4) !important; box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05) !important;
+  @media (orientation: landscape) and (max-height: 600px) {background: rgba(255, 255, 255, 0.35) !important;background-color: rgba(255, 255, 255, 0.35) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border-top: none !important;box-shadow: none !important;}
 }
 
 /* Ensure footer copyright text and social icons clear the fixed bottom navbar in landscape orientation */
@@ -1121,31 +1108,16 @@
   .footer_container {
     padding: 1.25rem 1rem 0.5rem 1rem !important;
   }
-  .footer_bottom_row {
-    margin-top: 1rem !important;
-    padding-top: 0.75rem !important;
-    padding-bottom: 4.25rem !important; /* Clearance so copyright text & icons sit above fixed bottom nav bar */
-  }
-  .footer_top_row {
-    gap: 1.25rem !important;
-  }
-  .footer_links_grid {
-    gap: 1.25rem !important;
-  }
-  .menu-view-container,
-  .menu_page_wrapper,
-  .main_content,
-  .checkout_page_container,
-  .contact_page_container {
-    padding-bottom: 1.5rem !important;
-  }
+  .footer_bottom_row { margin-top: 1rem !important; padding-top: 0.75rem !important; padding-bottom: 4.25rem !important; /* Clearance so copyright text & icons sit above fixed bottom nav bar */}
+  .footer_top_row {  gap: 1.25rem !important;}
+  .footer_links_grid { gap: 1.25rem !important;}
+  .menu-view-container, .menu_page_wrapper, .main_content, .checkout_page_container, .contact_page_container { padding-bottom: 1.5rem !important; }
 }
 
 .category_mobile_row {
   display: flex !important;
   @media (min-width: 640px) and (min-height: 551px) {
-    display: none !important;
-  }
+    display: none !important;}
 }
 
 .category_desktop_row {
