@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { CategoryDropdown } from "@/components/ui";
 import { PRODUCTS, Product, getResolvedProductImage } from "@/data/products";
 import { useCart } from "@/context/CartContext";
@@ -70,6 +71,7 @@ export function PhoneCard({
     <div
       onClick={onSelect}
       className={`phone-card ${isSelected ? "selected" : "default"}`}
+      suppressHydrationWarning
     >
       {/* Left: Drink Image Container */}
       <div className="image-container relative shrink-0">
@@ -136,6 +138,8 @@ export function PhoneCard({
 }
 
 export function MenupageView() {
+  const searchParams = useSearchParams();
+  const queryCategory = searchParams.get("category");
   const { openCart, addItem, subtotal, totalCount } = useCart();
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -146,6 +150,17 @@ export function MenupageView() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const categories = [
+    "All",
+    ...Array.from(new Set(PRODUCTS.map((p) => p.category).filter(Boolean))),
+  ];
+
+  useEffect(() => {
+    if (queryCategory && categories.includes(queryCategory)) {
+      setSelectedCategory(queryCategory);
+    }
+  }, [queryCategory]);
 
   useEffect(() => {
     if (activeModalProduct) {
@@ -160,11 +175,6 @@ export function MenupageView() {
       document.documentElement.style.overflow = "";
     };
   }, [activeModalProduct]);
-
-  const categories = [
-    "All",
-    ...Array.from(new Set(PRODUCTS.map((p) => p.category).filter(Boolean))),
-  ];
 
   const filteredProducts = PRODUCTS.filter((item) => {
     const matchesCategory =
@@ -190,7 +200,7 @@ export function MenupageView() {
         </div>
 
         {/* Desktop Category Filter & Search Row */}
-        <div className="hidden sm:flex flex-col sm:flex-row items-center justify-between gap-4 my-6 px-2">
+        <div className="category_desktop_row flex-col sm:flex-row items-center justify-between gap-4 my-6 px-2">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {categories.map((cat) => {
               const isSelected = selectedCategory === cat;
@@ -261,7 +271,7 @@ export function MenupageView() {
         </div>
 
         {/* Mobile Filter & Search Bar Row */}
-        <div className="sm:hidden flex items-center justify-between gap-2 my-4 px-2 w-full">
+        <div className="category_mobile_row items-center justify-between gap-2 my-4 px-2 w-full">
           {/* Category Dropdown Pill (Left - Thin & Slim) */}
           <div className="shrink-0">
             <CategoryDropdown

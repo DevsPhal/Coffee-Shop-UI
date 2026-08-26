@@ -145,7 +145,7 @@ export default function HeroCarousel() {
                         href={isMobile && slide.href === "/menu" ? "/menuphone" : slide.href}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Button className="hero_buy_btn">
+                        <Button variant="unstyled" className="hero_buy_btn">
                           Buy Now
                         </Button>
                       </Link>

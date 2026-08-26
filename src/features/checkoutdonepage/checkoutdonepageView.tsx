@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -13,6 +14,9 @@ import {
   Check,
   Receipt,
   CheckCircle2,
+  Bell,
+  ConciergeBell,
+  UtensilsCrossed,
 } from "lucide-react";
 import "@/app/globals.scss";
 
@@ -160,6 +164,15 @@ export function CheckoutdonepageView() {
   const handleCallStaff = () => {
     setStaffCalled(true);
     setCallStaffModal(true);
+  };
+
+  const handleBackToMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (typeof window !== "undefined" && window.innerWidth <= 768) {
+      router.push("/menuphone");
+    } else {
+      router.push("/menu");
+    }
   };
 
   return (
@@ -347,27 +360,34 @@ export function CheckoutdonepageView() {
             onClick={handleCallStaff}
             className="btn_desktop_staff"
           >
-            {staffCalled ? "Staff Notified" : "Call Staff"}
+            <Bell className="w-5 h-5 mr-2 shrink-0" />
+            <span>{staffCalled ? "Staff Notified" : "Call Staff"}</span>
           </button>
-          <Link href="/menu" className="btn_desktop_menu">
-            Back to Menu
+          <Link href="/menu" onClick={handleBackToMenu} className="btn_desktop_menu">
+            <UtensilsCrossed className="w-5 h-5 mr-2 shrink-0" />
+            <span>Back to Menu</span>
           </Link>
         </div>
       </div>
 
-      {/* Fixed Mobile Bottom Bar */}
-      <div className="mobile_bottom_bar">
-        <button
-          type="button"
-          onClick={handleCallStaff}
-          className="btn_mobile_staff"
-        >
-          {staffCalled ? "Staff Notified" : "Call Staff"}
-        </button>
-        <Link href="/menu" className="btn_mobile_menu">
-          Back to Menu
-        </Link>
-      </div>
+      {/* Fixed Mobile Bottom Bar Portalled to Body */}
+      {isMounted && createPortal(
+        <div className="mobile_bottom_bar">
+          <button
+            type="button"
+            onClick={handleCallStaff}
+            className="btn_mobile_staff"
+          >
+            <ConciergeBell className="w-5 h-5 shrink-0" />
+            <span>{staffCalled ? "Staff Notified" : "Call Staff"}</span>
+          </button>
+          <Link href="/menuphone" onClick={handleBackToMenu} className="btn_mobile_menu">
+            <UtensilsCrossed className="w-5 h-5 shrink-0" />
+            <span>Back to Menu</span>
+          </Link>
+        </div>,
+        document.body
+      )}
 
       {/* Call Staff Modal */}
       <Modal open={callStaffModal} onOpenChange={setCallStaffModal}>

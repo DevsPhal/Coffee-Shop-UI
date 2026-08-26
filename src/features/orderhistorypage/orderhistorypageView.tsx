@@ -193,7 +193,7 @@ export function OrderhistorypageView() {
 
               {/* Order Footer: Grand Total + Action Buttons */}
               <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-3 flex-wrap">
-                <div>
+                <div className="text-left">
                   <span className="text-xs text-gray-500 font-medium">
                     Grand Total:{" "}
                   </span>
@@ -202,11 +202,11 @@ export function OrderhistorypageView() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-nowrap shrink-0 ml-auto">
                   <button
                     type="button"
                     onClick={() => handleReorder(order)}
-                    className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-xl transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Reorder</span>
@@ -215,18 +215,18 @@ export function OrderhistorypageView() {
                   {order.status === "Completed" ? (
                     <Link
                       href={`/checkoutdone?id=${order.id}`}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors whitespace-nowrap shrink-0"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       <span>Order Complete</span>
                     </Link>
                   ) : (
                     <Link
                       href={`/checkoutdone?id=${order.id}`}
-                      className="inline-flex items-center gap-1 px-4 py-1.5 text-xs font-bold text-white bg-[#A1255B] hover:bg-[#881d52] rounded-xl transition-colors shadow-sm"
+                      className="inline-flex items-center gap-1 px-4 py-1.5 text-xs font-bold text-white bg-[#A1255B] hover:bg-[#881d52] rounded-xl transition-colors shadow-sm whitespace-nowrap shrink-0"
                     >
                       <span>Track</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <ChevronRight className="w-3.5 h-3.5 shrink-0" />
                     </Link>
                   )}
                 </div>

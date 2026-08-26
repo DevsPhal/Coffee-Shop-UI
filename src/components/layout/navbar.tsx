@@ -33,12 +33,14 @@ export function Navbar() {
   const [isLangOpen, setIsLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
-  const selectedLanguage = languages.find((l) => l.code === language) || languages[0];
+  const currentLangCode = mounted ? language : "en";
+  const selectedLanguage = languages.find((l) => l.code === currentLangCode) || languages[0];
   const { openCart, totalCount } = useCart();
   const { isLoggedIn } = useAuth();
 
   const userIsLoggedIn = mounted ? isLoggedIn : false;
   const displayTotalCount = mounted ? totalCount : 0;
+  const displayT = (key: string) => (mounted ? t(key) : key);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -105,7 +107,7 @@ export function Navbar() {
                   className={`nav_link ${isActive(href) ? "active" : ""}`}
                   suppressHydrationWarning
                 >
-                  {t(label)}
+                  {displayT(label)}
                 </Link>
               </li>
             ))}
@@ -205,7 +207,7 @@ export function Navbar() {
                     unoptimized
                     className="brightness-0 invert"
                   />
-                  <span>{t("Login")}</span>
+                  <span>{displayT("Login")}</span>
                 </Button>
               </Link>
             )}
@@ -214,8 +216,14 @@ export function Navbar() {
       </header>
 
       {/* Fixed Bottom Icon Navigation Bar for Phone Size (md:hidden) including Events & Login */}
-      {!(pathname === "/checkoutdone" || pathname === "/payment") && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] py-2 px-1 w-full max-w-full overflow-x-hidden" suppressHydrationWarning>
+      {!(
+        pathname === "/checkoutdone" ||
+        pathname === "/checkout-done" ||
+        pathname === "/payment" ||
+        pathname?.startsWith("/payment") ||
+        pathname === "/checkout"
+      ) && (
+        <div className="mobile_nav_bottom_bar md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] py-2 px-1 w-full max-w-full overflow-x-hidden" suppressHydrationWarning>
           <div className="max-w-md mx-auto flex items-center justify-around">
             {mobileNavItems.map((item) => {
               const active = isMobileNavActive(item.href);
@@ -231,7 +239,7 @@ export function Navbar() {
                   <div className="icon-wrapper flex items-center justify-center">
                     <Image
                       src={item.icon}
-                      alt={t(item.key)}
+                      alt={displayT(item.key)}
                       width={24}
                       height={24}
                       unoptimized

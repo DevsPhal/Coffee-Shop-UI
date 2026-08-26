@@ -3,6 +3,7 @@ import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { LanguageProvider } from "@/components/ui/translatetokhmer";
 import ScrollObserver from "@/components/common/ScrollObserver";
+import PointerCapturePolyfill from "@/components/common/PointerCapturePolyfill";
 import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
 
@@ -23,6 +24,7 @@ export default function RootLayout({
           <CartProvider>
             <LanguageProvider>
               <ScrollObserver />
+              <PointerCapturePolyfill />
               {children}
               <Toaster />
             </LanguageProvider>

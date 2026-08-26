@@ -12,6 +12,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
+import { cleanPhoneInput } from "@/lib/phoneUtils";
 import "@/app/globals.scss";
 
 export interface UserProfileData {
@@ -534,7 +535,7 @@ export function UserprofilepageView() {
                           </div>
 
                           <div className="order_footer_row">
-                            <div>
+                            <div className="order_total_wrapper">
                               <span className="order_total_label">Grand Total: </span>
                               <span className="order_total_value">$ {order.grandTotal.toFixed(2)}</span>
                             </div>
@@ -797,8 +798,8 @@ export function UserprofilepageView() {
                     <input
                       type="tel"
                       value={editForm.phone || ""}
-                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      placeholder="e.g. 012345678"
+                      onChange={(e) => setEditForm({ ...editForm, phone: cleanPhoneInput(e.target.value) })}
+                      placeholder="e.g. 12345678"
                       className="modal_input_control"
                     />
                   </div>

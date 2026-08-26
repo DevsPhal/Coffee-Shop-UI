@@ -62,7 +62,7 @@ export function MenupageView() {
         </div>
 
         {/* Full Screen Desktop Category Filter Pills */}
-        <div className="hidden sm:flex flex-wrap items-center justify-center gap-2 sm:gap-3 my-8 px-2">
+        <div className="category_desktop_row flex-wrap items-center justify-center gap-2 sm:gap-3 my-8 px-2">
           {categories.map((cat) => {
             const isSelected = selectedCategory === cat;
             const count = getCategoryCount(cat);
@@ -94,7 +94,7 @@ export function MenupageView() {
         </div>
 
         {/* Mobile Category Dropdown Selector */}
-        <div className="sm:hidden flex justify-center my-6 px-2">
+        <div className="category_mobile_row justify-center my-6 px-2">
           <CategoryDropdown
             categories={categories}
             selectedCategory={selectedCategory}

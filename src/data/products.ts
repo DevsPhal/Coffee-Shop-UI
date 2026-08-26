@@ -22,7 +22,7 @@ export const PRODUCTS: Product[] = [
 
   {
     id: "2",
-    title: "Amacano",
+    title: "Amacanonononononononononnno",
     price: 2.25,
     image: "/images/americano.jpg",
     description: "Smooth espresso diluted with chilled filtered water and poured over crisp ice cubes for a clean, refreshing coffee experience.",

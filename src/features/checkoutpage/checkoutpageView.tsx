@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { shippingInformationSchema } from "@/lib/authSchema";
+import { cleanPhoneInput } from "@/lib/phoneUtils";
 import { AlertCircle } from "lucide-react";
 import "@/app/globals.scss";
 
@@ -50,7 +51,7 @@ export function CheckoutpageView() {
     if (user) {
       if (user.name) setFullName((prev) => (prev ? prev : user.name));
       if (user.email) setEmail((prev) => (prev ? prev : user.email));
-      if (user.phone) setPhone((prev) => (prev ? prev : user.phone));
+      if (user.phone) setPhone((prev) => (prev ? prev : cleanPhoneInput(user.phone)));
       if (user.capital) setCapital((prev) => (prev ? prev : user.capital));
       if (user.district) setDistrict((prev) => (prev ? prev : user.district));
       if (user.zipCode) setZipCode((prev) => (prev ? prev : user.zipCode));
@@ -281,8 +282,9 @@ export function CheckoutpageView() {
                         type="tel"
                         value={phone}
                         onChange={(e) => {
-                          setPhone(e.target.value);
-                          validateSingleField("phone", e.target.value);
+                          const val = cleanPhoneInput(e.target.value);
+                          setPhone(val);
+                          validateSingleField("phone", val);
                         }}
                         placeholder="enter your phone number"
                         className="checkout_phone_field"
@@ -303,6 +305,7 @@ export function CheckoutpageView() {
                             alt="Cambodia"
                             width={20}
                             height={14}
+                            style={{ width: "auto", height: "auto" }}
                             className="checkout_phone_flag"
                           />
                           <span className="checkout_phone_code">+855</span>
@@ -311,8 +314,9 @@ export function CheckoutpageView() {
                           type="tel"
                           value={phone}
                           onChange={(e) => {
-                            setPhone(e.target.value);
-                            validateSingleField("phone", e.target.value);
+                            const val = cleanPhoneInput(e.target.value);
+                            setPhone(val);
+                            validateSingleField("phone", val);
                           }}
                           placeholder="enter your phone number"
                           className="checkout_phone_field"
@@ -423,6 +427,7 @@ export function CheckoutpageView() {
                       alt="590st CAFE"
                       width={48}
                       height={36}
+                      style={{ width: "auto", height: "auto" }}
                       className="object-contain"
                     />
                   </div>
@@ -453,6 +458,7 @@ export function CheckoutpageView() {
                       alt="Grab Express"
                       width={44}
                       height={28}
+                      style={{ width: "auto", height: "auto" }}
                       className="object-contain"
                     />
                   </div>
