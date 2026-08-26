@@ -35,7 +35,6 @@ export function ContactpageView() {
 
   return (
     <div className="contact_page_container font-sans">
-      {/* Header & Breadcrumbs matching Location & Product Detail style */}
       <div className="product_detail_header">
         <h1 className="product_detail_title">Contact Us</h1>
         <nav className="product_detail_breadcrumb" aria-label="Breadcrumb">
@@ -46,15 +45,10 @@ export function ContactpageView() {
           <span className="breadcrumb_current">Contact Us</span>
         </nav>
       </div>
-
-      {/* Main Grid Layout */}
       <div className="contact_page_grid">
-        {/* Left Column: Interactive Contact Form */}
         <div>
           <ContactForm />
         </div>
-
-        {/* Right Column: Store Contact Details Card */}
         <div className="contact_page_info_card">
           <div>
             <div className="contact_info_badge">
@@ -67,7 +61,6 @@ export function ContactpageView() {
           </div>
 
           <div className="contact_info_group">
-            {/* Address */}
             <div className="contact_info_item">
               <div className="contact_info_icon">
                 <MapPin className="w-5 h-5" />
@@ -79,19 +72,15 @@ export function ContactpageView() {
                 </p>
               </div>
             </div>
-
-            {/* Opening Hours */}
             <div className="contact_info_item">
               <div className="contact_info_icon">
                 <Clock className="w-5 h-5" />
               </div>
               <div>
                 <h4 className="contact_info_label">Opening Hours</h4>
-                <p className="contact_info_value">Monday - Sunday: 7:00 AM - 11:00 PM</p>
+                <p className="contact_info_value">Monday - Sunday: 7:00 AM - 3:00 PM</p>
               </div>
             </div>
-
-            {/* Phone */}
             <div className="contact_info_item">
               <div className="contact_info_icon">
                 <Phone className="w-5 h-5" />
@@ -103,8 +92,6 @@ export function ContactpageView() {
                 </p>
               </div>
             </div>
-
-            {/* Telegram */}
             <div className="contact_info_item">
               <div className="contact_info_icon">
                 <Send className="w-5 h-5" />
@@ -121,8 +108,6 @@ export function ContactpageView() {
                 </a>
               </div>
             </div>
-
-            {/* Email */}
             <div className="contact_info_item">
               <div className="contact_info_icon">
                 <Mail className="w-5 h-5" />

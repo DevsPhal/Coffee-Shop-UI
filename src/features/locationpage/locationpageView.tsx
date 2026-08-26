@@ -35,7 +35,6 @@ export function LocationpageView() {
 
   return (
     <div className="product_detail_container font-sans">
-      {/* Header & Breadcrumb Section */}
       <div className="product_detail_header">
         <h1 className="product_detail_title">Location</h1>
         <nav className="product_detail_breadcrumb" aria-label="Breadcrumb">
@@ -46,12 +45,8 @@ export function LocationpageView() {
           <span className="breadcrumb_current">Location</span>
         </nav>
       </div>
-
-      {/* Main Grid Layout */}
       <div className="location_page_grid">
-        {/* Left Column: Main Store Photo Card */}
         <div className="location_page_image_box group">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/images/590st%20cafe.jpg"
             alt="590st CAFE Location"
@@ -66,8 +61,6 @@ export function LocationpageView() {
             <p className="location_store_subtitle">Toul Kork, Phnom Penh</p>
           </div>
         </div>
-
-        {/* Right Column: Store Information & Map Card */}
         <div className="location_page_card">
           <div className="location_card_top">
             <div>
@@ -76,10 +69,7 @@ export function LocationpageView() {
                 Visit us to experience freshly crafted coffee, delicious beverages, and a cozy atmosphere perfect for relaxation, meeting friends, or working.
               </p>
             </div>
-
-            {/* Address & Info List */}
             <div className="location_info_group">
-              {/* Address */}
               <div className="location_info_item">
                 <div className="location_info_icon">
                   <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -91,19 +81,15 @@ export function LocationpageView() {
                   </p>
                 </div>
               </div>
-
-              {/* Opening Hours */}
               <div className="location_info_item">
                 <div className="location_info_icon">
                   <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
                   <h4 className="location_info_label">Opening Hours</h4>
-                  <p className="location_info_text">Monday - Sunday: 7:00 AM - 11:00 PM</p>
+                  <p className="location_info_text">Monday - Sunday: 7:00 AM - 3:00 PM</p>
                 </div>
               </div>
-
-              {/* Phone & Contact */}
               <div className="location_info_item">
                 <div className="location_info_icon">
                   <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -114,15 +100,12 @@ export function LocationpageView() {
                 </div>
               </div>
             </div>
-
-            {/* Clickable Relative Map Preview Card - Entire Box Opens Google Maps */}
             <a
               href={googleMapUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="map_preview_card"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/images/map.png"
                 alt="590st cafe location map"
@@ -137,8 +120,6 @@ export function LocationpageView() {
               </div>
             </a>
           </div>
-
-          {/* Action Row: Full-Width Explore Our Menu matching Map width */}
           <div className="action_row_border">
             <Link
               href={menuHref}

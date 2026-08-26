@@ -46,12 +46,10 @@ export function MenupageView() {
     cat === "All"
       ? PRODUCTS.length
       : PRODUCTS.filter((p) => p.category === cat).length;
-
   return (
     <div className="menu_page_wrapper font-sans">
       <div className="menu_page_container">
         
-        {/* Header Section */}
         <div className="menu_page_header">
           <h1 className="menu_page_title">
             Our Full Menu
@@ -60,8 +58,6 @@ export function MenupageView() {
             Handcrafted beverages & bites, made to order just for you.
           </p>
         </div>
-
-        {/* Full Screen Desktop Category Filter Pills */}
         <div className="category_desktop_row flex-wrap items-center justify-center gap-2 sm:gap-3 my-8 px-2">
           {categories.map((cat) => {
             const isSelected = selectedCategory === cat;
@@ -92,8 +88,6 @@ export function MenupageView() {
             );
           })}
         </div>
-
-        {/* Mobile Category Dropdown Selector */}
         <div className="category_mobile_row justify-center my-6 px-2">
           <CategoryDropdown
             categories={categories}
@@ -102,8 +96,6 @@ export function MenupageView() {
             getCategoryCount={getCategoryCount}
           />
         </div>
-
-        {/* Menu Cards Grid */}
         <div className="homepage_cards_grid">
           {filteredProducts.map((item) => (
             <Card

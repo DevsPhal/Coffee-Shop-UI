@@ -83,8 +83,6 @@ export function AboutpageView() {
   return (
    <div className="about-container">
   <div className="about-wrapper">
-    
-    {/* Top Header & Breadcrumbs */}
     <div className="product_detail_header">
       <h1 className="product_detail_title">About Us</h1>
 
@@ -96,8 +94,6 @@ export function AboutpageView() {
         <span className="breadcrumb_current">About Us</span>
       </nav>
     </div>
-
-    {/* Bento Gallery Grid Section */}
     <div className="bento-grid">
       {ABOUT_ITEMS.map((item, index) => (
         <div
@@ -106,7 +102,6 @@ export function AboutpageView() {
           className={`about-card ${item.colSpan || "span-col-1"}`}
           style={{ "--item-index": index } as React.CSSProperties}
         >
-          {/* Image */}
           <Image
             src={item.image}
             alt={item.title}
@@ -115,11 +110,7 @@ export function AboutpageView() {
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
             className="card-image"
           />
-
-          {/* Dark Gradient Overlay for Text Readability */}
           <div className="card-overlay" />
-
-          {/* Text Overlaid at Bottom Left */}
           <div className="card-content">
             <h3 className="card-title">
               {item.title}
@@ -133,8 +124,6 @@ export function AboutpageView() {
     </div>
 
   </div>
-
-  {/* Lightbox / Modal when clicking an item */}
   {selectedItem && (
     <div
       className="modal-backdrop"
