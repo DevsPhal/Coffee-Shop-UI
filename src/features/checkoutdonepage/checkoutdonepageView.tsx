@@ -166,6 +166,15 @@ export function CheckoutdonepageView() {
     setCallStaffModal(true);
   };
 
+  const handleBackToMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (typeof window !== "undefined" && window.innerWidth <= 768) {
+      router.push("/menuphone");
+    } else {
+      router.push("/menu");
+    }
+  };
+
   return (
     <div className="checkout_done_page">
       {/* 1. TOP BANNER SECTION WITH RESORT POOL BACKGROUND */}
@@ -354,7 +363,7 @@ export function CheckoutdonepageView() {
             <Bell className="w-5 h-5 mr-2 shrink-0" />
             <span>{staffCalled ? "Staff Notified" : "Call Staff"}</span>
           </button>
-          <Link href="/menu" className="btn_desktop_menu">
+          <Link href="/menu" onClick={handleBackToMenu} className="btn_desktop_menu">
             <UtensilsCrossed className="w-5 h-5 mr-2 shrink-0" />
             <span>Back to Menu</span>
           </Link>
@@ -372,7 +381,7 @@ export function CheckoutdonepageView() {
             <ConciergeBell className="w-5 h-5 shrink-0" />
             <span>{staffCalled ? "Staff Notified" : "Call Staff"}</span>
           </button>
-          <Link href="/menu" className="btn_mobile_menu">
+          <Link href="/menuphone" onClick={handleBackToMenu} className="btn_mobile_menu">
             <UtensilsCrossed className="w-5 h-5 shrink-0" />
             <span>Back to Menu</span>
           </Link>

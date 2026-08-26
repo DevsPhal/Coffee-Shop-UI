@@ -113,7 +113,8 @@ export function Card({
   if (variant === "phone") {
     return (
       <div
-        className={`relative flex items-center justify-between p-3 sm:p-3.5 rounded-[22px] bg-white transition-all duration-200 cursor-pointer ${
+        suppressHydrationWarning
+        className={`relative flex items-center justify-between p-3 sm:p-3.5 rounded-[22px] bg-white transition-all duration-200 cursor-pointer w-full min-w-0 overflow-hidden ${
           isSelected
             ? "border-[1.5px] border-[#931B42] shadow-md shadow-[#931B42]/10"
             : "border border-[#F3E8EC] hover:border-[#931B42]/40 shadow-sm"
@@ -138,19 +139,21 @@ export function Card({
             <div
               className={`promo_clock_badge promo_clock_badge_phone promo_clock_${promoStatus}`}
               title={`Promotion ends in ${displayPromoTime}`}
+              suppressHydrationWarning
             >
               <Clock className="w-3 h-3 shrink-0" />
-              <span className="promo_clock_text">{displayPromoTime}</span>
+              <span className="promo_clock_text" suppressHydrationWarning>{displayPromoTime}</span>
             </div>
           )}
         </Link>
 
         {/* Middle Details */}
-        <div className="flex-1 min-w-0 px-3 sm:px-4">
-          <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex-1 min-w-0 px-3 sm:px-4 overflow-hidden">
+          <div className="flex items-center gap-1.5 min-w-0 w-full">
             <Link
               href={targetHref}
-              className="text-[#111827] font-bold text-base sm:text-[17px] leading-snug tracking-tight truncate hover:underline"
+              className="text-[#111827] font-bold text-base sm:text-[17px] leading-snug tracking-tight truncate min-w-0 flex-1 hover:underline"
+              title={title}
             >
               {title}
             </Link>
@@ -171,7 +174,7 @@ export function Card({
             Price
           </div>
 
-          <div className="price_container">
+          <div className="price_container shrink-0">
             {originalPrice && originalPrice > price && isPromotion && (
               <span className="price_original">
                 ${originalPrice.toFixed(2)}
@@ -201,9 +204,9 @@ export function Card({
 
   // Default Grid Card
   return (
-    <div className="card_item relative">
-      <Link href={targetHref} className="block cursor-pointer group">
-        <div className="card_image_box group-hover:opacity-90 transition-opacity relative">
+    <div className="card_item relative w-full min-w-0 max-w-full overflow-hidden" suppressHydrationWarning>
+      <Link href={targetHref} className="block cursor-pointer group w-full min-w-0">
+        <div className="card_image_box group-hover:opacity-90 transition-opacity relative w-full overflow-hidden">
           <Image
             src={imgSrc}
             alt={title}
@@ -224,20 +227,21 @@ export function Card({
             <div
               className={`promo_clock_badge promo_clock_${promoStatus}`}
               title={`Promotion ends in ${displayPromoTime}`}
+              suppressHydrationWarning
             >
               <Clock className="w-3.5 h-3.5 shrink-0" />
-              <span className="promo_clock_text">{displayPromoTime}</span>
+              <span className="promo_clock_text" suppressHydrationWarning>{displayPromoTime}</span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 mb-4">
-          <h3 className="card_title group-hover:underline mb-0">
+        <div className="flex items-center justify-between gap-2 mb-4 w-full min-w-0">
+          <h3 className="card_title group-hover:underline mb-0 truncate min-w-0 flex-1" title={title}>
             {title}
           </h3>
 
           {/* Discount Price & Strikethrough Original Price using globals.scss classes */}
-          <div className="price_container">
+          <div className="price_container shrink-0">
             {originalPrice && originalPrice > price && isPromotion && (
               <span className="price_original">
                 ${originalPrice.toFixed(2)}

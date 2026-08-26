@@ -48,54 +48,58 @@ export default function ScrollObserver() {
       ".footer_bottom_row",
     ].join(",");
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in-view");
-          } else {
-            entry.target.classList.remove("in-view");
-          }
-        });
-      },
-      {
-        rootMargin: "-20px 0px -20px 0px",
-        threshold: 0.05,
-      }
-    );
+    let observer: IntersectionObserver | null = null;
+    let mutationObserver: MutationObserver | null = null;
+    let isDisposed = false;
 
     const observeAll = () => {
+      if (isDisposed || !observer) return;
       const elements = document.querySelectorAll(selector);
       elements.forEach((el) => {
-        observer.observe(el);
+        observer?.observe(el);
       });
     };
 
-    observeAll();
+    // Defer observer setup until React hydration completes
+    const initTimer = setTimeout(() => {
+      if (isDisposed) return;
 
-    const timer = setTimeout(observeAll, 50);
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("in-view");
+            } else {
+              entry.target.classList.remove("in-view");
+            }
+          });
+        },
+        {
+          rootMargin: "-20px 0px -20px 0px",
+          threshold: 0.05,
+        }
+      );
 
-    // Watch for DOM changes (category filtering, dynamic lists, etc.)
-    const mutationObserver = new MutationObserver(() => {
       observeAll();
-    });
 
-    mutationObserver.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
+      mutationObserver = new MutationObserver(() => {
+        observeAll();
+      });
 
-    const handleScroll = () => {
-      observeAll();
-    };
+      mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
+      window.addEventListener("scroll", observeAll, { passive: true });
+    }, 150);
 
     return () => {
-      clearTimeout(timer);
-      window.removeEventListener("scroll", handleScroll);
-      mutationObserver.disconnect();
-      observer.disconnect();
+      isDisposed = true;
+      clearTimeout(initTimer);
+      window.removeEventListener("scroll", observeAll);
+      if (mutationObserver) mutationObserver.disconnect();
+      if (observer) observer.disconnect();
     };
   }, []);
 

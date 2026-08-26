@@ -71,6 +71,7 @@ export function PhoneCard({
     <div
       onClick={onSelect}
       className={`phone-card ${isSelected ? "selected" : "default"}`}
+      suppressHydrationWarning
     >
       {/* Left: Drink Image Container */}
       <div className="image-container relative shrink-0">
@@ -199,7 +200,7 @@ export function MenupageView() {
         </div>
 
         {/* Desktop Category Filter & Search Row */}
-        <div className="hidden sm:flex flex-col sm:flex-row items-center justify-between gap-4 my-6 px-2">
+        <div className="category_desktop_row flex-col sm:flex-row items-center justify-between gap-4 my-6 px-2">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {categories.map((cat) => {
               const isSelected = selectedCategory === cat;
@@ -270,7 +271,7 @@ export function MenupageView() {
         </div>
 
         {/* Mobile Filter & Search Bar Row */}
-        <div className="sm:hidden flex items-center justify-between gap-2 my-4 px-2 w-full">
+        <div className="category_mobile_row items-center justify-between gap-2 my-4 px-2 w-full">
           {/* Category Dropdown Pill (Left - Thin & Slim) */}
           <div className="shrink-0">
             <CategoryDropdown
