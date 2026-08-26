@@ -23,17 +23,17 @@ const SPECIAL_TODAY_DISCOUNTS: Record<
   string,
   { price: number; originalPrice: number; promoEndDate?: string; promoDaysLeft?: string }
 > = {
-  "1": { price: 1.50, originalPrice: 2.00, promoEndDate: getFuturePromoDate(15), promoDaysLeft: "15 days left" }, // Fresh 15-day promotion
-  "2": { price: 1.75, originalPrice: 2.25, promoEndDate: getFuturePromoDate(7), promoDaysLeft: "7 days left" },   // 7 days left -> YELLOW
-  "3": { price: 2.00, originalPrice: 2.50, promoEndDate: getFuturePromoDate(2), promoDaysLeft: "2 days left" },   // 2 days left -> RED
+  "11": { price: 2.25, originalPrice: 3.00, promoEndDate: getFuturePromoDate(15), promoDaysLeft: "15 days left" }, // -25% OFF
+  "12": { price: 1.95, originalPrice: 2.50, promoEndDate: getFuturePromoDate(7), promoDaysLeft: "7 days left" },   // -22% OFF
+  "13": { price: 1.60, originalPrice: 2.00, promoEndDate: getFuturePromoDate(2), promoDaysLeft: "2 days left" },   // -20% OFF
 };
 
 export function SpecialTodaySection({
   title = "Special Today",
   subtitle = "Handcrafted daily specials picked fresh for you",
 }: SpecialTodaySectionProps) {
-  // Only slice the first 3 cards (ESPRESSO, Ice Amacano, Ice Latte)
-  const specialProducts = PRODUCTS.slice(0, 3);
+  // Display the 3 special promotion items (Blue soda, Hot Chocolate, Sting)
+  const specialProducts = PRODUCTS.filter((item) => ["11", "12", "13"].includes(item.id));
 
   return (
     <section className="homepage_crafted_section font-sans">

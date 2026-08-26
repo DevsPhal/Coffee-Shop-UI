@@ -131,8 +131,8 @@ export function Card({
             className="object-cover transition-transform duration-300 hover:scale-105"
           />
           {discountPercent > 0 && isPromotion && (
-            <span className="discount_badge">
-              -{discountPercent}%
+            <span className="discount_badge discount_badge_phone">
+              -{discountPercent}% OFF
             </span>
           )}
           {isPromotion && (
@@ -149,14 +149,19 @@ export function Card({
 
         {/* Middle Details */}
         <div className="flex-1 min-w-0 px-3 sm:px-4 overflow-hidden">
-          <div className="flex items-center gap-1.5 min-w-0 w-full">
+          <div className="flex items-center gap-1.5 min-w-0 w-full flex-wrap">
             <Link
               href={targetHref}
-              className="text-[#111827] font-bold text-base sm:text-[17px] leading-snug tracking-tight truncate min-w-0 flex-1 hover:underline"
+              className="text-[#111827] font-bold text-base sm:text-[17px] leading-snug tracking-tight truncate min-w-0 flex-initial hover:underline"
               title={title}
             >
               {title}
             </Link>
+            {isPromotion && (
+              <span className="bg-[#A1255B] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
+                PROMO
+              </span>
+            )}
             <button
               type="button"
               title="Info"
@@ -174,7 +179,7 @@ export function Card({
             Price
           </div>
 
-          <div className="price_container shrink-0">
+          <div className="price_container shrink-0 flex items-center gap-1.5 flex-wrap">
             {originalPrice && originalPrice > price && isPromotion && (
               <span className="price_original">
                 ${originalPrice.toFixed(2)}

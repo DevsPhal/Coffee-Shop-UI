@@ -57,6 +57,11 @@ export function PhoneCard({
     setTimeout(() => setAdded(false), 1200);
   };
 
+  const discountPercent =
+    product.originalPrice && product.originalPrice > product.price
+      ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+      : 0;
+
   const promoResult = calculatePromoTimeLeft(product.promoEndDate, product.promoDaysLeft);
   const isPromotion =
     ((product.originalPrice !== undefined && product.originalPrice > product.price) ||
@@ -83,6 +88,11 @@ export function PhoneCard({
           sizes="(max-width: 640px) 80px, 88px"
           className="card-thumb"
         />
+        {discountPercent > 0 && isPromotion && (
+          <span className="discount_badge discount_badge_phone">
+            -{discountPercent}% OFF
+          </span>
+        )}
         {isPromotion && (
           <div
             className={`promo_clock_badge promo_clock_badge_phone promo_clock_${promoStatus}`}
@@ -94,13 +104,18 @@ export function PhoneCard({
         )}
       </div>
 
-      {/* Middle: Drink Info (Title, Info Icon, Price) */}
+      {/* Middle: Drink Info (Title, Discount Tag, Info Icon, Price) */}
       <div className="card-info flex-1 min-w-0 overflow-hidden">
-        {/* Title + Info Icon */}
-        <div className="title-row inline-flex items-center gap-1.5 min-w-0 max-w-full overflow-hidden">
+        {/* Title + PROMO Badge + Info Icon */}
+        <div className="title-row inline-flex items-center gap-1.5 min-w-0 max-w-full overflow-hidden flex-wrap">
           <h3 className="item-title truncate min-w-0 flex-initial">
             {product.title}
           </h3>
+          {isPromotion && (
+            <span className="bg-[#A1255B] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
+              PROMO
+            </span>
+          )}
           <button
             type="button"
             title="Product Details"
@@ -119,9 +134,16 @@ export function PhoneCard({
           Price
         </div>
 
-        {/* Price Value */}
-        <div className="price-value">
-          $ {product.price.toFixed(2)}
+        {/* Price Value with Original Price Strikethrough */}
+        <div className="price-value flex items-center gap-1.5 flex-wrap">
+          {product.originalPrice && product.originalPrice > product.price && isPromotion && (
+            <span className="line-through text-xs text-gray-400 font-medium">
+              ${product.originalPrice.toFixed(2)}
+            </span>
+          )}
+          <span className="text-[#A1255B] font-extrabold">
+            $ {product.price.toFixed(2)}
+          </span>
         </div>
       </div>
 
@@ -343,61 +365,98 @@ export function MenupageView() {
       </div>
 
       {/* Product Detail Modal (Rendered on document.body via Portal) */}
-      {activeModalProduct && mounted && createPortal(
-        <div
-          className="modal-backdrop"
-          onClick={() => setActiveModalProduct(null)}
-        >
+      {activeModalProduct && mounted && (() => {
+        const modalDiscountPercent =
+          activeModalProduct.originalPrice && activeModalProduct.originalPrice > activeModalProduct.price
+            ? Math.round(((activeModalProduct.originalPrice - activeModalProduct.price) / activeModalProduct.originalPrice) * 100)
+            : 0;
+
+        const modalPromoResult = calculatePromoTimeLeft(
+          activeModalProduct.promoEndDate,
+          activeModalProduct.promoDaysLeft
+        );
+
+        const isModalPromotion =
+          (modalDiscountPercent > 0 || (activeModalProduct.originalPrice !== undefined && activeModalProduct.originalPrice > activeModalProduct.price)) &&
+          modalPromoResult.isValid;
+
+        return createPortal(
           <div
-            className="modal-card"
-            onClick={(e) => e.stopPropagation()}
+            className="modal-backdrop"
+            onClick={() => setActiveModalProduct(null)}
           >
-            <button
-              type="button"
-              onClick={() => setActiveModalProduct(null)}
-              className="modal-close-btn"
+            <div
+              className="modal-card"
+              onClick={(e) => e.stopPropagation()}
             >
-              ✕
-            </button>
-
-            <div className="modal-img-container">
-              <Image
-                src={getResolvedProductImage(activeModalProduct.id, activeModalProduct.image)}
-                alt={activeModalProduct.title}
-                fill
-                unoptimized
-                className="modal-img"
-              />
-            </div>
-
-            <div>
-              <div className="modal-header-row">
-                <h3 className="modal-item-title">
-                  {activeModalProduct.title}
-                </h3>
-                <span className="modal-item-price">
-                  $ {activeModalProduct.price.toFixed(2)}
-                </span>
-              </div>
-              <p className="modal-item-desc">
-                {activeModalProduct.description}
-              </p>
-            </div>
-
-            <div className="modal-action-wrapper space-y-2 pt-2">
-              <Link
-                href={`/product?id=${activeModalProduct.id}&title=${encodeURIComponent(
-                  activeModalProduct.title
-                )}&price=${activeModalProduct.price}${activeModalProduct.originalPrice ? `&originalPrice=${activeModalProduct.originalPrice}` : ""}${activeModalProduct.promoEndDate ? `&promoEndDate=${encodeURIComponent(activeModalProduct.promoEndDate)}` : ""}${activeModalProduct.promoDaysLeft ? `&promoDaysLeft=${encodeURIComponent(activeModalProduct.promoDaysLeft)}` : ""}&category=${encodeURIComponent(activeModalProduct.category)}&image=${encodeURIComponent(getResolvedProductImage(activeModalProduct.id, activeModalProduct.image))}`}
-                className="modal-view-btn"
+              <button
+                type="button"
+                onClick={() => setActiveModalProduct(null)}
+                className="modal-close-btn"
               >
-                View Full Details
-              </Link>
+                ✕
+              </button>
+
+              <div className="modal-img-container relative">
+                <Image
+                  src={getResolvedProductImage(activeModalProduct.id, activeModalProduct.image)}
+                  alt={activeModalProduct.title}
+                  fill
+                  unoptimized
+                  className="modal-img"
+                />
+                {modalDiscountPercent > 0 && isModalPromotion && (
+                  <span className="discount_badge">
+                    -{modalDiscountPercent}% OFF
+                  </span>
+                )}
+                {isModalPromotion && (
+                  <div
+                    className={`promo_clock_badge promo_clock_badge_phone promo_clock_${modalPromoResult.status}`}
+                    title={`Promotion ends in ${modalPromoResult.displayText}`}
+                  >
+                    <Clock className="w-3 h-3 shrink-0" />
+                    <span className="promo_clock_text">{modalPromoResult.displayText}</span>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div className="modal-header-row items-baseline min-w-0 w-full overflow-hidden">
+                  <h3 className="modal-item-title truncate min-w-0 flex-1" title={activeModalProduct.title}>
+                    {activeModalProduct.title}
+                  </h3>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {activeModalProduct.originalPrice && activeModalProduct.originalPrice > activeModalProduct.price && isModalPromotion && (
+                      <span className="line-through text-xs text-gray-400 font-semibold">
+                        ${activeModalProduct.originalPrice.toFixed(2)}
+                      </span>
+                    )}
+                    <span className="modal-item-price text-[#A1255B] font-extrabold text-base sm:text-lg">
+                      $ {activeModalProduct.price.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+                <p className="modal-item-desc">
+                  {activeModalProduct.description}
+                </p>
+              </div>
+
+              <div className="modal-action-wrapper space-y-2 pt-2">
+                <Link
+                  href={`/product?id=${activeModalProduct.id}&title=${encodeURIComponent(
+                    activeModalProduct.title
+                  )}&price=${activeModalProduct.price}${activeModalProduct.originalPrice ? `&originalPrice=${activeModalProduct.originalPrice}` : ""}${activeModalProduct.promoEndDate ? `&promoEndDate=${encodeURIComponent(activeModalProduct.promoEndDate)}` : ""}${activeModalProduct.promoDaysLeft ? `&promoDaysLeft=${encodeURIComponent(activeModalProduct.promoDaysLeft)}` : ""}&category=${encodeURIComponent(activeModalProduct.category)}&image=${encodeURIComponent(getResolvedProductImage(activeModalProduct.id, activeModalProduct.image))}`}
+                  className="modal-view-btn"
+                >
+                  View Full Details
+                </Link>
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        );
+      })()}
     </div>
   );
 }

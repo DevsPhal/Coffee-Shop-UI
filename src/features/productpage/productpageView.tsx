@@ -58,8 +58,6 @@ export function ProductpageView({
   }, []);
 
   const menuBaseUrl = isMobile ? "/menuphone" : "/menu";
-
-  // Read search params as fallback if props aren't provided
   const queryId = searchParams.get("id") || undefined;
   const queryTitle = searchParams.get("title") || undefined;
   const queryPrice = searchParams.get("price")
@@ -76,8 +74,6 @@ export function ProductpageView({
 
   const effectiveId = propId || queryId;
   const effectiveTitle = propTitle || queryTitle;
-
-  // Look up product from product list or fallback to default
   const matchedProduct =
     getProductByIdOrTitle(effectiveId, effectiveTitle) || PRODUCTS[0];
 
@@ -95,7 +91,6 @@ export function ProductpageView({
       ? Math.round(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100)
       : 0;
 
-  // Zod Date Validation & Countdown Calculation
   const promoResult = calculatePromoTimeLeft(displayPromoEndDate, displayPromoDaysLeft);
   const isPromotion =
     (discountPercent > 0 || (displayOriginalPrice !== undefined && displayOriginalPrice > displayPrice)) &&
@@ -158,11 +153,9 @@ export function ProductpageView({
 
   return (
     <div className="product_detail_container font-sans" suppressHydrationWarning>
-      {/* Header & Breadcrumb Section */}
       <div className="product_detail_header block mb-6" style={{ display: "block" }}>
         <h1 className="product_detail_title">Product Detail</h1>
 
-        {/* Clickable Breadcrumbs: Products » Category » Product Title */}
         <nav className="product_detail_breadcrumb" aria-label="Breadcrumb">
           <Link href={menuBaseUrl} className="breadcrumb_link">
             Products
@@ -178,10 +171,7 @@ export function ProductpageView({
           <span className="breadcrumb_current">{displayTitle}</span>
         </nav>
       </div>
-
-      {/* Main 2-Column Product Detail Layout */}
       <div className="product_detail_grid">
-        {/* Left Column: Image Box */}
         <div className="product_image_container" suppressHydrationWarning>
           {displayImage ? (
             <Image
@@ -197,15 +187,11 @@ export function ProductpageView({
               {displayTitle}
             </div>
           )}
-
-          {/* Discount Badge on Product Image */}
           {discountPercent > 0 && (
             <span className="product_discount_badge">
               -{discountPercent}% OFF
             </span>
           )}
-
-          {/* Promo Clock Badge on Product Image Top Right */}
           {isPromotion && (
             <div
               className={`promo_clock_badge promo_clock_detail_badge promo_clock_${promoResult.status}`}
@@ -216,10 +202,7 @@ export function ProductpageView({
             </div>
           )}
         </div>
-
-        {/* Right Column: Product Information Box Card */}
         <div className="product_info_box" suppressHydrationWarning>
-          {/* Header Row: Title & Right-Aligned Price */}
           <div className="product_info_header">
             <div>
               <h2 className="product_name">{displayTitle}</h2>
@@ -233,8 +216,6 @@ export function ProductpageView({
                 </Link>
               </div>
             </div>
-
-            {/* Product Price & Strikethrough Original Price */}
             <div className="price_wrapper">
               {displayOriginalPrice && displayOriginalPrice > displayPrice && (
                 <span className="original_price">

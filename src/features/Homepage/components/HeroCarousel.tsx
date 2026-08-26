@@ -15,7 +15,6 @@ import Autoplay from "embla-carousel-autoplay";
 import { cn } from "@/lib/utils";
 import "@/app/globals.scss";
 
-// Slides data using poster1, poster2, and poster3 from /images
 const SLIDES = [
   {
     id: 1,
@@ -54,7 +53,6 @@ export default function HeroCarousel() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Configure continuous autoplay that loops indefinitely without stopping
   const plugin = React.useRef(
     Autoplay({
       delay: 3000,

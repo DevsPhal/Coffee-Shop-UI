@@ -35,12 +35,8 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
   const [showPassword, setShowPassword] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [viewMode, setViewMode] = useState<"login" | "forgot" | "create">(initialViewMode);
-
-  // Zod Validation Errors & Focused Input State
   const [errors, setErrors] = useState<FormErrors>({});
   const [activeInput, setActiveInput] = useState<keyof FormErrors | null>(null);
-
-  // Validate fields dynamically using Zod schema
   const validateField = (field: keyof FormErrors, value: string) => {
     const fieldSchema = userLoginSchema.shape[field];
     const result = fieldSchema.safeParse(value);
@@ -93,10 +89,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
 
   return (
     <div className="login_page_wrapper font-sans relative">
-
-      {/* Left Side: Login Form */}
       <div className="login_form_side">
-        {/* Top Left Back Button with back.svg icon */}
         <div className="flex justify-start">
           <Link
             href="/"
@@ -113,12 +106,8 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
             />
           </Link>
         </div>
-
-        {/* Form Area */}
         <div className="login_form_area">
-          {/* 590st CAFE Logo with Hearts */}
           <div className="login_logo-container">
-            {/* Floating Hearts around Logo */}
             <div className="absolute -inset-6 pointer-events-none">
               <Heart className="absolute top-0 left-2 w-4 h-4 text-pink-500 fill-pink-500 rotate-[-15deg] animate-pulse" />
               <Heart className="absolute top-2 right-1 w-3.5 h-3.5 text-red-500 fill-red-500 rotate-[20deg]" />
@@ -144,22 +133,16 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
             <Create onBackToLogin={() => setViewMode("login")} />
           ) : (
             <>
-              {/* Avatar Circle */}
               <div className="login_avatar_circle">
                 <User className="w-10 h-10 stroke-[1.5]" />
               </div>
-
-              {/* Title & Subtitle */}
               <h1 className="login_title">
                 Login to your account
               </h1>
               <p className="login_subtitle">
                 Enter your credential to login
               </p>
-
-              {/* Form with Zod Validation & Speech-Bubble Tooltip */}
               <form onSubmit={handleSubmit} className="w-full space-y-4" noValidate>
-                {/* Username Field */}
                 <div>
                   <label className="login_input_label">
                     Username
@@ -184,14 +167,10 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                       className="login_input_field"
                     />
                   </div>
-
-                  {/* Zod Error Tooltip Alert */}
                   {errors.username && (
                     <TooltipAlert message={errors.username} />
                   )}
                 </div>
-
-                {/* Password Field */}
                 <div>
                   <label className="login_input_label">
                     Password
@@ -224,14 +203,10 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                       )}
                     </button>
                   </div>
-
-                  {/* Zod Error Tooltip Alert */}
                   {errors.password && (
                     <TooltipAlert message={errors.password} />
                   )}
                 </div>
-
-                {/* Controls Row */}
                 <div className="login_controls_row">
                   <label
                     onClick={() => setKeepLoggedIn(!keepLoggedIn)}
@@ -284,8 +259,6 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
 
         <div />
       </div>
-
-      {/* Right Side: slideshowloginscreen.svg */}
       <div className="login_slideshow_side hidden lg:flex">
         <div className="relative w-full h-full min-h-[500px] flex items-center justify-center">
           <Image

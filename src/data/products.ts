@@ -8,6 +8,7 @@ export interface Product {
   image?: string | null;
   description: string;
   category: string;
+  isPromotionOnly?: boolean;
 }
 
 export const PRODUCTS: Product[] = [
@@ -92,6 +93,36 @@ export const PRODUCTS: Product[] = [
     description: "Rich, bold, and concentrated shot of pure coffee essence crafted from expertly roasted beans for a intense caffeine kick.",
     category: "Beer",
   },
+  {
+    id: "11",
+    title: "Blue soda",
+    price: 2.25,
+    originalPrice: 3.00,
+    promoDaysLeft: "15 days left",
+    image: "/images/soda.jpg",
+    description: "Refreshing blue curaçao soda infused with sparkling water and crushed ice.",
+    category: "Soft Drink",
+  },
+  {
+    id: "12",
+    title: "Hot Chocolate",
+    price: 1.95,
+    originalPrice: 2.50,
+    promoDaysLeft: "7 days left",
+    image: "/images/chocolate.jpg",
+    description: "Rich cocoa blended with steamed milk and topped with creamy froth.",
+    category: "Hot",
+  },
+  {
+    id: "13",
+    title: "Sting",
+    price: 1.60,
+    originalPrice: 2.00,
+    promoDaysLeft: "2 days left",
+    image: "/images/sting.png",
+    description: "Energy drink served chilled for an instant refresh and boost.",
+    category: "Soft Drink",
+  },
 ];
 
 export const DEFAULT_IMAGES: Record<string, string> = {
@@ -105,6 +136,9 @@ export const DEFAULT_IMAGES: Record<string, string> = {
   "8": "/images/cappucino.jpg",
   "9": "/images/cappucino_frappee.jpg",
   "10": "/images/cambodia_beer.jpg",
+  "11": "/images/soda.jpg",
+  "12": "/images/chocolate.jpg",
+  "13": "/images/sting.png",
 };
 
 export const GENERIC_COFFEE_IMG =
