@@ -38,7 +38,7 @@ export function Navbar() {
 
   const mobileNavItems = [
     { label: "Home", href: "/", icon: "/icons/home.svg" },
-    { label: "Menu", href: "/menuphone", icon: "/icons/menu.svg" },
+    { label: "Menu", href: "/menu", icon: "/icons/menu.svg" },
     { label: "Events", href: "/events", icon: "/icons/event.svg" },
     { label: "Location", href: "/location", icon: "/icons/location.svg" },
     { label: "Contact", href: "/contact", icon: "/icons/contact.svg" },
@@ -56,9 +56,9 @@ export function Navbar() {
 
   const isMobileNavActive = (href: string) => {
     if (href === "/") return pathname === "/";
-    if (href === "/menuphone") return pathname === "/menuphone" || pathname === "/menu";
+    if (href === "/menu") return pathname === "/menu";
     if (href === "/events") return pathname.startsWith("/events") || pathname.startsWith("/event");
-    if (href === "/userprofile") return pathname === "/userprofile" || pathname === "/profile";
+    if (href === "/userprofile") return pathname === "/userprofile";
     return pathname.startsWith(href);
   };
 

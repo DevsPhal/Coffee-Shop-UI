@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Mail, MapPin, Phone, Send } from "lucide-react";
 import "@/app/globals.scss";
 
 const infoLinks = [
@@ -15,102 +16,98 @@ const infoLinks = [
 
 const socialLinks = [
   { label: "Instagram", href: "https://www.instagram.com/", icon: "/icons/instagram.svg" },
-  { label: "Facebook", href: "https://www.facebook.com/profile.php?id=61573086337988", icon: "/icons/facebook.svg" },
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/profile.php?id=61573086337988",
+    icon: "/icons/facebook.svg",
+  },
   { label: "TikTok", href: "https://www.tiktok.com/en/", icon: "/icons/tiktok.svg" },
 ];
 
 export function Footer() {
   const pathname = usePathname();
 
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
-  };
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
     <footer className="footer_wrapper font-sans">
       <div className="footer_container">
         <div className="footer_top_row">
-          <div className="footer_address_box">
-            <Link href="/" className="footer_logo_link">
-              <Image
-                src="/images/Logo.svg"
-                alt="590st CAFE"
-                width={66}
-                height={48}
-              />
+          {/* Brand */}
+          <div className="footer_brand">
+            <Link href="/" className="footer_logo_link" aria-label="590st CAFE home">
+              <Image src="/images/Logo.svg" alt="590st CAFE" width={66} height={48} />
             </Link>
             <p className="footer_address_text">
-              30a St 590, Phnom Penh 12101, Khan Toul Kork, Phnom Penh Cambodia.
+              <MapPin className="footer_address_icon" aria-hidden />
+              <span>
+                30a St 590, Phnom Penh 12101, Khan Toul Kork, Phnom Penh
+                Cambodia.
+              </span>
             </p>
           </div>
 
-          <div className="footer_links_grid">
-            <div>
-              <h3 className="footer_column_title">
-                Info
-              </h3>
-              <ul className="footer_list">
-                {infoLinks.map(({ label, href }) => (
-                  <li key={href}>
-                    <Link
-                      href={href}
-                      className={`footer_link ${isActive(href) ? "active" : ""}`}
-                    >
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {/* Explore — two columns on mobile so five links take three rows */}
+          <nav className="footer_column footer_column_info" aria-label="Footer">
+            <h3 className="footer_column_title">Explore</h3>
+            <ul className="footer_link_grid">
+              {infoLinks.map(({ label, href }) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    className={`footer_link ${isActive(href) ? "active" : ""}`}
+                  >
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
-            <div>
-              <h3 className="footer_column_title">
-                Contact for Service
-              </h3>
-              <p className="footer_contact_text">
-                Telegram:{" "}
+          {/* Contact */}
+          <div className="footer_column">
+            <h3 className="footer_column_title">Contact</h3>
+            <ul className="footer_contact_list">
+              <li>
                 <a
-                 href="tg://resolve?domain=069 955 878"
+                  href="https://t.me/+855699558789"
                   target="_blank"
                   rel="noopener noreferrer"
+                  className="footer_contact_item"
                 >
-                  069 955 878
-                </a>
-              </p>
-            </div>
-
-            <div>
-              <h3 className="footer_column_title">
-                Contact for Partner
-              </h3>
-              <ul className="footer_list">
-                <li>
-                  <a href="tel:+85595600676" className="footer_link">
-                    095 600 676
-                  </a>
-                </li>
-                <li>
-                  <a href="tel:+85569955878" className="footer_link">
+                  <Send className="footer_contact_icon" aria-hidden />
+                  <span>
                     069 955 878
-                  </a>
-                </li>
-                <li>
-                  <a
-                href="https://mail.google.com/mail/?view=cm&fs=1&to=lengsokpunlork611@gmail.com"
-                    className="footer_email_link"
-                  >
+                    <small className="footer_contact_note">Telegram</small>
+                  </span>
+                </a>
+              </li>
+              <li>
+                <a href="tel:+85595600676" className="footer_contact_item">
+                  <Phone className="footer_contact_icon" aria-hidden />
+                  <span>
+                    095 600 676
+                    <small className="footer_contact_note">Partners</small>
+                  </span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="mailto:lengsokpunlork611@gmail.com"
+                  className="footer_contact_item"
+                >
+                  <Mail className="footer_contact_icon" aria-hidden />
+                  <span className="footer_contact_email">
                     lengsokpunlork611@gmail.com
-                  </a>
-                </li>
-              </ul>
-            </div>
+                  </span>
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
 
         <div className="footer_bottom_row">
-          <p className="footer_copyright_text">© 2026 — Copyright</p>
-
           <div className="footer_social_links">
             {socialLinks.map(({ label, href, icon }) => (
               <a
@@ -121,10 +118,14 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Image src={icon} alt={label} width={20} height={20} />
+                <Image src={icon} alt="" width={18} height={18} />
               </a>
             ))}
           </div>
+
+          <p className="footer_copyright_text">
+            © 2026 590st CAFE · All rights reserved
+          </p>
         </div>
       </div>
     </footer>

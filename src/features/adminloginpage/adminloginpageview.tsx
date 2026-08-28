@@ -117,7 +117,7 @@ export function AdminloginpageView() {
     setToastMessage(`Logging in as ${role}...`);
     setTimeout(() => {
       setToastMessage(null);
-      router.push("/profile");
+      router.push("/userprofile");
     }, 1500);
   };
 

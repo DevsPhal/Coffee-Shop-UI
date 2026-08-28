@@ -360,41 +360,119 @@
   @media (min-width: 1024px) {  grid-template-columns: repeat(3, 1fr);}
 }
 /*  Footer SCSS Styles*/
-.footer_wrapper {  margin-top: auto;  width: 100%;  background-color: #ffffff;  font-family: inherit;}
-.footer_container {  max-width: 80rem;  margin-left: auto;  margin-right: auto;  padding: 3rem 1.5rem;
-  @media (min-width: 1024px) {    padding-left: 2.5rem;    padding-right: 2.5rem;  }
+/* ---------------------------------------------------------------------------
+   Footer
+--------------------------------------------------------------------------- */
+.footer_wrapper {
+  margin-top: auto; width: 100%;
+  background-color: #faf8f6; border-top: 1px solid #ece7e2;
+  font-family: inherit;
 }
-.footer_top_row {  display: flex;  flex-direction: column;  gap: 2.5rem;
-  @media (min-width: 1024px) {    flex-direction: row;    align-items: flex-start;    justify-content: space-between;  }
+
+.footer_container {
+  max-width: 80rem; margin-inline: auto; padding: 1.75rem 1.25rem 1rem;
+  // The mobile bottom nav is `fixed`, so the last element on the page has to
+  // reserve its height or it sits underneath. 64px bar + the home indicator.
+  padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  @media (min-width: 768px) {
+    padding: 3rem 1.5rem 1.75rem;
+  }
+  @media (min-width: 1024px) { padding-inline: 2.5rem; }
 }
-.footer_address_box {  display: flex;  max-width: 28rem;  align-items: flex-start;  gap: 1.25rem;}
-.footer_logo_link {flex-shrink: 0;}
-.footer_address_text {  font-size: 0.875rem;  line-height: 1.625;color: #111827;}
-.footer_links_grid {  display: grid;  grid-template-columns: 1fr;  gap: 2.5rem;
-  @media (min-width: 640px) {    grid-template-columns: repeat(3, 1fr);    gap: 3rem;  }
-  @media (min-width: 1024px) {    gap: 4rem;  }
+
+.footer_top_row {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem 1.25rem;
+  @media (min-width: 640px) { gap: 2rem; }
+  @media (min-width: 1024px) {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: 4rem;
+  }
 }
-.footer_column_title {  font-size: 1rem;  font-weight: 700;  text-transform: uppercase;  letter-spacing: 0.05em;  color: #111827;}
-.footer_list {  margin-top: 1rem;  display: flex;  flex-direction: column;  gap: 0.25rem;}
-.footer_link {font-size: 0.875rem;color: #111827;transition: color 0.2s ease-in-out;
-  &:hover {color: var(--secondary-color);}
-  &.active {color: var(--secondary-color);}
+
+/* ---- brand ---- */
+.footer_brand {
+  grid-column: span 2;
+  display: flex; flex-direction: column; gap: 0.625rem; max-width: 26rem;
+  @media (min-width: 640px) { gap: 0.875rem; }
+  @media (min-width: 1024px) { grid-column: auto; }
 }
-.footer_contact_text {margin-top: 1rem;font-size: 0.875rem;color: #111827;
-  a {  transition: color 0.2s ease-in-out;
-    &:hover {  color: var(--secondary-color);}  
-    }
+.footer_logo_link {
+  display: inline-flex; flex-shrink: 0; width: fit-content;
+  img { height: 34px; width: auto; }
+  @media (min-width: 640px) { img { height: 48px; } }
 }
-.footer_email_link {color: var(--secondary-color);
-  &:hover {  text-decoration: underline;}
+.footer_address_text {
+  display: flex; align-items: flex-start; gap: 0.5rem;
+  font-size: 0.8125rem; line-height: 1.55; color: #6b7280;
+  @media (min-width: 640px) { font-size: 0.875rem; }
 }
-.footer_bottom_row {margin-top: 3rem;display: flex;flex-direction: column;align-items: center;justify-content: space-between;gap: 1rem;border-top: 1px solid #f3f4f6;padding-top: 1.5rem;
-  @media (min-width: 640px) {  flex-direction: row;}
+.footer_address_icon { width: 15px; height: 15px; flex-shrink: 0; margin-top: 3px; color: var(--primary-color); }
+
+/* ---- columns ---- */
+.footer_column { min-width: 0; }
+.footer_column_title {
+  margin-bottom: 0.375rem;
+  font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.09em; color: #a8a29c;
+  @media (min-width: 640px) { margin-bottom: 0.75rem; }
 }
-.footer_copyright_text {  font-size: 0.875rem;  color: #9ca3af;}
-.footer_social_links {  display: flex;  align-items: center;  gap: 1rem;}
-.footer_social_item {transition: opacity 0.2s ease-in-out;
-  &:hover {  opacity: 0.7;}
+
+.footer_link_grid { display: flex; flex-direction: column; }
+
+.footer_link {
+  display: block; padding: 0.3125rem 0;
+  font-size: 0.875rem; color: #111827;
+  transition: color 0.2s ease-in-out;
+  &:hover { color: var(--primary-color); }
+  &.active { color: var(--primary-color); font-weight: 600; }
+  @media (min-width: 640px) { padding: 0.375rem 0; }
+}
+
+/* ---- contact ---- */
+.footer_contact_list { display: flex; flex-direction: column; }
+.footer_contact_item {
+  display: flex; align-items: flex-start; gap: 0.5rem;
+  padding: 0.3125rem 0; font-size: 0.875rem; color: #111827;
+  transition: color 0.2s ease-in-out;
+  span { display: flex; align-items: baseline; gap: 0.4375rem; min-width: 0; flex-wrap: wrap; }
+  &:hover { color: var(--primary-color); }
+  &:hover .footer_contact_icon { color: var(--primary-color); }
+  @media (min-width: 640px) { padding: 0.375rem 0; }
+}
+.footer_contact_icon {
+  width: 15px; height: 15px; flex-shrink: 0; margin-top: 3px;
+  color: #9ca3af; transition: color 0.2s ease-in-out;
+}
+// Sits inline after the number rather than stacking, which halves the row count.
+.footer_contact_note { font-size: 0.6875rem; color: #a8a29c; }
+.footer_contact_email { overflow-wrap: anywhere; font-size: 0.8125rem; line-height: 1.4; }
+
+/* ---- bottom ---- */
+.footer_bottom_row {
+  margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #ece7e2;
+  display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+  @media (min-width: 640px) {
+    margin-top: 2rem; flex-direction: row-reverse;
+    justify-content: space-between; gap: 1rem;
+  }
+}
+
+.footer_copyright_text {
+  font-size: 0.75rem; color: #8b8781; text-align: center;
+  @media (min-width: 640px) { text-align: left; }
+}
+
+.footer_social_links { display: flex; align-items: center; gap: 0.625rem; }
+.footer_social_item {
+  display: grid; place-items: center; width: 40px; height: 40px;
+  border-radius: 9999px; background-color: #ffffff; border: 1px solid #ece7e2;
+  transition: border-color 0.2s ease-in-out, transform 0.2s ease-in-out,
+    box-shadow 0.2s ease-in-out;
+  &:hover {
+    border-color: var(--primary-color); transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(161, 37, 91, 0.12);
+  }
 }
 /* Cart Drawer SCSS Styles*/
 .cart_drawer_wrapper {  position: fixed;  inset: 0;  z-index: 50;  overflow: hidden;}

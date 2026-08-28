@@ -47,12 +47,15 @@ function Button({
   size,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
-  const hasCustomPillOrBrandClass =
-    className?.includes("button_pill") ||
-    className?.includes("button_add_cart") ||
-    className?.includes("button_buy_now") ||
-    className?.includes("button_nav_login") ||
-    className?.includes("btn-");
+  // Base UI allows className to be a state callback, so narrow before matching.
+  const classNameText = typeof className === "string" ? className : "";
+  const hasCustomPillOrBrandClass = [
+    "button_pill",
+    "button_add_cart",
+    "button_buy_now",
+    "button_nav_login",
+    "btn-",
+  ].some((token) => classNameText.includes(token));
 
   const selectedVariant = variant ?? (hasCustomPillOrBrandClass ? "unstyled" : "default");
   const selectedSize = size ?? (hasCustomPillOrBrandClass ? "none" : "default");

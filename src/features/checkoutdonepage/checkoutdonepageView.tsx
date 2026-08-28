@@ -281,7 +281,7 @@ export function CheckoutdonepageView() {
         </button>
 
         <Link
-          href="/menuphone"
+          href="/menu"
           className="btn_mobile_menu"
         >
           <Image
