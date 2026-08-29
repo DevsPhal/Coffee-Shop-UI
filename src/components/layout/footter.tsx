@@ -3,12 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLanguage } from "@/components/ui/translatetokhmer";
+import { useMounted } from "@/hooks/useMounted";
 import "@/app/globals.scss";
 
 const infoLinks = [
   { label: "Home", href: "/" },
   { label: "Menu", href: "/menu" },
-  { label: "Drinks", href: "/drinks" },
+  { label: "Events", href: "/events" },
   { label: "Location", href: "/location" },
   { label: "Contact Us", href: "/contact" },
 ];
@@ -20,7 +22,15 @@ const socialLinks = [
 ];
 
 export function Footer() {
+  const mounted = useMounted();
   const pathname = usePathname();
+  const { t } = useLanguage();
+
+  const displayT = (key: string) => (mounted ? t(key) : key);
+
+  if (pathname === "/payment" || pathname?.startsWith("/payment")) {
+    return null;
+  }
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -41,14 +51,14 @@ export function Footer() {
               />
             </Link>
             <p className="footer_address_text">
-              30a St 590, Phnom Penh 12101, Khan Toul Kork, Phnom Penh Cambodia.
+              {displayT("30a St 590, Phnom Penh 12101, Khan Toul Kork, Phnom Penh Cambodia.")}
             </p>
           </div>
 
           <div className="footer_links_grid">
             <div>
               <h3 className="footer_column_title">
-                Info
+                {displayT("Info")}
               </h3>
               <ul className="footer_list">
                 {infoLinks.map(({ label, href }) => (
@@ -57,7 +67,7 @@ export function Footer() {
                       href={href}
                       className={`footer_link ${isActive(href) ? "active" : ""}`}
                     >
-                      {label}
+                      {displayT(label)}
                     </Link>
                   </li>
                 ))}
@@ -66,7 +76,7 @@ export function Footer() {
 
             <div>
               <h3 className="footer_column_title">
-                Contact for Service
+                {displayT("Contact for Service")}
               </h3>
               <p className="footer_contact_text">
                 Telegram:{" "}
@@ -82,8 +92,9 @@ export function Footer() {
 
             <div>
               <h3 className="footer_column_title">
-                Contact for Partner
+                {displayT("Contact for Partner")}
               </h3>
+
               <ul className="footer_list">
                 <li>
                   <a href="tel:+85595600676" className="footer_link">
@@ -109,7 +120,7 @@ export function Footer() {
         </div>
 
         <div className="footer_bottom_row">
-          <p className="footer_copyright_text">© 2026 — Copyright</p>
+          <p className="footer_copyright_text" suppressHydrationWarning>{displayT("copyright-© 2026 590stcafe.shop")}</p>
 
           <div className="footer_social_links">
             {socialLinks.map(({ label, href, icon }) => (

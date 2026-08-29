@@ -11,7 +11,7 @@ export default function SiteLayout({
   return (
     <CartProvider>
       <Navbar />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 pt-20 site_main_content">{children}</main>
       <Footer />
       <CartDrawer />
     </CartProvider>

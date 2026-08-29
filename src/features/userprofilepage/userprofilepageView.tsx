@@ -4,35 +4,156 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User } from "lucide-react";
+import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ExternalLink, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useContactStore } from "@/store/useContactStore";
+import { useOrderStore } from "@/store/useOrderStore";
+import { useCart } from "@/context/CartContext";
+import { toast } from "@/components/ui/toast";
+import { Modal, ModalContent } from "@/components/ui/modal";
+import { TooltipAlert } from "@/components/ui/tooltip-alert";
+import { cleanPhoneInput } from "@/lib/phoneUtils";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
 export interface UserProfileData {
   userId: string;
   name: string;
   email: string;
+  phone?: string;
+  gender?: string;
   avatarUrl: string;
+  capital?: string;
+  district?: string;
+  zipCode?: string;
+  address?: string;
 }
 
 export function UserprofilepageView() {
+  const { t } = useLanguage();
   const router = useRouter();
-  const { logout } = useAuth();
-  const [profile, setProfile] = useState<UserProfileData>({
-    userId: "001",
-    name: "Ream",
-    email: "Ream123@gmail.com",
-    avatarUrl:
-      "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
-  });
+  const { logout, user, updateUser } = useAuth();
+  const { messagesHistory, clearHistory: clearContactHistory } = useContactStore();
+  const { ordersHistory, clearHistory } = useOrderStore();
+  const { addItem, openCart } = useCart();
 
-  const [activeTab, setActiveTab] = useState<"about" | "orders" | "settings">("about");
+  const userMessages = user
+    ? messagesHistory.filter(
+        (m) =>
+          (!!user.userId && m.userId === user.userId) ||
+          (!!user.email && m.email && m.email.toLowerCase() === user.email.toLowerCase()) ||
+          (!!user.name && m.fullName && m.fullName.toLowerCase() === user.name.toLowerCase())
+      )
+    : [];
+
+  const userOrders = user
+    ? ordersHistory.filter((o) => {
+        if (user.userId && o.userId === user.userId) return true;
+        if (user.name && o.customerName && o.customerName.toLowerCase() === user.name.toLowerCase()) return true;
+        if (user.email && o.customerName && o.customerName.toLowerCase() === user.email.toLowerCase()) return true;
+        return false;
+      })
+    : [];
+
+  const profile: UserProfileData = {
+    userId: user?.userId || "N/A",
+    name: user?.name || "Guest",
+    email: user?.email || "N/A",
+    phone: user?.phone || "",
+    gender: user?.gender || "Not specified",
+    avatarUrl:
+      user?.avatarUrl ||
+      "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
+    capital: user?.capital || "Phnom Penh",
+    district: user?.district || "Khan Boeng Keng Kang",
+    zipCode: user?.zipCode || "120000",
+    address: user?.address || "",
+  };
+
+  const [activeTab, setActiveTab] = useState<"about" | "messages" | "orders">("about");
+  const [showEmail, setShowEmail] = useState(false);
+  const [showPhone, setShowPhone] = useState(false);
+
+  const maskEmail = (email: string) => {
+    if (!email || email === "N/A") return "N/A";
+    const parts = email.split("@");
+    if (parts.length !== 2) return "••••••••";
+    const [userPart, domain] = parts;
+    if (userPart.length <= 2) {
+      return `${userPart.slice(0, 1)}***@${domain}`;
+    }
+    const maskedName = `${userPart.slice(0, 2)}${"*".repeat(Math.max(userPart.length - 2, 3))}`;
+    return `${maskedName}@${domain}`;
+  };
+
+  const maskPhone = (phone: string) => {
+    if (!phone) return "";
+    if (phone.length <= 4) return "••••••••";
+    return `${phone.slice(0, 3)}****${phone.slice(-3)}`;
+  };
 
   // Modals & Overlay States
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Password Verification Modal States
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+  const [verifyTarget, setVerifyTarget] = useState<"changePassword" | "editProfile" | "email" | "phone" | null>(null);
+  const [verifyPassword, setVerifyPassword] = useState("");
+  const [verifyError, setVerifyError] = useState("");
+  const [verifyShowPassword, setVerifyShowPassword] = useState(false);
+
+  const handleVerifyPasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verifyPassword.trim()) {
+      const err = "Password is required.";
+      setVerifyError(err);
+      toast.add({
+        type: "warning",
+        description: err,
+      });
+      return;
+    }
+
+    const correctPassword = user?.password || "123";
+
+    if (verifyPassword !== correctPassword) {
+      const err = "Incorrect password. Please try again.";
+      setVerifyError(err);
+      toast.add({
+        type: "warning",
+        description: err,
+      });
+      return;
+    }
+
+    setVerifyError("");
+    setIsVerifyModalOpen(false);
+
+    if (verifyTarget === "changePassword") {
+      setPasswords({ current: verifyPassword, newPass: "", confirmPass: "" });
+      setPassError("");
+      setIsResetPasswordOpen(true);
+      toast.add({
+        type: "success",
+        description: "Password verified! Please enter your new password.",
+      });
+    } else if (verifyTarget === "editProfile") {
+      setEditForm({ ...profile });
+      setIsEditProfileOpen(true);
+      toast.add({
+        type: "success",
+        description: "Password verified! You can now edit your profile.",
+      });
+    } else if (verifyTarget === "email") {
+      setShowEmail(true);
+    } else if (verifyTarget === "phone") {
+      setShowPhone(true);
+    }
+
+    setVerifyPassword("");
+  };
 
   // Form states for password reset
   const [passwords, setPasswords] = useState({
@@ -41,79 +162,140 @@ export function UserprofilepageView() {
     confirmPass: "",
   });
   const [passError, setPassError] = useState("");
-  const [passSuccess, setPassSuccess] = useState("");
 
   // Edit profile form state
   const [editForm, setEditForm] = useState<UserProfileData>({ ...profile });
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+  // Avatar position adjustment state
+  const [avatarPos, setAvatarPos] = useState({ x: 50, y: 50 });
+  const [isDraggingAvatar, setIsDraggingAvatar] = useState(false);
+  const dragStartRef = React.useRef({ mouseX: 0, mouseY: 0, posX: 50, posY: 50 });
+
+  const handleAvatarMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingAvatar(true);
+    dragStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      posX: avatarPos.x,
+      posY: avatarPos.y,
+    };
+  };
+
+  const handleAvatarMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingAvatar) return;
+    const deltaX = (e.clientX - dragStartRef.current.mouseX) * 0.6;
+    const deltaY = (e.clientY - dragStartRef.current.mouseY) * 0.6;
+    const newX = Math.max(0, Math.min(100, dragStartRef.current.posX - deltaX));
+    const newY = Math.max(0, Math.min(100, dragStartRef.current.posY - deltaY));
+    setAvatarPos({ x: Math.round(newX), y: Math.round(newY) });
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setIsDraggingAvatar(true);
+      dragStartRef.current = {
+        mouseX: e.touches[0].clientX,
+        mouseY: e.touches[0].clientY,
+        posX: avatarPos.x,
+        posY: avatarPos.y,
+      };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDraggingAvatar || e.touches.length !== 1) return;
+    const deltaX = (e.touches[0].clientX - dragStartRef.current.mouseX) * 0.6;
+    const deltaY = (e.touches[0].clientY - dragStartRef.current.mouseY) * 0.6;
+    const newX = Math.max(0, Math.min(100, dragStartRef.current.posX - deltaX));
+    const newY = Math.max(0, Math.min(100, dragStartRef.current.posY - deltaY));
+    setAvatarPos({ x: Math.round(newX), y: Math.round(newY) });
+  };
+
+  const handleAvatarMouseUp = () => {
+    setIsDraggingAvatar(false);
   };
 
   const handleResetPasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!passwords.current) {
-      setPassError("Please enter your current password.");
+    if (!passwords.newPass.trim()) {
+      const err = "New password is required.";
+      setPassError(err);
+      toast.add({
+        type: "warning",
+        description: err,
+      });
       return;
     }
-    if (passwords.newPass.length < 6) {
-      setPassError("New password must be at least 6 characters.");
+    if (passwords.newPass.length < 3) {
+      const err = "New password must be at least 3 characters.";
+      setPassError(err);
+      toast.add({
+        type: "warning",
+        description: err,
+      });
+      return;
+    }
+    if (!passwords.confirmPass.trim()) {
+      const err = "Confirm password is required.";
+      setPassError(err);
+      toast.add({
+        type: "warning",
+        description: err,
+      });
       return;
     }
     if (passwords.newPass !== passwords.confirmPass) {
-      setPassError("New password and confirm password do not match.");
+      const err = "New password and confirm password do not match.";
+      setPassError(err);
+      toast.add({
+        type: "warning",
+        description: err,
+      });
       return;
     }
 
     setPassError("");
-    setPassSuccess("Password reset successfully!");
-
-    setTimeout(() => {
-      setPassSuccess("");
-      setIsResetPasswordOpen(false);
-      setPasswords({ current: "", newPass: "", confirmPass: "" });
-      showToast("Password updated successfully!");
-    }, 1200);
+    updateUser({ password: passwords.newPass });
+    setIsResetPasswordOpen(false);
+    setPasswords({ current: "", newPass: "", confirmPass: "" });
+    toast.add({
+      type: "success",
+      description: "Password updated successfully!",
+    });
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    setProfile({ ...editForm });
+    updateUser(editForm);
     setIsEditProfileOpen(false);
-    showToast("Profile information updated!");
+    toast.add({
+      type: "success",
+      description: "Profile information updated!",
+    });
   };
+
 
   const handleLogout = () => {
     setIsLogoutModalOpen(false);
     logout();
-    showToast("You have logged out.");
-    setTimeout(() => {
-      router.push("/login");
-    }, 1000);
+    router.push("/login");
   };
 
   return (
     <div className="user_profile_container">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-6 right-6 z-50 bg-gray-900 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in text-sm font-medium">
-          <Check className="w-4 h-4 text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       <div className="user_profile_wrapper">
         {/* Top Header & Breadcrumbs */}
         <div className="product_detail_header">
-          <h1 className="product_detail_title">User Profile</h1>
+          <h1 className="product_detail_title">{t("User Profile")}</h1>
 
           <nav className="product_detail_breadcrumb" aria-label="Breadcrumb">
             <Link href="/" className="breadcrumb_link">
-              Home
+              {t("Home")}
             </Link>
             <span className="breadcrumb_separator">»</span>
-            <span className="breadcrumb_current">User Profile</span>
+            <span className="breadcrumb_current">{t("User Profile")}</span>
           </nav>
         </div>
 
@@ -126,20 +308,24 @@ export function UserprofilepageView() {
                 src={profile.avatarUrl}
                 alt={profile.name}
                 fill
+                priority
                 unoptimized
                 className="user_profile_avatar_img"
+                style={{ objectPosition: `${avatarPos.x}% ${avatarPos.y}%` }}
               />
               <button
                 type="button"
                 onClick={() => {
-                  setEditForm({ ...profile });
-                  setIsEditProfileOpen(true);
+                  setVerifyTarget("editProfile");
+                  setVerifyPassword("");
+                  setVerifyError("");
+                  setIsVerifyModalOpen(true);
                 }}
-                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white text-xs font-medium transition-opacity cursor-pointer border-none"
+                className="user_profile_avatar_edit_btn"
                 title="Change Avatar"
               >
                 <Edit3 className="w-5 h-5 mb-1" />
-                <span>Edit Photo</span>
+                <span>{t("Edit Photo")}</span>
               </button>
             </div>
           </div>
@@ -147,16 +333,39 @@ export function UserprofilepageView() {
           {/* Right Content Side */}
           <div className="user_profile_content_side">
             <div>
-              {/* Header Row: Username + Reset Password Button */}
+              {/* Header Row: Username + Edit Profile & Change Password Buttons */}
               <div className="user_profile_header_row">
-                <h2 className="user_profile_username">{profile.name}</h2>
-                <button
-                  type="button"
-                  onClick={() => setIsResetPasswordOpen(true)}
-                  className="user_profile_reset_btn"
-                >
-                  reset password
-                </button>
+                <h2 className="user_profile_username" suppressHydrationWarning>{profile.name}</h2>
+                <div className="user_profile_action_group">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVerifyTarget("editProfile");
+                      setVerifyPassword("");
+                      setVerifyError("");
+                      setIsVerifyModalOpen(true);
+                    }}
+                    title="Edit Profile"
+                    className="user_profile_change_btn"
+                  >
+                    <Edit3 className="w-4 h-4 sm:w-3 sm:h-3" />
+                    <span className="btn_responsive_text">{t("Edit Profile")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVerifyTarget("changePassword");
+                      setVerifyPassword("");
+                      setVerifyError("");
+                      setIsVerifyModalOpen(true);
+                    }}
+                    title="Change Password"
+                    className="user_profile_change_btn"
+                  >
+                    <KeyRound className="w-4 h-4 sm:w-3 sm:h-3" />
+                    <span className="btn_responsive_text">{t("Change Password")}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Tabs Bar */}
@@ -165,10 +374,44 @@ export function UserprofilepageView() {
                   type="button"
                   onClick={() => setActiveTab("about")}
                   className={`user_profile_tab_item ${
-                    activeTab === "about" ? "" : "text-gray-500 border-transparent"
+                    activeTab === "about" ? "active_tab" : ""
                   }`}
                 >
-                  About
+                  {t("About")}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("messages")}
+                  className={`user_profile_tab_item flex items-center gap-1.5 ${
+                    activeTab === "messages" ? "active_tab" : ""
+                  }`}
+                >
+                  <span>{t("My Messages")}</span>
+                  <span
+                    className={`tab_badge ${
+                      activeTab === "messages" ? "tab_badge_active" : ""
+                    }`}
+                  >
+                    {userMessages.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("orders")}
+                  className={`user_profile_tab_item flex items-center gap-1.5 ${
+                    activeTab === "orders" ? "active_tab" : ""
+                  }`}
+                >
+                  <span>{t("Order History")}</span>
+                  <span
+                    className={`tab_badge ${
+                      activeTab === "orders" ? "tab_badge_active" : ""
+                    }`}
+                  >
+                    {userOrders.length}
+                  </span>
                 </button>
               </div>
 
@@ -176,282 +419,577 @@ export function UserprofilepageView() {
               {activeTab === "about" && (
                 <div className="user_profile_details">
                   <div className="user_profile_detail_row">
-                    <span className="user_profile_detail_label">User Id</span>
-                    <span className="user_profile_detail_value">{profile.userId}</span>
+                    <span className="user_profile_detail_label">{t("User Id")}</span>
+                    <span className="user_profile_detail_value" suppressHydrationWarning>#{profile.userId}</span>
                   </div>
 
                   <div className="user_profile_detail_row">
-                    <span className="user_profile_detail_label">Name</span>
-                    <span className="user_profile_detail_value">{profile.name}</span>
+                    <span className="user_profile_detail_label">{t("Gender")}</span>
+                    <span className="user_profile_detail_value">
+                      {t(profile.gender || "Other")}
+                    </span>
                   </div>
 
                   <div className="user_profile_detail_row">
-                    <span className="user_profile_detail_label">Email</span>
-                    <span className="user_profile_detail_value">{profile.email}</span>
+                    <span className="user_profile_detail_label">{t("Email Address")}</span>
+                    <span className="user_profile_detail_value">
+                      {profile.email}
+                    </span>
                   </div>
+
+                  {profile.phone && (
+                    <div className="user_profile_detail_row">
+                      <span className="user_profile_detail_label">{t("Phone Number")}</span>
+                      <span className="user_profile_detail_value">
+                        {profile.phone}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Messages Tab Content */}
+              {activeTab === "messages" && (
+                <div>
+                  {userMessages.length === 0 ? (
+                    <div className="profile_empty_state">
+                      <MessageSquare className="profile_empty_icon" />
+                      <p className="profile_empty_title">No Sent Messages Yet</p>
+                      <p className="profile_empty_desc">
+                        Have questions or feedback? Send us a message from our contact page.
+                      </p>
+                      <Link
+                        href="/contact"
+                        className="profile_empty_btn"
+                      >
+                        <span>Contact Us</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center justify-between mb-3 px-1">
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          Your Message History ({userMessages.length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            clearContactHistory();
+                            if (typeof window !== "undefined") {
+                              try {
+                                localStorage.removeItem("contact_store");
+                              } catch {}
+                            }
+                            toast.add({ type: "warning", description: "Message history cleared." });
+                          }}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1 rounded-full border border-rose-200 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Clear History</span>
+                        </button>
+                      </div>
+
+                      <div className="history_scroll_list">
+                      {userMessages.map((msg) => (
+                        <div key={msg.id} className="history_item_card">
+                          <div className="history_header_row">
+                            <span className="message_topic_badge">
+                              <Tag className="w-3 h-3" />
+                              {msg.topic}
+                            </span>
+                            <span className="history_meta_date">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(msg.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="message_bubble_content">
+                            "{msg.message}"
+                          </p>
+                          <div className="message_footer_row">
+                            <span>Status: <strong className="message_status_text">{msg.status || "Received"}</strong></span>
+                            <span>{msg.phone ? `Phone: ${msg.phone}` : msg.email}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  )}
+                </div>
+              )}
+
+              {/* Order History Tab Content */}
+              {activeTab === "orders" && (
+                <div>
+                  {userOrders.length === 0 ? (
+                    <div className="profile_empty_state">
+                      <ShoppingBag className="profile_empty_icon" />
+                      <p className="profile_empty_title">No Past Orders Found</p>
+                      <p className="profile_empty_desc">
+                        Once you complete checkout, your order history will appear here.
+                      </p>
+                      <Link
+                        href="/menu"
+                        className="profile_empty_btn profile_empty_btn_secondary"
+                      >
+                        <span>Order Now</span>
+                      </Link>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center justify-between mb-3 px-1">
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          Your Order History ({userOrders.length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            clearHistory();
+                            if (typeof window !== "undefined") {
+                              try {
+                                localStorage.removeItem("order_history_store");
+                                localStorage.removeItem("active_order_id");
+                              } catch {}
+                            }
+                            toast.add({ type: "warning", description: "Order history cleared." });
+                          }}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1 rounded-full border border-rose-200 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Clear History</span>
+                        </button>
+                      </div>
+
+                      <div className="history_scroll_list">
+                      {userOrders.map((order) => (
+                        <div key={order.id} className="history_item_card">
+                          <div className="history_header_row">
+                            <div className="flex items-center gap-2">
+                              <span className="order_id_badge">{order.id}</span>
+                              <span
+                                className={`order_status_badge ${
+                                  order.status === "Completed"
+                                    ? "order_status_completed"
+                                    : order.status === "On the way"
+                                    ? "order_status_transit"
+                                    : "order_status_pending"
+                                }`}
+                              >
+                                {order.status}
+                              </span>
+                            </div>
+                            <span className="history_meta_date">
+                              <Clock className="w-3 h-3" />
+                              {new Date(order.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+
+                          <div className="order_items_box">
+                            {order.items.map((it, idx) => (
+                              <div key={it.id || idx} className="order_item_row">
+                                <span>{it.quantity}x {it.title} {it.size ? `(Size: ${it.size})` : ""}</span>
+                                <span className="order_item_price">$ {(it.price * it.quantity).toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="order_footer_row">
+                            <div className="order_total_wrapper">
+                              <span className="order_total_label">Grand Total: </span>
+                              <span className="order_total_value">$ {order.grandTotal.toFixed(2)}</span>
+                            </div>
+
+                            <div className="order_actions_group">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  order.items.forEach((item) => {
+                                    addItem({ id: item.id, title: item.title, price: item.price, quantity: item.quantity, size: item.size || "M", image: item.image || "" }, false);
+                                  });
+                                  toast.add({ type: "success", description: "Items reordered into cart!" });
+                                  openCart();
+                                }}
+                                className="btn_reorder"
+                              >
+                                Reorder
+                              </button>
+
+                              {order.status === "Completed" ? (
+                                <Link
+                                  href={`/checkoutdone?id=${order.id}`}
+                                  className="btn_order_status_complete"
+                                >
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Order Complete</span>
+                                </Link>
+                              ) : (
+                                <Link
+                                  href={`/checkoutdone?id=${order.id}`}
+                                  className="btn_order_track"
+                                >
+                                  <span>Track</span>
+                                  <ChevronRight className="w-3 h-3" />
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Bottom Actions: Log Out */}
-            <div className="pt-2 flex items-center justify-between">
+            {/* Bottom Actions: Log Out (Aligned Right Bottom) */}
+            <div className="profile_bottom_actions">
               <button
                 type="button"
                 onClick={() => setIsLogoutModalOpen(true)}
                 className="user_profile_logout_btn"
               >
-                Log Out
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setEditForm({ ...profile });
-                  setIsEditProfileOpen(true);
-                }}
-                className="text-xs text-gray-500 hover:text-blue-600 flex items-center gap-1 transition-colors cursor-pointer border-none bg-transparent"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit Profile</span>
+                <LogOut className="w-4 h-4" />
+                <span>Log Out</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Reset Password Modal */}
-      {isResetPasswordOpen && (
-        <div className="modal_backdrop" onClick={() => setIsResetPasswordOpen(false)}>
-          <div
-            className="modal_card max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="modal_close_btn"
-              onClick={() => setIsResetPasswordOpen(false)}
-            >
-              
-            </button>
-
-            <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                <KeyRound className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-lg">Reset Password</h3>
-                <p className="text-xs text-gray-500">Update your account security password</p>
-              </div>
+      {/* Change Password Modal */}
+      <Modal open={isResetPasswordOpen} onOpenChange={setIsResetPasswordOpen}>
+        <ModalContent className="max-w-md text-left p-6" showCloseButton={false}>
+          <div className="modal_header_group">
+            <div className="modal_icon_box">
+              <KeyRound className="w-5 h-5" />
             </div>
-
-            <form onSubmit={handleResetPasswordSubmit} className="space-y-4 pt-2">
-              {passError && (
-                <div className="p-3 bg-red-50 text-red-600 text-xs rounded-lg border border-red-100 font-medium">
-                  {passError}
-                </div>
-              )}
-              {passSuccess && (
-                <div className="p-3 bg-emerald-50 text-emerald-600 text-xs rounded-lg border border-emerald-100 font-medium flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>{passSuccess}</span>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Current Password
-                </label>
-                <input
-                  type="password"
-                  value={passwords.current}
-                  onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
-                  placeholder="Enter current password"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  New Password
-                </label>
-                <input
-                  type="password"
-                  value={passwords.newPass}
-                  onChange={(e) => setPasswords({ ...passwords, newPass: e.target.value })}
-                  placeholder="At least 6 characters"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Confirm New Password
-                </label>
-                <input
-                  type="password"
-                  value={passwords.confirmPass}
-                  onChange={(e) => setPasswords({ ...passwords, confirmPass: e.target.value })}
-                  placeholder="Re-enter new password"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsResetPasswordOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors border-none bg-transparent cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors border-none cursor-pointer"
-                >
-                  Save Password
-                </button>
-              </div>
-            </form>
+            <div>
+              <h3 className="modal_title">Change Password</h3>
+              <p className="modal_subtitle">Enter your new security password below</p>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Edit Profile Modal */}
-      {isEditProfileOpen && (
-        <div className="modal_backdrop" onClick={() => setIsEditProfileOpen(false)}>
-          <div
-            className="modal_card max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="modal_close_btn"
-              onClick={() => setIsEditProfileOpen(false)}
-            >
-              
-            </button>
-
-            <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                <User className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-lg">Edit Profile</h3>
-                <p className="text-xs text-gray-500">Update your public profile details</p>
-              </div>
+          <form onSubmit={handleResetPasswordSubmit} className="space-y-4 pt-2 text-left" noValidate>
+            <div className="modal_notice_success">
+              <Check className="w-4 h-4 stroke-[2.5]" />
+              <span>Current password verified successfully</span>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-4 pt-2">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  User Id
-                </label>
-                <input
-                  type="text"
-                  value={editForm.userId}
-                  onChange={(e) => setEditForm({ ...editForm, userId: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Display Name
-                </label>
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Avatar Image URL
-                </label>
-                <input
-                  type="url"
-                  value={editForm.avatarUrl}
-                  onChange={(e) => setEditForm({ ...editForm, avatarUrl: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEditProfileOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors border-none bg-transparent cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors border-none cursor-pointer"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Logout Confirmation Modal */}
-      {isLogoutModalOpen && (
-        <div className="modal_backdrop" onClick={() => setIsLogoutModalOpen(false)}>
-          <div
-            className="modal_card max-w-sm text-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-3">
-              <LogOut className="w-6 h-6" />
+            <div className="modal_input_group">
+              <label className="modal_input_label">
+                New Password
+              </label>
+              <input
+                type="password"
+                value={passwords.newPass}
+                onChange={(e) => {
+                  setPasswords({ ...passwords, newPass: e.target.value });
+                  if (passError) setPassError("");
+                }}
+                placeholder="Enter new password (at least 3 characters)"
+                className={`modal_input_control ${passError ? "modal_input_control_error" : ""}`}
+              />
             </div>
 
-            <h3 className="font-bold text-gray-900 text-lg mb-1">Log Out</h3>
-            <p className="text-xs text-gray-500 mb-5">
-              Are you sure you want to log out of your account?
-            </p>
+            <div className="modal_input_group">
+              <label className="modal_input_label">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                value={passwords.confirmPass}
+                onChange={(e) => {
+                  setPasswords({ ...passwords, confirmPass: e.target.value });
+                  if (passError) setPassError("");
+                }}
+                placeholder="Re-enter new password"
+                className={`modal_input_control ${passError ? "modal_input_control_error" : ""}`}
+              />
+              {passError && <TooltipAlert message={passError} />}
+            </div>
 
-            <div className="flex items-center justify-center gap-3">
+            <div className="modal_footer_actions">
               <button
                 type="button"
-                onClick={() => setIsLogoutModalOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors border-none bg-transparent cursor-pointer flex-1"
+                onClick={() => setIsResetPasswordOpen(false)}
+                className="btn_modal_cancel"
               >
                 Cancel
               </button>
               <button
-                type="button"
-                onClick={handleLogout}
-                className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors border-none cursor-pointer flex-1"
+                type="submit"
+                className="btn_modal_submit"
               >
-                Log Out
+                Save Password
               </button>
             </div>
+          </form>
+        </ModalContent>
+      </Modal>
+
+      {/* Edit Profile Modal (Full Width Landscape Split Layout) */}
+      <Modal open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
+        <ModalContent className="max-w-[680px] w-[92%] p-6 text-left" showCloseButton={false}>
+          <div className="modal_header_group">
+            <div className="modal_icon_box">
+              <User className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="modal_title">Edit Profile</h3>
+              <p className="modal_subtitle">Update your public profile details</p>
+            </div>
           </div>
-        </div>
-      )}
+
+          <form onSubmit={handleSaveProfile} className="space-y-5 text-left">
+            {/* Split 2-Column Layout */}
+            <div className="profile_edit_split_layout">
+              {/* LEFT SIDE: Photo & Direct Drag-to-Move */}
+              <div className="profile_edit_avatar_column">
+                <span className="profile_edit_avatar_label">
+                  Profile Picture
+                </span>
+
+                {/* Direct Drag-to-Move Circular Avatar Box */}
+                <div
+                  className="avatar_interactive_wrapper group"
+                  onMouseDown={handleAvatarMouseDown}
+                  onMouseMove={handleAvatarMouseMove}
+                  onMouseUp={handleAvatarMouseUp}
+                  onMouseLeave={handleAvatarMouseUp}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleAvatarMouseUp}
+                  title="Click & drag to adjust image position"
+                >
+                  <Image
+                    src={editForm.avatarUrl}
+                    alt="Avatar Preview"
+                    fill
+                    priority
+                    unoptimized
+                    className="object-cover pointer-events-none transition-none"
+                    style={{ objectPosition: `${avatarPos.x}% ${avatarPos.y}%` }}
+                  />
+                  <div className="avatar_drag_hint_overlay">
+                    <Move className="w-4 h-4 text-white mb-0.5" />
+                    <span>Drag to move</span>
+                  </div>
+                </div>
+
+                <label
+                  htmlFor="avatar-file-upload"
+                  className="btn_upload_photo"
+                >
+                  <Upload className="w-3.5 h-3.5 text-[#A1255B]" />
+                  <span>Choose Photo</span>
+                </label>
+                <input
+                  type="file"
+                  id="avatar-file-upload"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        if (reader.result) {
+                          setEditForm((prev) => ({ ...prev, avatarUrl: reader.result as string }));
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="hidden"
+                />
+                <span className="upload_hint_caption">
+                  File Explorer / Phone
+                </span>
+              </div>
+
+              {/* RIGHT SIDE: User Details */}
+              <div className="profile_edit_fields_column">
+                <div className="profile_edit_grid_2col">
+                  <div className="modal_input_group">
+                    <label className="modal_input_label">
+                      User Id
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.userId}
+                      onChange={(e) => setEditForm({ ...editForm, userId: e.target.value })}
+                      className="modal_input_control modal_input_control_disabled"
+                      disabled
+                    />
+                  </div>
+
+                  <div className="modal_input_group">
+                    <label className="modal_input_label">
+                      Display Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      className="modal_input_control"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="profile_edit_grid_2col">
+                  <div className="modal_input_group">
+                    <label className="modal_input_label">
+                      Gender
+                    </label>
+                    <select
+                      value={editForm.gender || ""}
+                      onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                      className="modal_input_control bg-white cursor-pointer"
+                    >
+                      <option value="" disabled>
+                        Select gender
+                      </option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div className="modal_input_group">
+                    <label className="modal_input_label">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={editForm.phone || ""}
+                      onChange={(e) => setEditForm({ ...editForm, phone: cleanPhoneInput(e.target.value) })}
+                      placeholder="e.g. 12345678"
+                      className="modal_input_control"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="modal_footer_actions">
+              <button
+                type="button"
+                onClick={() => setIsEditProfileOpen(false)}
+                className="btn_modal_cancel"
+              >
+                {t("Cancel")}
+              </button>
+              <button
+                type="submit"
+                className="btn_modal_submit"
+              >
+                {t("Save Changes")}
+              </button>
+            </div>
+          </form>
+        </ModalContent>
+      </Modal>
+
+      {/* Logout Confirmation Modal */}
+      <Modal open={isLogoutModalOpen} onOpenChange={setIsLogoutModalOpen}>
+        <ModalContent className="max-w-sm text-center p-6" showCloseButton={false}>
+          <div className="logout_modal_icon_box">
+            <LogOut className="w-6 h-6" />
+          </div>
+
+          <h3 className="logout_modal_title">{t("Confirm Logout")}</h3>
+          <p className="logout_modal_subtitle">
+            {t("Are you sure you want to log out?")}
+          </p>
+
+          <div className="logout_modal_actions">
+            <button
+              type="button"
+              onClick={() => setIsLogoutModalOpen(false)}
+              className="btn_modal_cancel btn_modal_cancel_flex"
+            >
+              {t("Cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="btn_logout_confirm"
+            >
+              {t("Logout")}
+            </button>
+          </div>
+        </ModalContent>
+      </Modal>
+
+      {/* Verify Password Modal */}
+      <Modal open={isVerifyModalOpen} onOpenChange={setIsVerifyModalOpen}>
+        <ModalContent className="max-w-[420px] w-[92%] p-6 text-left" showCloseButton={false}>
+          <div className="modal_header_group">
+            <div className="modal_icon_box">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="modal_title">{t("Verify Password")}</h3>
+              <p className="modal_subtitle">
+                {t("Verify Password")}
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleVerifyPasswordSubmit} className="space-y-4 pt-1 text-left" noValidate>
+
+            <div className="modal_input_group">
+              <label className="modal_input_label">
+                {t("Account Password")}
+              </label>
+              <div className="password_input_container">
+                <input
+                  type={verifyShowPassword ? "text" : "password"}
+                  value={verifyPassword}
+                  onChange={(e) => {
+                    setVerifyPassword(e.target.value);
+                    if (verifyError) setVerifyError("");
+                  }}
+                  placeholder="Enter your account password"
+                  className={`modal_input_control password_input_field ${
+                    verifyError ? "modal_input_control_error" : ""
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setVerifyShowPassword(!verifyShowPassword)}
+                  className="password_visibility_toggle"
+                >
+                  {verifyShowPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {verifyError && <TooltipAlert message={verifyError} />}
+            </div>
+
+            <div className="modal_footer_actions">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsVerifyModalOpen(false);
+                  setVerifyPassword("");
+                  setVerifyError("");
+                }}
+                className="btn_modal_cancel"
+              >
+                {t("Cancel")}
+              </button>
+              <button
+                type="submit"
+                className="btn_modal_submit"
+              >
+                {t("Confirm Order")}
+              </button>
+            </div>
+          </form>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

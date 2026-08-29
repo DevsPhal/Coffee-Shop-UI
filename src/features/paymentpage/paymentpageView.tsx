@@ -5,22 +5,46 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 
 export function PaymentpageView() {
   const router = useRouter();
   const { subtotal } = useCart();
-  const displayAmount = subtotal > 0 ? subtotal : 6.2;
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    try {
+      const stored = localStorage.getItem("checkout_delivery");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (typeof parsed.fee === "number") {
+          setDeliveryFee(parsed.fee);
+        }
+      }
+    } catch {}
+  }, []);
+
+  const displayAmount = subtotal + deliveryFee;
 
   const [secondsLeft, setSecondsLeft] = useState(177);
 
   useEffect(() => {
-    if (secondsLeft <= 0) return;
+    if (secondsLeft <= 0) {
+      toast.add({
+        type: "warning",
+        description: "Payment time expired. Returning to checkout.",
+      });
+      router.push("/checkout");
+      return;
+    }
     const timer = setInterval(() => {
       setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(timer);
-  }, [secondsLeft]);
+  }, [secondsLeft, router]);
 
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
@@ -77,7 +101,7 @@ export function PaymentpageView() {
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               />
             </svg>
-            <span className="payment_page_timer_text">{formattedTime}</span>
+            <span className="payment_page_timer_text" suppressHydrationWarning>{formattedTime}</span>
           </div>
         </div>
 
@@ -88,7 +112,7 @@ export function PaymentpageView() {
               <span className="payment_page_logo_cyan">PAY</span>
             </div>
             <p className="payment_page_merchant_name">590st Cafe</p>
-            <p className="payment_page_amount">${displayAmount.toFixed(2)}</p>
+            <p className="payment_page_amount" suppressHydrationWarning>${isMounted ? displayAmount.toFixed(2) : "0.00"}</p>
           </div>
 
           <div
@@ -110,7 +134,7 @@ export function PaymentpageView() {
         </div>
       </div>
 
-      <div className="payment_page_footer">
+      <div className="payment_page_footer hidden sm:flex">
         <div className="payment_page_bank_tag">
           <span>ABA BANK</span>
           <span className="payment_page_bank_dot" />

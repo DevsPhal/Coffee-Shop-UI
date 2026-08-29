@@ -3,9 +3,14 @@ export interface Product {
   title: string;
   price: number;
   originalPrice?: number;
+  discountType?: "percentage" | "fixed";
+  discountAmount?: number;
+  promoEndDate?: string;
+  promoDaysLeft?: string;
   image?: string | null;
   description: string;
   category: string;
+  isPromotionOnly?: boolean;
 }
 
 export const PRODUCTS: Product[] = [
@@ -14,88 +19,159 @@ export const PRODUCTS: Product[] = [
     title: "590 Coffee",
     price: 2.00,
     image: null,
-    description: "Crafted to fuel the modern city hustle, our signature 590 Coffee is the ultimate balance of bold energy and rich, creamy indulgence.",
-    category: "signature",
+    description: "Our signature iced espresso blend, crafted with bold dark-roast coffee, sweet milk, and served over chilled ice for the perfect morning boost.",
+    category: "Ice Coffee",
   },
-
   {
     id: "2",
-    title: "Amacano",
-    price: 1.75,
-    image: null,
-    description: "Smooth espresso diluted with chilled filtered water and poured over crisp ice cubes for a clean, refreshing coffee experience.",
-    category: "Hot",
+    title: "Amacanonononononononononnno",
+    price: 2.25,
+    image: "/images/americano.jpg",
+    description: "Rich double-shot espresso poured over hot purified water, delivering a smooth, aromatic black coffee with a golden crema.",
+    category: "Hot Coffee",
   },
   {
     id: "3",
     title: "Ice Latte",
-    price: 2.00,
-    image: null,
+    price: 2.50,
+    image: "/images/iced_latte.jpg",
     description: "Perfect harmony of rich espresso and cold, velvety fresh milk, served over ice for a creamy and delightful flavor.",
-    category: "Iced",
+    category: "Ice Coffee",
   },
   {
     id: "4",
     title: "Coca Cola",
     price: 2.00,
-    image: null,
-    description: "Crafted to fuel the modern city hustle, our signature 590 Coffee is the ultimate balance of bold energy and rich, creamy indulgence.",
-    category: "Soft Drink",
+    image: "/images/coca.jpg",
+    description: "Classic, ice-cold Coca Cola sparkling soft drink with iconic crisp carbonation and refreshing cola flavor.",
+    category: "Energy Drink",
   },
   {
     id: "5",
-    title: "indonesia noodle",
+    title: "Indonesia Noodle",
     price: 2.20,
-    image: null,
-    description: "Authentic Cambodian iced coffee crafted with strong dark roast coffee and rich sweet condensed milk served over crushed ice.",
-    category: "Snack",
+    image: "/images/indomie.jpg",
+    description: "Savory Indonesian fried instant noodles tossed with aromatic seasoning, garlic oil, chili, and sweet soy sauce.",
+    category: "Noodle",
   },
   {
     id: "6",
-    title: "ផាសិនស្រស់",
+    title: "Fresh Passion Fruit Juice",
     price: 2.50,
-    image: null,
-    description: "Freshly squeezed passion fruit juice blended with ice, delivering a vibrant, sweet-and-tangy tropical refreshment.",
-    category: "Material",
+    image: "/images/passion.jpg",
+    description: "Freshly squeezed natural passion fruit juice served over ice, packed with vibrant tangy-sweet tropical flavor.",
+    category: "Fresh Drink",
   },
   {
     id: "7",
-    title: "Americano",
+    title: "Black Coffee",
     price: 2.20,
-    image: null,
-    description: "Bold espresso blended with milk and topped with fluffy cold foam, served over ice for a classic refreshing treat.",
-    category: "Coffee",
+    image: "/images/black_coffee.jpg",
+    description: "Strong, bold iced black coffee brewed from dark roasted beans, served ice-cold for a pure, uncompromised coffee kick.",
+    category: "Ice Coffee",
   },
   {
     id: "8",
-    title: "capuccino",
+    title: "Cappuccino",
     price: 2.25,
-    image: null,
-    description: "Invigorating brewed tea infused with fresh passion fruit seeds and tangy lemon slice over ice.",
-    category: "Coffee",
+    image: "/images/cappucino.jpg",
+    description: "Rich espresso base topped with equal parts warm milk and thick, velvety milk foam.",
+    category: "Ice Coffee",
   },
   {
     id: "9",
-    title: "capuccino frappe",
+    title: "Cappuccino Frappe",
     price: 1.80,
-    image: null,
-    description: "Golden, flaky, butter-layered French croissant baked fresh daily, perfect paired with your morning coffee.",
-    category: "Frappe",
+    image: "/images/cappucino_frappee.jpg",
+    description: "Decadent blended cappuccino slushie with rich espresso, milk, and crushed ice.",
+    category: "Ice Coffee",
   },
   {
     id: "10",
     title: "Cambodia Beer",
-    price: 1.50,
-    image: null,
-    description: "Rich, bold, and concentrated shot of pure coffee essence crafted from expertly roasted beans for a intense caffeine kick.",
+    price: 0.75,
+    image: "/images/cambodia_beer.jpg",
+    description: "Premium Cambodian lager beer brewed with fine European standard hops, crisp and refreshing with a smooth finish.",
     category: "Beer",
   },
+  {
+    id: "11",
+    title: "Blue soda",
+    price: 2.25,
+    originalPrice: 3.00,
+    discountType: "percentage",
+    promoDaysLeft: "15 days left",
+    image: "/images/soda.jpg",
+    description: "Refreshing blue curaçao soda infused with sparkling water and crushed ice.",
+    category: "Energy Drink",
+  },
+  {
+    id: "12",
+    title: "Hot Chocolate",
+    price: 2.00,
+    originalPrice: 2.50,
+    discountType: "fixed",
+    discountAmount: 0.50,
+    promoDaysLeft: "7 days left",
+    image: "/images/chocolate.jpg",
+    description: "Rich cocoa blended with steamed milk and topped with creamy froth.",
+    category: "Hot Coffee",
+  },
+  {
+    id: "13",
+    title: "Sting",
+    price: 1.60,
+    originalPrice: 2.00,
+    discountType: "percentage",
+    promoDaysLeft: "2 days left",
+    image: "/images/sting.png",
+    description: "Invigorating red Sting energy drink with ginseng and B-vitamins, served ice-cold for an instant energetic boost.",
+    category: "Energy Drink",
+  },
+  {
+    id: "14",
+    title: "Cambodia",
+    price: 1.60,
+    image: "/images/water.jpg",
+    description: "Pure, clean, and refreshing natural drinking water bottled to the highest European quality standards for daily hydration.",
+    category: "Pure Water",
+  },
 ];
+
+export const DEFAULT_IMAGES: Record<string, string> = {
+  "1": "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&w=400&q=80",
+  "2": "/images/americano.jpg",
+  "3": "/images/iced_latte.jpg",
+  "4": "/images/coca.jpg",
+  "5": "/images/indomie.jpg",
+  "6": "/images/passion.jpg",
+  "7": "/images/black_coffee.jpg",
+  "8": "/images/cappucino.jpg",
+  "9": "/images/cappucino_frappee.jpg",
+  "10": "/images/cambodia_beer.jpg",
+  "11": "/images/soda.jpg",
+  "12": "/images/chocolate.jpg",
+  "13": "/images/sting.png",
+};
+
+export const GENERIC_COFFEE_IMG =
+  "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=400&q=80";
+
+export function getResolvedProductImage(id?: string, image?: string | null): string {
+  if (image && image.trim() !== "") return image;
+  if (id && DEFAULT_IMAGES[id]) return DEFAULT_IMAGES[id];
+  return GENERIC_COFFEE_IMG;
+}
 
 export function getProductByIdOrTitle(id?: string, title?: string): Product | undefined {
   if (id) {
     const found = PRODUCTS.find((p) => p.id === id);
     if (found) return found;
+    const baseId = id.split("-")[0];
+    if (baseId) {
+      const foundBase = PRODUCTS.find((p) => p.id === baseId);
+      if (foundBase) return foundBase;
+    }
   }
   if (title) {
     const titleLower = title.toLowerCase();
@@ -103,4 +179,266 @@ export function getProductByIdOrTitle(id?: string, title?: string): Product | un
     if (found) return found;
   }
   return undefined;
+}
+
+export interface CustomizationConfig {
+  hasSize: boolean;
+  sizeOptions: string[];
+  hasIce: boolean;
+  hasSugar: boolean;
+  hasMilk: boolean;
+}
+
+export function getItemCustomizationConfig(title: string, category?: string): CustomizationConfig {
+  const prod = getProductByIdOrTitle(undefined, title);
+  const cat = (category || prod?.category || "").trim();
+  const lowerCat = cat.toLowerCase();
+  const lowerTitle = (title || "").toLowerCase();
+
+  // Beer: Packaging options (Can - $0.75, Bottle - $1.25, Carton - $28.00)
+  if (lowerCat === "beer" || lowerTitle.includes("beer")) {
+    return {
+      hasSize: true,
+      sizeOptions: ["Can", "Bottle", "Carton"],
+      hasIce: false,
+      hasSugar: false,
+      hasMilk: false,
+    };
+  }
+
+  // Water / Pure Water: bottle sizes (1000ml and 1500ml)
+  if (
+    lowerCat === "pure water" ||
+    lowerCat === "pour water" ||
+    lowerCat === "water" ||
+    lowerTitle.includes("water")
+  ) {
+    return {
+      hasSize: true,
+      sizeOptions: ["1000ml", "1500ml"],
+      hasIce: false,
+      hasSugar: false,
+      hasMilk: false,
+    };
+  }
+
+  // Snack / Noodle: size (1 or Double)
+  if (
+    lowerCat === "noodle" ||
+    lowerCat === "snack" ||
+    lowerTitle.includes("noodle") ||
+    lowerTitle.includes("indomie")
+  ) {
+    return {
+      hasSize: true,
+      sizeOptions: ["1", "Double"],
+      hasIce: false,
+      hasSugar: false,
+      hasMilk: false,
+    };
+  }
+
+  // Energy Drink / Soft Drink: has icedlevel
+  if (
+    lowerCat === "energy drink" ||
+    lowerCat === "soft drink" ||
+    lowerTitle.includes("coca") ||
+    lowerTitle.includes("sting") ||
+    lowerTitle.includes("soda")
+  ) {
+    return {
+      hasSize: true,
+      sizeOptions: ["M", "L"],
+      hasIce: true,
+      hasSugar: false,
+      hasMilk: false,
+    };
+  }
+
+  // Hot Coffee / Hot: has sugarlevel and milktype, didn't have icedlevel
+  if (
+    lowerCat === "hot coffee" ||
+    lowerCat === "hot" ||
+    lowerTitle.startsWith("hot ") ||
+    lowerTitle.includes("chocolate")
+  ) {
+    return {
+      hasSize: true,
+      sizeOptions: ["M", "L"],
+      hasIce: false,
+      hasSugar: true,
+      hasMilk: true,
+    };
+  }
+
+  // Fresh Drink / Material: has icedlevel
+  if (
+    lowerCat === "fresh drink" ||
+    lowerCat === "material" ||
+    lowerTitle.includes("juice") ||
+    lowerTitle.includes("passion")
+  ) {
+    return {
+      hasSize: true,
+      sizeOptions: ["M", "L"],
+      hasIce: true,
+      hasSugar: false,
+      hasMilk: false,
+    };
+  }
+
+  // Ice Coffee, Frappe, Signature, Coffee: has icedlevel, sugarlevel, and milktype
+  return {
+    hasSize: true,
+    sizeOptions: ["M", "L"],
+    hasIce: true,
+    hasSugar: true,
+    hasMilk: true,
+  };
+}
+
+export interface SubCategoryConfig {
+  id: string;
+  name: string;
+  rawCategories: string[];
+  icon: string;
+}
+
+export interface MainCategoryConfig {
+  id: string;
+  name: string;
+  icon: string;
+  subCategories: SubCategoryConfig[];
+}
+
+export const MAIN_CATEGORIES: MainCategoryConfig[] = [
+  {
+    id: "beverage",
+    name: "Beverage",
+    icon: "/icons/coffee.svg",
+    subCategories: [
+      {
+        id: "beer",
+        name: "Beer",
+        rawCategories: ["Beer"],
+        icon: "/icons/beer.svg",
+      },
+      {
+        id: "ice_coffee",
+        name: "Ice Coffee",
+        rawCategories: ["Ice Coffee", "Iced", "Coffee", "signature", "Frappe"],
+        icon: "/icons/iced.svg",
+      },
+      {
+        id: "hot_coffee",
+        name: "Hot Coffee",
+        rawCategories: ["Hot Coffee", "Hot"],
+        icon: "/icons/hot.svg",
+      },
+      {
+        id: "fresh_drink",
+        name: "Fresh Drink",
+        rawCategories: ["Fresh Drink", "Material"],
+        icon: "/icons/material.svg",
+      },
+    ],
+  },
+  {
+    id: "soft_drink",
+    name: "Soft Drink",
+    icon: "/icons/soft_drink.svg",
+    subCategories: [
+      {
+        id: "pure_water",
+        name: "Pure Water",
+        rawCategories: ["Pure Water", "Pour Water", "Water"],
+        icon: "/icons/water.svg",
+      },
+      {
+        id: "energy_drink",
+        name: "Energy Drink",
+        rawCategories: ["Energy Drink", "Soft Drink"],
+        icon: "/icons/soft_drink.svg",
+      },
+    ],
+  },
+  {
+    id: "snack",
+    name: "Snack",
+    icon: "/icons/snack.svg",
+    subCategories: [
+      {
+        id: "noodle",
+        name: "Noodle",
+        rawCategories: ["Noodle", "Snack"],
+        icon: "/icons/snack.svg",
+      },
+    ],
+  },
+];
+
+export function filterProductsByCategory(categoryName: string, searchQuery?: string): Product[] {
+  const normCat = (categoryName || "All").trim();
+
+  let categoryFiltered: Product[] = [];
+
+  if (normCat === "All" || normCat === "all") {
+    categoryFiltered = PRODUCTS;
+  } else if (normCat.toLowerCase().includes("featured")) {
+    // Filter products that have active discounts or promotions
+    categoryFiltered = PRODUCTS.filter(
+      (p) =>
+        (p.originalPrice && p.originalPrice > p.price) ||
+        p.discountAmount !== undefined ||
+        Boolean(p.discountType) ||
+        Boolean(p.promoDaysLeft) ||
+        Boolean(p.promoEndDate)
+    );
+  } else {
+    // Check if normCat matches a Main Category name
+    const mainMatch = MAIN_CATEGORIES.find(
+      (m) => m.name.toLowerCase() === normCat.toLowerCase() || m.id === normCat.toLowerCase()
+    );
+
+    if (mainMatch) {
+      const allSubRaw = mainMatch.subCategories.flatMap((sub) => sub.rawCategories.map((c) => c.toLowerCase()));
+      categoryFiltered = PRODUCTS.filter((p) =>
+        allSubRaw.includes((p.category || "").toLowerCase())
+      );
+    } else {
+      // Check if normCat matches a Sub Category name
+      let subMatchRaw: string[] | undefined = undefined;
+      for (const main of MAIN_CATEGORIES) {
+        const foundSub = main.subCategories.find(
+          (s) => s.name.toLowerCase() === normCat.toLowerCase() || s.id === normCat.toLowerCase()
+        );
+        if (foundSub) {
+          subMatchRaw = foundSub.rawCategories.map((c) => c.toLowerCase());
+          break;
+        }
+      }
+
+      if (subMatchRaw) {
+        categoryFiltered = PRODUCTS.filter((p) =>
+          subMatchRaw!.includes((p.category || "").toLowerCase())
+        );
+      } else {
+        // Direct category match fallback
+        categoryFiltered = PRODUCTS.filter(
+          (p) => (p.category || "").toLowerCase() === normCat.toLowerCase()
+        );
+      }
+    }
+  }
+
+  if (!searchQuery || !searchQuery.trim()) {
+    return categoryFiltered;
+  }
+
+  const queryLower = searchQuery.trim().toLowerCase();
+  return categoryFiltered.filter((p) => p.title.toLowerCase().includes(queryLower));
+}
+
+export function getCategoryItemCount(categoryName: string): number {
+  return filterProductsByCategory(categoryName).length;
 }

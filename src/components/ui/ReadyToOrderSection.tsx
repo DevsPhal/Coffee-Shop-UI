@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
 export interface ReadyToOrderSectionProps {
@@ -24,31 +25,45 @@ export function ReadyToOrderSection({
   secondaryBtnHref = "/about",
   className = "",
 }: ReadyToOrderSectionProps) {
+  const [isMobile, setIsMobile] = useState(false);
+  const { t } = useLanguage();
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const targetPrimaryHref = isMobile && primaryBtnHref === "/menu" ? "/menuphone" : primaryBtnHref;
+
   return (
     <section className={`ready_to_order_section ${className}`}>
       {/* Heading */}
       <h2 className="ready_to_order_title">
-        {title}
+        {t(title)}
       </h2>
 
       {/* Subtitle / Description */}
       <p className="ready_to_order_desc">
-        {description}
+        {t(description)}
       </p>
 
       {/* Action Buttons */}
       <div className="ready_to_order_actions">
         {/* Primary Button */}
-        <Link href={primaryBtnHref}>
+        <Link href={targetPrimaryHref}>
           <Button className="button_pill_primary">
-            {primaryBtnText}
+            {t(primaryBtnText)}
           </Button>
         </Link>
 
         {/* Secondary Button */}
         <Link href={secondaryBtnHref}>
           <Button className="button_pill_secondary">
-            {secondaryBtnText}
+            {t(secondaryBtnText)}
           </Button>
         </Link>
       </div>

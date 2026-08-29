@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
 interface EventItem {
@@ -81,14 +82,15 @@ const EVENT_ITEMS: EventItem[] = [
 
 export function EventpageView() {
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+  const { t } = useLanguage();
 
   return (
     <div className="events_container">
       <div className="events_wrapper">
         <div className="header_section">
-          <h1 className="header_title">Events at 590st Cafe</h1>
+          <h1 className="header_title">{t("Events at 590st Cafe")}</h1>
           <p className="header_description">
-            Discover our vibrant community gatherings, esports tournaments, live coffee brewing sessions, and special celebrations at 590st Cafe.
+            {t("Discover our vibrant community gatherings, esports tournaments, live coffee brewing sessions, and special celebrations at 590st Cafe.")}
           </p>
         </div>
         <div className="bento_grid">
@@ -99,7 +101,7 @@ export function EventpageView() {
               <>
                 <Image
                   src={item.image}
-                  alt={item.title}
+                  alt={t(item.title)}
                   fill
                   unoptimized
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
@@ -107,8 +109,8 @@ export function EventpageView() {
                 />
                 <div className="card_overlay" />
                 <div className="card_content">
-                  <h3 className="card_title">{item.title}</h3>
-                  <p className="card_description">{item.description}</p>
+                  <h3 className="card_title text-white font-bold text-lg" style={{ color: "#ffffff" }}>{t(item.title)}</h3>
+                  <p className="card_description">{t(item.description)}</p>
                 </div>
               </>
             );
@@ -160,7 +162,7 @@ export function EventpageView() {
             <div className="modal_image-wrapper">
               <Image
                 src={selectedEvent.image}
-                alt={selectedEvent.title}
+                alt={t(selectedEvent.title)}
                 fill
                 unoptimized
                 className="modal_image"
@@ -168,8 +170,8 @@ export function EventpageView() {
             </div>
 
             <div className="modal_body">
-              <h2 className="modal_title">{selectedEvent.title}</h2>
-              <p className="modal_description">{selectedEvent.description}</p>
+              <h2 className="modal_title">{t(selectedEvent.title)}</h2>
+              <p className="modal_description">{t(selectedEvent.description)}</p>
             </div>
 
             <div className="modal_footer">
@@ -180,7 +182,7 @@ export function EventpageView() {
                   rel="noopener noreferrer"
                   className="modal_action_btn modal_action_facebook"
                 >
-                  View on Facebook
+                  {t("View on Facebook")}
                 </a>
               )}
               <button
@@ -188,7 +190,7 @@ export function EventpageView() {
                 onClick={() => setSelectedEvent(null)}
                 className="modal_action_btn"
               >
-                Close
+                {t("Close")}
               </button>
             </div>
           </div>

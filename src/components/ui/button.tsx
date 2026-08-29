@@ -1,4 +1,4 @@
-import { Button as ButtonPrimitive } from "@base-ui/react/button";
+import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
@@ -41,29 +41,34 @@ const buttonVariants = cva(
   }
 );
 
-function Button({
-  className,
-  variant,
-  size,
-  ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
-  const hasCustomPillOrBrandClass =
-    className?.includes("button_pill") ||
-    className?.includes("button_add_cart") ||
-    className?.includes("button_buy_now") ||
-    className?.includes("button_nav_login") ||
-    className?.includes("btn-");
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}
 
-  const selectedVariant = variant ?? (hasCustomPillOrBrandClass ? "unstyled" : "default");
-  const selectedSize = size ?? (hasCustomPillOrBrandClass ? "none" : "default");
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, type = "button", ...props }, ref) => {
+    const hasCustomPillOrBrandClass =
+      className?.includes("button_pill") ||
+      className?.includes("button_add_cart") ||
+      className?.includes("button_buy_now") ||
+      className?.includes("button_nav_login") ||
+      className?.includes("btn-");
 
-  return (
-    <ButtonPrimitive
-      data-slot="button"
-      className={cn(buttonVariants({ variant: selectedVariant, size: selectedSize, className }))}
-      {...props}
-    />
-  );
-}
+    const selectedVariant = variant ?? (hasCustomPillOrBrandClass ? "unstyled" : "default");
+    const selectedSize = size ?? (hasCustomPillOrBrandClass ? "none" : "default");
+
+    return (
+      <button
+        ref={ref}
+        type={type}
+        data-slot="button"
+        className={cn(buttonVariants({ variant: selectedVariant, size: selectedSize, className }))}
+        {...props}
+      />
+    );
+  }
+);
+
+Button.displayName = "Button";
 
 export { Button, buttonVariants };

@@ -1,25 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
-import { User, Mail, Eye, EyeOff, UserPlus, Phone } from "lucide-react";
-import { z } from "zod";
+import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { User, Mail, Eye, EyeOff, UserPlus, Phone, ShieldCheck, ChevronDown, Users, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/context/AuthContext";
 import "@/app/globals.scss";
 
-const createSchema = z.object({
-  username: z.string().trim().min(1, { message: "Please enter your username." }),
-  email: z
-    .string()
-    .trim()
-    .min(1, { message: "Please enter your email." })
-    .email({ message: "Please enter a valid email address." }),
-  phone: z.string().trim().min(1, { message: "Please enter your phone number." }),
-  password: z.string().trim().min(1, { message: "Please enter a password." }),
-});
+import { signUpSchema, adminSignUpSchema } from "@/lib/authSchema";
+import { TooltipAlert } from "@/components/ui/tooltip-alert";
+import { cleanPhoneInput } from "@/lib/phoneUtils";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 
 type FormErrors = {
+  role?: string;
   username?: string;
+  gender?: string;
   email?: string;
   phone?: string;
   password?: string;
@@ -27,72 +24,63 @@ type FormErrors = {
 
 interface CreateProps {
   onBackToLogin: () => void;
+  isAdmin?: boolean;
+  defaultRole?: string;
 }
 
-// Floating Tooltip Speech-Bubble Alert Component matching target screenshot
-function TooltipAlert({ message }: { message?: string }) {
-  if (!message) return null;
-
-  return (
-    <div className="relative z-30 mt-1.5 mb-1 animate-in fade-in slide-in-from-top-1 duration-150">
-      {/* Pointer Triangle pointing UP to the input */}
-      <div className="absolute -top-[8px] left-6 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[8px] border-b-gray-400" />
-      <div className="absolute -top-[6.5px] left-[25px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[7px] border-b-white" />
-
-      {/* Speech Bubble Card */}
-      <div className="inline-flex items-center gap-2.5 bg-white border border-gray-400 rounded-md p-2.5 shadow-[0_8px_20px_rgba(0,0,0,0.18)] max-w-xs">
-        {/* Orange Exclamation Mark Badge */}
-        <div className="w-6 h-6 bg-[#f95700] text-white font-bold text-base rounded flex items-center justify-center flex-shrink-0 shadow-xs select-none">
-          !
-        </div>
-        {/* Error Message */}
-        <span className="text-xs text-gray-900 font-normal leading-tight">
-          {message}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-export function Create({ onBackToLogin }: CreateProps) {
+export function Create({ onBackToLogin, isAdmin = false, defaultRole = "Admin" }: CreateProps) {
+  const { t } = useLanguage();
+  const router = useRouter();
+  const { signup } = useAuth();
+  const [role, setRole] = useState(defaultRole);
   const [username, setUsername] = useState("");
+  const [gender, setGender] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
-  // Zod Errors & Active Focused Input (Starts empty so typing never triggers false alert)
+  // Custom Dropdown Open States & Refs
+  const [isRoleOpen, setIsRoleOpen] = useState(false);
+  const [isGenderOpen, setIsGenderOpen] = useState(false);
+  const roleRef = useRef<HTMLDivElement>(null);
+  const genderRef = useRef<HTMLDivElement>(null);
+
+  // Click Outside to Dismiss Custom Dropdowns
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (roleRef.current && !roleRef.current.contains(e.target as Node)) {
+        setIsRoleOpen(false);
+      }
+      if (genderRef.current && !genderRef.current.contains(e.target as Node)) {
+        setIsGenderOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Zod Errors & Active Focused Input
   const [errors, setErrors] = useState<FormErrors>({});
-  const [activeInput, setActiveInput] = useState<keyof FormErrors | null>(null);
+  const [, setActiveInput] = useState<keyof FormErrors | null>(null);
 
-  const validateField = (
-    field: keyof FormErrors,
-    value: string,
-    currentUsername = username,
-    currentEmail = email,
-    currentPhone = phone,
-    currentPassword = password
-  ) => {
-    // If value has text, immediately hide error alert
-    if (value.trim().length > 0) {
+  const validateField = (field: keyof FormErrors, value: string) => {
+    if (!value.trim()) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
       return;
     }
-
-    const data = {
-      username: field === "username" ? value : currentUsername,
-      email: field === "email" ? value : currentEmail,
-      phone: field === "phone" ? value : currentPhone,
-      password: field === "password" ? value : currentPassword,
-    };
-    const result = createSchema.safeParse(data);
+    const schemaToUse = isAdmin ? adminSignUpSchema : signUpSchema;
+    // @ts-ignore dynamic field access
+    const fieldSchema = schemaToUse.shape[field];
+    if (!fieldSchema) return;
+    const result = fieldSchema.safeParse(value);
 
     if (!result.success) {
-      const fieldErrors = result.error.flatten().fieldErrors;
       setErrors((prev) => ({
         ...prev,
-        [field]: fieldErrors[field]?.[0] || "Please fill in this field.",
+        [field]: result.error.issues[0]?.message,
       }));
     } else {
       setErrors((prev) => ({
@@ -106,18 +94,27 @@ export function Create({ onBackToLogin }: CreateProps) {
     e.preventDefault();
 
     // Validate with Zod
-    const validationResult = createSchema.safeParse({ username, email, phone, password });
+    const schemaToUse = isAdmin ? adminSignUpSchema : signUpSchema;
+    const formData = isAdmin
+      ? { role, username, gender, email, phone, password }
+      : { username, gender, email, phone, password };
+
+    const validationResult = schemaToUse.safeParse(formData);
 
     if (!validationResult.success) {
       const fieldErrors = validationResult.error.flatten().fieldErrors;
       const newErrors: FormErrors = {
+        role: fieldErrors.role?.[0],
         username: fieldErrors.username?.[0],
+        gender: fieldErrors.gender?.[0],
         email: fieldErrors.email?.[0],
         phone: fieldErrors.phone?.[0],
         password: fieldErrors.password?.[0],
       };
       setErrors(newErrors);
-      if (newErrors.username) setActiveInput("username");
+      if (newErrors.role) setActiveInput("role");
+      else if (newErrors.username) setActiveInput("username");
+      else if (newErrors.gender) setActiveInput("gender");
       else if (newErrors.email) setActiveInput("email");
       else if (newErrors.phone) setActiveInput("phone");
       else if (newErrors.password) setActiveInput("password");
@@ -125,7 +122,24 @@ export function Create({ onBackToLogin }: CreateProps) {
     }
 
     setErrors({});
-    setSubmitted(true);
+
+    // Register user in AuthContext & save profile data
+    const res = signup({
+      name: username,
+      email: email,
+      phone: phone,
+      gender: gender,
+      password: password,
+    });
+
+    if (!res.success) {
+      setErrors({ username: res.message });
+      setActiveInput("username");
+      return;
+    }
+
+    // Navigate to user profile page
+    router.push("/userprofile");
   };
 
   return (
@@ -136,159 +150,268 @@ export function Create({ onBackToLogin }: CreateProps) {
         </div>
       </div>
       <h1 className="login_title">
-        Create an account
+        {t(isAdmin ? "Create an admin account" : "Create an account")}
       </h1>
       <p className="login_subtitle">
-        Enter your details below to create your account
+        {t("Enter your details below to create your account")}
       </p>
 
-      {submitted ? (
-        <div className="p-4 rounded-lg bg-teal-50 border border-teal-200 text-center space-y-3">
-          <p className="text-xs font-semibold text-teal-800">
-            Account Created Successfully!
-          </p>
-          <p className="text-[11px] text-teal-600">
-            Welcome, <span className="font-medium">{username}</span>! You can now log in with your credentials.
-          </p>
-          <Button
-            type="button"
-            onClick={onBackToLogin}
-            className="login_submit_button mt-2"
-          >
-            Go to Login
-          </Button>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="w-full space-y-3" noValidate>
-          <div>
+      <form onSubmit={handleSubmit} className="w-full space-y-3" noValidate>
+        {/* Optional Role Selection for Admin Sign Up */}
+        {isAdmin && (
+          <div ref={roleRef} className="relative">
             <label className="login_input_label">
-              Username
+              Role
             </label>
-            <div className="relative flex items-center">
-              <span className="absolute left-3 text-gray-400 pointer-events-none">
-                <User className="w-4 h-4" />
-              </span>
-              <Input
-                type="text"
-                value={username}
-                onFocus={() => setActiveInput("username")}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setUsername(val);
-                  validateField("username", val);
-                }}
-                placeholder="enter your username"
-                className="login_input_field"
-              />
-            </div>
-            {activeInput === "username" && errors.username && (
-              <TooltipAlert message={errors.username} />
-            )}
-          </div>
-          <div>
-            <label className="login_input_label">
-              Email
-            </label>
-            <div className="relative flex items-center">
-              <span className="absolute left-3 text-gray-400 pointer-events-none">
-                <Mail className="w-4 h-4" />
-              </span>
-              <Input
-                type="email"
-                value={email}
-                onFocus={() => setActiveInput("email")}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setEmail(val);
-                  validateField("email", val);
-                }}
-                placeholder="enter your email address"
-                className="login_input_field"
-              />
-            </div>
-            {activeInput === "email" && errors.email && (
-              <TooltipAlert message={errors.email} />
-            )}
-          </div>
-          <div>
-            <label className="login_input_label">
-              Phone Number
-            </label>
-            <div className="relative flex items-center">
-              <span className="absolute left-3 text-gray-400 pointer-events-none">
-                <Phone className="w-4 h-4" />
-              </span>
-              <Input
-                type="tel"
-                value={phone}
-                onFocus={() => setActiveInput("phone")}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setPhone(val);
-                  validateField("phone", val);
-                }}
-                placeholder="enter your phone number"
-                className="login_input_field"
-              />
-            </div>
-            {activeInput === "phone" && errors.phone && (
-              <TooltipAlert message={errors.phone} />
-            )}
-          </div>
-          <div>
-            <label className="login_input_label">
-              Password
-            </label>
-            <div className="relative flex items-center">
-              <Input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onFocus={() => setActiveInput("password")}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setPassword(val);
-                  validateField("password", val);
-                }}
-                placeholder="create a strong password"
-                className="login_input_field_pass"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-              >
-                {showPassword ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-            {activeInput === "password" && errors.password && (
-              <TooltipAlert message={errors.password} />
-            )}
-          </div>
-          <Button
-            type="submit"
-            className="login_submit_button mt-2"
-          >
-            Sign Up
-          </Button>
-          <div className="text-center pt-1">
-            <span className="text-xs text-gray-600">
-              Already have an account?
-            </span>
-            &nbsp;
             <button
               type="button"
-              onClick={onBackToLogin}
-              className="login_forgot_link cursor-pointer border-none bg-transparent"
+              onClick={() => setIsRoleOpen(!isRoleOpen)}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-full border border-[#94a3b8] bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-[#475569] transition-all cursor-pointer select-none text-left"
+              aria-expanded={isRoleOpen}
             >
-              Log in
+              <div className="flex items-center gap-2.5 min-w-0">
+                <ShieldCheck className="w-4 h-4 text-gray-400 shrink-0" />
+                <span className={role ? "text-gray-900 font-semibold" : "text-gray-400"}>
+                  {role || "enter your role"}
+                </span>
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${
+                  isRoleOpen ? "rotate-180 text-[#A1255B]" : ""
+                }`}
+              />
+            </button>
+
+            {/* Custom Role Dropdown Menu */}
+            {isRoleOpen && (
+              <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-full bg-white border border-gray-100 rounded-2xl shadow-lg p-1.5 space-y-0.5 animate-in fade-in duration-150">
+                {["Admin", "Barista"].map((option) => {
+                  const isSelected = role === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => {
+                        setRole(option);
+                        setIsRoleOpen(false);
+                        validateField("role", option);
+                      }}
+                      className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer border-none text-left select-none ${
+                        isSelected
+                          ? "bg-[#A1255B] text-white font-bold shadow-2xs"
+                          : "hover:bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      <span>{option}</span>
+                      {isSelected && <Check className="w-4 h-4 text-white shrink-0 ml-1" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {errors.role && (
+              <TooltipAlert message={errors.role} />
+            )}
+          </div>
+        )}
+
+        <div>
+          <label className="login_input_label">
+            {t("Username")}
+          </label>
+          <div className="relative flex items-center">
+            <span className="absolute left-3 text-gray-400 pointer-events-none">
+              <User className="w-4 h-4 text-gray-400" />
+            </span>
+            <Input
+              type="text"
+              value={username}
+              onFocus={() => {
+                setActiveInput("username");
+                if (username.trim()) validateField("username", username);
+              }}
+              onChange={(e) => {
+                const val = e.target.value;
+                setUsername(val);
+                validateField("username", val);
+              }}
+              placeholder="enter your username"
+              className="login_input_field"
+            />
+          </div>
+          {errors.username && (
+            <TooltipAlert message={errors.username} />
+          )}
+        </div>
+
+        {/* Custom Gender Dropdown Selection */}
+        <div ref={genderRef} className="relative">
+          <label className="login_input_label">
+            {t("Gender")}
+          </label>
+          <button
+            type="button"
+            onClick={() => setIsGenderOpen(!isGenderOpen)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-full border border-[#94a3b8] bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-[#475569] transition-all cursor-pointer select-none text-left"
+            aria-expanded={isGenderOpen}
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Users className="w-4 h-4 text-gray-400 shrink-0" />
+              <span className={gender ? "text-gray-900 font-semibold" : "text-gray-400"}>
+                {t(gender) || "select your gender"}
+              </span>
+            </div>
+            <ChevronDown
+              className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${
+                isGenderOpen ? "rotate-180 text-[#A1255B]" : ""
+              }`}
+            />
+          </button>
+
+          {/* Clean Custom Floating Dropdown Menu */}
+          {isGenderOpen && (
+            <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-full bg-white border border-gray-100 rounded-2xl shadow-lg p-1.5 space-y-0.5 animate-in fade-in duration-150">
+              {["Male", "Female", "Other"].map((option) => {
+                const isSelected = gender === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => {
+                      setGender(option);
+                      setIsGenderOpen(false);
+                      validateField("gender", option);
+                    }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer border-none text-left select-none ${
+                      isSelected
+                        ? "bg-[#A1255B] text-white font-bold shadow-2xs"
+                        : "hover:bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    <span>{t(option)}</span>
+                    {isSelected && <Check className="w-4 h-4 text-white shrink-0 ml-1" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {errors.gender && (
+            <TooltipAlert message={errors.gender} />
+          )}
+        </div>
+
+        <div>
+          <label className="login_input_label">
+            {t("Email Address")}
+          </label>
+          <div className="relative flex items-center">
+            <span className="absolute left-3 text-gray-400 pointer-events-none">
+              <Mail className="w-4 h-4 text-gray-400" />
+            </span>
+            <Input
+              type="email"
+              value={email}
+              onFocus={() => {
+                setActiveInput("email");
+                if (email.trim()) validateField("email", email);
+              }}
+              onChange={(e) => {
+                const val = e.target.value;
+                setEmail(val);
+                validateField("email", val);
+              }}
+              placeholder="enter your email address"
+              className="login_input_field"
+            />
+          </div>
+          {errors.email && (
+            <TooltipAlert message={errors.email} />
+          )}
+        </div>
+        <div>
+          <label className="login_input_label">
+            {t("Phone Number")}
+          </label>
+          <div className="relative flex items-center">
+            <span className="absolute left-3 text-gray-400 pointer-events-none">
+              <Phone className="w-4 h-4 text-gray-400" />
+            </span>
+            <Input
+              type="tel"
+              value={phone}
+              onFocus={() => {
+                setActiveInput("phone");
+                if (phone.trim()) validateField("phone", phone);
+              }}
+              onChange={(e) => {
+                const val = cleanPhoneInput(e.target.value);
+                setPhone(val);
+                validateField("phone", val);
+              }}
+              placeholder="enter your phone number"
+              className="login_input_field"
+            />
+          </div>
+          {errors.phone && (
+            <TooltipAlert message={errors.phone} />
+          )}
+        </div>
+        <div>
+          <label className="login_input_label">
+            {t("Password")}
+          </label>
+          <div className="relative flex items-center">
+            <Input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onFocus={() => {
+                setActiveInput("password");
+                if (password.trim()) validateField("password", password);
+              }}
+              onChange={(e) => {
+                const val = e.target.value;
+                setPassword(val);
+                validateField("password", val);
+              }}
+              placeholder="create a strong password"
+              className="login_input_field_pass"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer border-none bg-transparent"
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
             </button>
           </div>
-        </form>
-      )}
+          {errors.password && (
+            <TooltipAlert message={errors.password} />
+          )}
+        </div>
+        <Button
+          type="submit"
+          className="login_submit_button mt-2"
+        >
+          {t("Sign Up")}
+        </Button>
+        <div className="text-center pt-1">
+          <span className="text-xs text-gray-600 font-medium">
+            {t("Already have an account?")}
+          </span>
+          &nbsp;
+          <button
+            type="button"
+            onClick={onBackToLogin}
+            className="login_forgot_link cursor-pointer border-none bg-transparent"
+          >
+            {t("Log in")}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

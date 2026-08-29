@@ -15,7 +15,6 @@ import Autoplay from "embla-carousel-autoplay";
 import { cn } from "@/lib/utils";
 import "@/app/globals.scss";
 
-// Slides data using poster1, poster2, and poster3 from /images
 const SLIDES = [
   {
     id: 1,
@@ -43,8 +42,17 @@ const SLIDES = [
 export default function HeroCarousel() {
   const [api, setApi] = useState<CarouselApi>();
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Configure continuous autoplay that loops indefinitely without stopping
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const plugin = React.useRef(
     Autoplay({
       delay: 3000,
@@ -112,7 +120,7 @@ export default function HeroCarousel() {
                       src={slide.image}
                       alt={slide.title || `Slide ${index + 1}`}
                       fill
-                      priority={index === 0}
+                      loading="eager"
                       className="hero_slide_image"
                     />
 
@@ -132,10 +140,10 @@ export default function HeroCarousel() {
 
                       {/* Buy Now Button */}
                       <Link
-                        href={slide.href}
+                        href={isMobile && slide.href === "/menu" ? "/menuphone" : slide.href}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Button className="hero_buy_btn">
+                        <Button variant="unstyled" className="hero_buy_btn">
                           Buy Now
                         </Button>
                       </Link>

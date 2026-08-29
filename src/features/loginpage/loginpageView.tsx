@@ -11,77 +11,42 @@ import { Input } from "@/components/ui/input";
 import { Forgot } from "@/components/ui/forgot";
 import { Create } from "@/components/ui/create";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 
-// Zod Schema for User Login Form Validation
-const userLoginSchema = z.object({
-  username: z.string().trim().min(1, { message: "Please enter your username." }),
-  password: z.string().trim().min(1, { message: "Please enter your password." }),
-});
+import { userLoginSchema } from "@/lib/authSchema";
 
 type FormErrors = {
   username?: string;
   password?: string;
 };
 
-// Floating Tooltip Speech-Bubble Alert Component matching target screenshot
-function TooltipAlert({ message }: { message?: string }) {
-  if (!message) return null;
+import { TooltipAlert } from "@/components/ui/tooltip-alert";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 
-  return (
-    <div className="relative z-30 mt-1.5 mb-1 animate-in fade-in slide-in-from-top-1 duration-150">
-      {/* Pointer Triangle pointing UP to the input */}
-      <div className="absolute -top-[8px] left-6 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[8px] border-b-gray-400" />
-      <div className="absolute -top-[6.5px] left-[25px] w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[7px] border-b-white" />
-
-      {/* Speech Bubble Card */}
-      <div className="inline-flex items-center gap-2.5 bg-white border border-gray-400 rounded-md p-2.5 shadow-[0_8px_20px_rgba(0,0,0,0.18)] max-w-xs">
-        {/* Orange Exclamation Mark Badge */}
-        <div className="w-6 h-6 bg-[#f95700] text-white font-bold text-base rounded flex items-center justify-center flex-shrink-0 shadow-xs select-none">
-          !
-        </div>
-        {/* Error Message */}
-        <span className="text-xs text-gray-900 font-normal leading-tight">
-          {message}
-        </span>
-      </div>
-    </div>
-  );
+interface LoginPageViewProps {
+  initialViewMode?: "login" | "forgot" | "create";
 }
 
-export function LoginPageView() {
+export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps = {}) {
+  const { t } = useLanguage();
   const router = useRouter();
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [keepLoggedIn, setKeepLoggedIn] = useState(true);
-  const [viewMode, setViewMode] = useState<"login" | "forgot" | "create">("login");
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  // Zod Validation Errors & Focused Input State (Starts empty so no false alerts when typing)
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
+  const [viewMode, setViewMode] = useState<"login" | "forgot" | "create">(initialViewMode);
   const [errors, setErrors] = useState<FormErrors>({});
   const [activeInput, setActiveInput] = useState<keyof FormErrors | null>(null);
-
-  // Validate fields dynamically using Zod
-  const validateField = (field: keyof FormErrors, value: string, currentUsername = username, currentPassword = password) => {
-    // If value has text, immediately hide error
-    if (value.trim().length > 0) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-      return;
-    }
-
-    const data = {
-      username: field === "username" ? value : currentUsername,
-      password: field === "password" ? value : currentPassword,
-    };
-    const result = userLoginSchema.safeParse(data);
+  const validateField = (field: keyof FormErrors, value: string) => {
+    const fieldSchema = userLoginSchema.shape[field];
+    const result = fieldSchema.safeParse(value);
 
     if (!result.success) {
-      const fieldErrors = result.error.flatten().fieldErrors;
       setErrors((prev) => ({
         ...prev,
-        [field]: fieldErrors[field]?.[0] || "Please fill in this field.",
+        [field]: result.error.issues[0]?.message,
       }));
     } else {
       setErrors((prev) => ({
@@ -94,7 +59,7 @@ export function LoginPageView() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate all fields using Zod
+    // Full form validation using Zod Schema
     const validationResult = userLoginSchema.safeParse({ username, password });
 
     if (!validationResult.success) {
@@ -104,34 +69,29 @@ export function LoginPageView() {
         password: fieldErrors.password?.[0],
       };
       setErrors(newErrors);
-
       if (newErrors.username) setActiveInput("username");
       else if (newErrors.password) setActiveInput("password");
+
+      toast.add({
+        type: "warning",
+        description: newErrors.username || newErrors.password || "Please fix validation errors.",
+      });
       return;
     }
 
     setErrors({});
-    login();
-    setToastMessage("Logging in...");
-    setTimeout(() => {
-      setToastMessage(null);
-      router.push("/");
-    }, 1500);
+    const res = login({ identifier: username.trim(), password: password.trim(), keepLoggedIn });
+    if (!res.success) {
+      setErrors({ username: res.message || "Account not found. Please sign up first." });
+      setActiveInput("username");
+      return;
+    }
+    router.push("/");
   };
 
   return (
     <div className="login_page_wrapper font-sans relative">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-6 right-6 z-50 bg-gray-900 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in text-sm font-medium">
-          <Check className="w-4 h-4 text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
-      {/* Left Side: Login Form */}
       <div className="login_form_side">
-        {/* Top Left Back Button with back.svg icon */}
         <div className="flex justify-start">
           <Link
             href="/"
@@ -148,12 +108,8 @@ export function LoginPageView() {
             />
           </Link>
         </div>
-
-        {/* Form Area */}
         <div className="login_form_area">
-          {/* 590st CAFE Logo with Hearts */}
           <div className="login_logo-container">
-            {/* Floating Hearts around Logo */}
             <div className="absolute -inset-6 pointer-events-none">
               <Heart className="absolute top-0 left-2 w-4 h-4 text-pink-500 fill-pink-500 rotate-[-15deg] animate-pulse" />
               <Heart className="absolute top-2 right-1 w-3.5 h-3.5 text-red-500 fill-red-500 rotate-[20deg]" />
@@ -179,25 +135,19 @@ export function LoginPageView() {
             <Create onBackToLogin={() => setViewMode("login")} />
           ) : (
             <>
-              {/* Avatar Circle */}
               <div className="login_avatar_circle">
                 <User className="w-10 h-10 stroke-[1.5]" />
               </div>
-
-              {/* Title & Subtitle */}
               <h1 className="login_title">
-                Login to your account
+                {t("Login to your account")}
               </h1>
               <p className="login_subtitle">
-                Enter your credential to login
+                {t("Enter your credential to login")}
               </p>
-
-              {/* Form with Zod Validation & Speech-Bubble Tooltip */}
               <form onSubmit={handleSubmit} className="w-full space-y-4" noValidate>
-                {/* Username Field */}
                 <div>
                   <label className="login_input_label">
-                    Username
+                    {t("Username")}
                   </label>
                   <div className="relative flex items-center">
                     <span className="absolute left-3 text-gray-400 pointer-events-none">
@@ -206,7 +156,10 @@ export function LoginPageView() {
                     <Input
                       type="text"
                       value={username}
-                      onFocus={() => setActiveInput("username")}
+                      onFocus={() => {
+                        setActiveInput("username");
+                        if (username.trim()) validateField("username", username);
+                      }}
                       onChange={(e) => {
                         const val = e.target.value;
                         setUsername(val);
@@ -216,23 +169,22 @@ export function LoginPageView() {
                       className="login_input_field"
                     />
                   </div>
-
-                  {/* Tooltip Alert Speech-Bubble (Only shows if empty error exists and field is focused/submitted) */}
-                  {activeInput === "username" && errors.username && (
+                  {errors.username && (
                     <TooltipAlert message={errors.username} />
                   )}
                 </div>
-
-                {/* Password Field */}
                 <div>
                   <label className="login_input_label">
-                    Password
+                    {t("Password")}
                   </label>
                   <div className="relative flex items-center">
                     <Input
                       type={showPassword ? "text" : "password"}
                       value={password}
-                      onFocus={() => setActiveInput("password")}
+                      onFocus={() => {
+                        setActiveInput("password");
+                        if (password.trim()) validateField("password", password);
+                      }}
                       onChange={(e) => {
                         const val = e.target.value;
                         setPassword(val);
@@ -253,24 +205,24 @@ export function LoginPageView() {
                       )}
                     </button>
                   </div>
-
-                  {/* Tooltip Alert Speech-Bubble */}
-                  {activeInput === "password" && errors.password && (
+                  {errors.password && (
                     <TooltipAlert message={errors.password} />
                   )}
                 </div>
-
-                {/* Controls Row */}
                 <div className="login_controls_row">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <label
+                    onClick={() => setKeepLoggedIn(!keepLoggedIn)}
+                    className="flex items-center gap-2 cursor-pointer select-none"
+                  >
                     <div
-                      onClick={() => setKeepLoggedIn(!keepLoggedIn)}
                       className={`login_checkbox_box ${keepLoggedIn ? "checked" : ""}`}
+                      role="checkbox"
+                      aria-checked={keepLoggedIn}
                     >
                       {keepLoggedIn && <Check className="w-3 h-3 stroke-[3]" />}
                     </div>
                     <span className="text-xs text-gray-700 font-medium">
-                      Keep me logged in
+                      {t("Keep me logged in")}
                     </span>
                   </label>
 
@@ -279,7 +231,7 @@ export function LoginPageView() {
                     onClick={() => setViewMode("forgot")}
                     className="login_forgot_link cursor-pointer border-none bg-transparent"
                   >
-                    Forgot password?
+                    {t("Forgot password?")}
                   </button>
                 </div>
 
@@ -287,11 +239,11 @@ export function LoginPageView() {
                   type="submit"
                   className="login_submit_button"
                 >
-                  Login
+                  {t("Login")}
                 </Button>
                 <div className="text-center">
                   <span className="text-sm text-gray-600">
-                    Don't have an account?
+                    {t("Don't have an account?")}
                   </span>
                   &nbsp;
                   <button
@@ -299,7 +251,7 @@ export function LoginPageView() {
                     onClick={() => setViewMode("create")}
                     className="login_forgot_link cursor-pointer border-none bg-transparent"
                   >
-                    Sign up
+                    {t("Sign up")}
                   </button>
                 </div>
               </form>
@@ -309,9 +261,7 @@ export function LoginPageView() {
 
         <div />
       </div>
-
-      {/* Right Side: slideshowloginscreen.svg */}
-      <div className="login_slideshow_side">
+      <div className="login_slideshow_side hidden lg:flex">
         <div className="relative w-full h-full min-h-[500px] flex items-center justify-center">
           <Image
             src="/images/slideshowloginscreen.svg"
