@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MapPin, Phone, Mail, Clock, Send, Coffee } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 import ContactForm from "./components/ContactForm";
 import "@/app/globals.scss";
 
 export function ContactpageView() {
   const router = useRouter();
+  const { t } = useLanguage();
   const googleMapUrl = "https://maps.app.goo.gl/DKbvJw3Hz2tsCriQA?g_st=it";
   const [menuHref, setMenuHref] = useState("/menu");
 
@@ -36,13 +38,13 @@ export function ContactpageView() {
   return (
     <div className="contact_page_container font-sans">
       <div className="product_detail_header">
-        <h1 className="product_detail_title">Contact Us</h1>
+        <h1 className="product_detail_title">{t("Contact Us")}</h1>
         <nav className="product_detail_breadcrumb" aria-label="Breadcrumb">
           <Link href="/" className="breadcrumb_link">
-            Home
+            {t("Home")}
           </Link>
           <span className="breadcrumb_separator">»</span>
-          <span className="breadcrumb_current">Contact Us</span>
+          <span className="breadcrumb_current">{t("Contact Us")}</span>
         </nav>
       </div>
       <div className="contact_page_grid">
@@ -54,9 +56,9 @@ export function ContactpageView() {
             <div className="contact_info_badge">
               <Coffee className="w-3.5 h-3.5 mr-1" /> 590st CAFE
             </div>
-            <h2 className="contact_info_title">Get in Touch Directly</h2>
+            <h2 className="contact_info_title">{t("Get in Touch Directly")}</h2>
             <p className="contact_info_desc">
-              Whether you want to place a custom order, ask about catering, or just say hello, we are always happy to connect!
+              {t("Whether you want to place a custom order, ask about catering, or just say hello, we are always happy to connect!")}
             </p>
           </div>
 
@@ -66,9 +68,9 @@ export function ContactpageView() {
                 <MapPin className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="contact_info_label">Address</h4>
+                <h4 className="contact_info_label">{t("Address")}</h4>
                 <p className="contact_info_value">
-                  House No. 30A, Street 590, Toul Kork District, Phnom Penh 12101, Cambodia
+                  {t("House No. 30A, Street 590, Toul Kork District, Phnom Penh 12101, Cambodia")}
                 </p>
               </div>
             </div>
@@ -77,8 +79,8 @@ export function ContactpageView() {
                 <Clock className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="contact_info_label">Opening Hours</h4>
-                <p className="contact_info_value">Monday - Sunday: 7:00 AM - 3:00 PM</p>
+                <h4 className="contact_info_label">{t("Opening Hours")}</h4>
+                <p className="contact_info_value">{t("Monday - Sunday: 7:00 AM - 3:00 PM")}</p>
               </div>
             </div>
             <div className="contact_info_item">
@@ -86,7 +88,7 @@ export function ContactpageView() {
                 <Phone className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="contact_info_label">Contact Number</h4>
+                <h4 className="contact_info_label">{t("Contact Number")}</h4>
                 <p className="contact_info_value">
                   <a href="tel:095600676">095 600 676</a> / <a href="tel:069955878">069 955 878</a>
                 </p>
@@ -113,7 +115,7 @@ export function ContactpageView() {
                 <Mail className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="contact_info_label">Email</h4>
+                <h4 className="contact_info_label">{t("Email")}</h4>
                 <a
                   href="https://mail.google.com/mail/?view=cm&fs=1&to=lengsokpunlork611@gmail.com"
                   className="footer_email_link"
@@ -131,7 +133,7 @@ export function ContactpageView() {
               className="explore_menu_link"
             >
               <Button className="button_explore_menu">
-                Explore Our Menu
+                {t("Explore Our Menu")}
               </Button>
             </Link>
           </div>

@@ -21,10 +21,24 @@ export function useCart() {
     closeCart: store.closeCart,
     toggleCart: store.toggleCart,
     addItem: (
-      newItem: { id: string; title: string; price: number; image?: string; quantity?: number },
+      newItem: {
+        id: string;
+        title: string;
+        price: number;
+        image?: string;
+        quantity?: number;
+        size?: string;
+        iceLevel?: string;
+        sugarLevel?: string;
+        milkType?: string;
+      },
       openDrawer?: boolean
     ) => store.addItem(newItem, openDrawer, isLoggedIn),
     updateQuantity: store.updateQuantity,
+    updateSize: store.updateSize,
+    updateIceLevel: store.updateIceLevel,
+    updateSugarLevel: store.updateSugarLevel,
+    updateMilkType: store.updateMilkType,
     removeItem: store.removeItem,
     clearCart: store.clearCart,
     subtotal: store.getSubtotal(),

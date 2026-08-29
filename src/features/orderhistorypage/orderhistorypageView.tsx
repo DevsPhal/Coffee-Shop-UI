@@ -9,9 +9,11 @@ import { useOrderStore, OrderRecord } from "@/store/useOrderStore";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
 export function OrderhistorypageView() {
+  const { t } = useLanguage();
   const router = useRouter();
   const { user } = useAuth();
   const { ordersHistory } = useOrderStore();

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Mail, ArrowLeft, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
 import { forgotPasswordSchema } from "@/lib/authSchema";
@@ -15,6 +16,7 @@ interface ForgotProps {
 }
 
 export function Forgot({ onBackToLogin }: ForgotProps) {
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
   const [submitted, setSubmitted] = useState(false);
@@ -64,10 +66,10 @@ export function Forgot({ onBackToLogin }: ForgotProps) {
 
       {/* Title & Subtitle */}
       <h1 className="login_title">
-        Forgot Password?
+        {t("Forgot Password?")}
       </h1>
       <p className="login_subtitle">
-        Enter your email address and we&apos;ll send you instructions to reset your password.
+        {t("Enter your email address and we'll send you instructions to reset your password.")}
       </p>
 
       {submitted ? (
@@ -83,7 +85,7 @@ export function Forgot({ onBackToLogin }: ForgotProps) {
             onClick={onBackToLogin}
             className="login_submit_button mt-2"
           >
-            Back to Login
+            {t("Back to Login")}
           </Button>
         </div>
       ) : (
@@ -91,7 +93,7 @@ export function Forgot({ onBackToLogin }: ForgotProps) {
           {/* Email Field */}
           <div>
             <label className="login_input_label">
-              Email or Username
+              {t("Email Address")}
             </label>
             <div className="relative flex items-center">
               <span className="absolute left-3 text-gray-400 pointer-events-none">
@@ -113,9 +115,6 @@ export function Forgot({ onBackToLogin }: ForgotProps) {
               />
             </div>
             {error && <TooltipAlert message={error} />}
-            <p className="login_input_helper">
-              Please enter your registered email address
-            </p>
           </div>
 
           {/* Submit Button */}
@@ -123,7 +122,7 @@ export function Forgot({ onBackToLogin }: ForgotProps) {
             type="submit"
             className="login_submit_button"
           >
-            Send Reset Link
+            {t("Send Reset Link")}
           </Button>
 
           {/* Back to Login Link */}
@@ -134,7 +133,7 @@ export function Forgot({ onBackToLogin }: ForgotProps) {
               className="login_forgot_link flex items-center justify-center gap-1.5 cursor-pointer border-none bg-transparent"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Back to Login
+              {t("Back to Login")}
             </button>
           </div>
         </form>

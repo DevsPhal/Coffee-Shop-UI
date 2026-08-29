@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ExternalLink, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move } from "lucide-react";
+import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ExternalLink, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useContactStore } from "@/store/useContactStore";
 import { useOrderStore } from "@/store/useOrderStore";
@@ -13,6 +13,7 @@ import { toast } from "@/components/ui/toast";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { cleanPhoneInput } from "@/lib/phoneUtils";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
 export interface UserProfileData {
@@ -20,6 +21,7 @@ export interface UserProfileData {
   name: string;
   email: string;
   phone?: string;
+  gender?: string;
   avatarUrl: string;
   capital?: string;
   district?: string;
@@ -28,10 +30,11 @@ export interface UserProfileData {
 }
 
 export function UserprofilepageView() {
+  const { t } = useLanguage();
   const router = useRouter();
   const { logout, user, updateUser } = useAuth();
-  const { messagesHistory } = useContactStore();
-  const { ordersHistory } = useOrderStore();
+  const { messagesHistory, clearHistory: clearContactHistory } = useContactStore();
+  const { ordersHistory, clearHistory } = useOrderStore();
   const { addItem, openCart } = useCart();
 
   const userMessages = user
@@ -57,6 +60,7 @@ export function UserprofilepageView() {
     name: user?.name || "Guest",
     email: user?.email || "N/A",
     phone: user?.phone || "",
+    gender: user?.gender || "Not specified",
     avatarUrl:
       user?.avatarUrl ||
       "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
@@ -284,14 +288,14 @@ export function UserprofilepageView() {
       <div className="user_profile_wrapper">
         {/* Top Header & Breadcrumbs */}
         <div className="product_detail_header">
-          <h1 className="product_detail_title">User Profile</h1>
+          <h1 className="product_detail_title">{t("User Profile")}</h1>
 
           <nav className="product_detail_breadcrumb" aria-label="Breadcrumb">
             <Link href="/" className="breadcrumb_link">
-              Home
+              {t("Home")}
             </Link>
             <span className="breadcrumb_separator">»</span>
-            <span className="breadcrumb_current">User Profile</span>
+            <span className="breadcrumb_current">{t("User Profile")}</span>
           </nav>
         </div>
 
@@ -321,7 +325,7 @@ export function UserprofilepageView() {
                 title="Change Avatar"
               >
                 <Edit3 className="w-5 h-5 mb-1" />
-                <span>Edit Photo</span>
+                <span>{t("Edit Photo")}</span>
               </button>
             </div>
           </div>
@@ -345,7 +349,7 @@ export function UserprofilepageView() {
                     className="user_profile_change_btn"
                   >
                     <Edit3 className="w-4 h-4 sm:w-3 sm:h-3" />
-                    <span className="btn_responsive_text">Edit Profile</span>
+                    <span className="btn_responsive_text">{t("Edit Profile")}</span>
                   </button>
                   <button
                     type="button"
@@ -359,7 +363,7 @@ export function UserprofilepageView() {
                     className="user_profile_change_btn"
                   >
                     <KeyRound className="w-4 h-4 sm:w-3 sm:h-3" />
-                    <span className="btn_responsive_text">Change Password</span>
+                    <span className="btn_responsive_text">{t("Change Password")}</span>
                   </button>
                 </div>
               </div>
@@ -373,7 +377,7 @@ export function UserprofilepageView() {
                     activeTab === "about" ? "active_tab" : ""
                   }`}
                 >
-                  About
+                  {t("About")}
                 </button>
 
                 <button
@@ -383,7 +387,7 @@ export function UserprofilepageView() {
                     activeTab === "messages" ? "active_tab" : ""
                   }`}
                 >
-                  <span>My Messages</span>
+                  <span>{t("My Messages")}</span>
                   <span
                     className={`tab_badge ${
                       activeTab === "messages" ? "tab_badge_active" : ""
@@ -400,7 +404,7 @@ export function UserprofilepageView() {
                     activeTab === "orders" ? "active_tab" : ""
                   }`}
                 >
-                  <span>Order History</span>
+                  <span>{t("Order History")}</span>
                   <span
                     className={`tab_badge ${
                       activeTab === "orders" ? "tab_badge_active" : ""
@@ -415,12 +419,19 @@ export function UserprofilepageView() {
               {activeTab === "about" && (
                 <div className="user_profile_details">
                   <div className="user_profile_detail_row">
-                    <span className="user_profile_detail_label">User Id</span>
+                    <span className="user_profile_detail_label">{t("User Id")}</span>
                     <span className="user_profile_detail_value" suppressHydrationWarning>#{profile.userId}</span>
                   </div>
 
                   <div className="user_profile_detail_row">
-                    <span className="user_profile_detail_label">Email</span>
+                    <span className="user_profile_detail_label">{t("Gender")}</span>
+                    <span className="user_profile_detail_value">
+                      {t(profile.gender || "Other")}
+                    </span>
+                  </div>
+
+                  <div className="user_profile_detail_row">
+                    <span className="user_profile_detail_label">{t("Email Address")}</span>
                     <span className="user_profile_detail_value">
                       {profile.email}
                     </span>
@@ -428,7 +439,7 @@ export function UserprofilepageView() {
 
                   {profile.phone && (
                     <div className="user_profile_detail_row">
-                      <span className="user_profile_detail_label">Phone Number</span>
+                      <span className="user_profile_detail_label">{t("Phone Number")}</span>
                       <span className="user_profile_detail_value">
                         {profile.phone}
                       </span>
@@ -456,7 +467,30 @@ export function UserprofilepageView() {
                       </Link>
                     </div>
                   ) : (
-                    <div className="history_scroll_list">
+                    <div>
+                      <div className="flex items-center justify-between mb-3 px-1">
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          Your Message History ({userMessages.length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            clearContactHistory();
+                            if (typeof window !== "undefined") {
+                              try {
+                                localStorage.removeItem("contact_store");
+                              } catch {}
+                            }
+                            toast.add({ type: "warning", description: "Message history cleared." });
+                          }}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1 rounded-full border border-rose-200 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Clear History</span>
+                        </button>
+                      </div>
+
+                      <div className="history_scroll_list">
                       {userMessages.map((msg) => (
                         <div key={msg.id} className="history_item_card">
                           <div className="history_header_row">
@@ -479,6 +513,7 @@ export function UserprofilepageView() {
                         </div>
                       ))}
                     </div>
+                  </div>
                   )}
                 </div>
               )}
@@ -501,7 +536,31 @@ export function UserprofilepageView() {
                       </Link>
                     </div>
                   ) : (
-                    <div className="history_scroll_list">
+                    <div>
+                      <div className="flex items-center justify-between mb-3 px-1">
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          Your Order History ({userOrders.length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            clearHistory();
+                            if (typeof window !== "undefined") {
+                              try {
+                                localStorage.removeItem("order_history_store");
+                                localStorage.removeItem("active_order_id");
+                              } catch {}
+                            }
+                            toast.add({ type: "warning", description: "Order history cleared." });
+                          }}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1 rounded-full border border-rose-200 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Clear History</span>
+                        </button>
+                      </div>
+
+                      <div className="history_scroll_list">
                       {userOrders.map((order) => (
                         <div key={order.id} className="history_item_card">
                           <div className="history_header_row">
@@ -528,7 +587,7 @@ export function UserprofilepageView() {
                           <div className="order_items_box">
                             {order.items.map((it, idx) => (
                               <div key={it.id || idx} className="order_item_row">
-                                <span>{it.quantity}x {it.title}</span>
+                                <span>{it.quantity}x {it.title} {it.size ? `(Size: ${it.size})` : ""}</span>
                                 <span className="order_item_price">$ {(it.price * it.quantity).toFixed(2)}</span>
                               </div>
                             ))}
@@ -545,7 +604,7 @@ export function UserprofilepageView() {
                                 type="button"
                                 onClick={() => {
                                   order.items.forEach((item) => {
-                                    addItem({ id: item.id, title: item.title, price: item.price, quantity: item.quantity, image: item.image || "" }, false);
+                                    addItem({ id: item.id, title: item.title, price: item.price, quantity: item.quantity, size: item.size || "M", image: item.image || "" }, false);
                                   });
                                   toast.add({ type: "success", description: "Items reordered into cart!" });
                                   openCart();
@@ -577,6 +636,7 @@ export function UserprofilepageView() {
                         </div>
                       ))}
                     </div>
+                  </div>
                   )}
                 </div>
               )}
@@ -780,15 +840,20 @@ export function UserprofilepageView() {
                 <div className="profile_edit_grid_2col">
                   <div className="modal_input_group">
                     <label className="modal_input_label">
-                      Email Address
+                      Gender
                     </label>
-                    <input
-                      type="email"
-                      value={editForm.email}
-                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                      className="modal_input_control"
-                      required
-                    />
+                    <select
+                      value={editForm.gender || ""}
+                      onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                      className="modal_input_control bg-white cursor-pointer"
+                    >
+                      <option value="" disabled>
+                        Select gender
+                      </option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
 
                   <div className="modal_input_group">
@@ -814,13 +879,13 @@ export function UserprofilepageView() {
                 onClick={() => setIsEditProfileOpen(false)}
                 className="btn_modal_cancel"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 type="submit"
                 className="btn_modal_submit"
               >
-                Save Changes
+                {t("Save Changes")}
               </button>
             </div>
           </form>
@@ -834,9 +899,9 @@ export function UserprofilepageView() {
             <LogOut className="w-6 h-6" />
           </div>
 
-          <h3 className="logout_modal_title">Log Out</h3>
+          <h3 className="logout_modal_title">{t("Confirm Logout")}</h3>
           <p className="logout_modal_subtitle">
-            Are you sure you want to log out of your account?
+            {t("Are you sure you want to log out?")}
           </p>
 
           <div className="logout_modal_actions">
@@ -845,14 +910,14 @@ export function UserprofilepageView() {
               onClick={() => setIsLogoutModalOpen(false)}
               className="btn_modal_cancel btn_modal_cancel_flex"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="button"
               onClick={handleLogout}
               className="btn_logout_confirm"
             >
-              Log Out
+              {t("Logout")}
             </button>
           </div>
         </ModalContent>
@@ -866,13 +931,9 @@ export function UserprofilepageView() {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="modal_title">Password Verification</h3>
+              <h3 className="modal_title">{t("Verify Password")}</h3>
               <p className="modal_subtitle">
-                {verifyTarget === "changePassword"
-                  ? "Enter your current password to verify your identity before changing password"
-                  : verifyTarget === "editProfile"
-                  ? "Enter your current password to verify your identity before editing profile"
-                  : "Confirm your password to proceed"}
+                {t("Verify Password")}
               </p>
             </div>
           </div>
@@ -881,7 +942,7 @@ export function UserprofilepageView() {
 
             <div className="modal_input_group">
               <label className="modal_input_label">
-                Account Password
+                {t("Account Password")}
               </label>
               <div className="password_input_container">
                 <input
@@ -917,13 +978,13 @@ export function UserprofilepageView() {
                 }}
                 className="btn_modal_cancel"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 type="submit"
                 className="btn_modal_submit"
               >
-                Confirm
+                {t("Confirm Order")}
               </button>
             </div>
           </form>

@@ -10,6 +10,7 @@ export const userDataSchema = z.object({
   name: z.string().min(1, { message: "Name is required." }),
   email: z.string().email({ message: "Invalid email format." }),
   phone: z.string().optional(),
+  gender: z.string().optional(),
   password: z.string().optional(),
   avatarUrl: z.string(),
   capital: z.string().optional(),
@@ -25,6 +26,7 @@ const DEFAULT_DEMO_USER: UserData = {
   name: "Ream",
   email: "ream@gmail.com",
   phone: "012345222",
+  gender: "Female",
   password: "123",
   avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
   capital: "Phnom Penh",
@@ -41,7 +43,7 @@ interface AuthStoreState {
 
   // Actions
   login: (credentials?: { identifier?: string; password?: string; keepLoggedIn?: boolean }) => { success: boolean; message?: string };
-  signup: (userData: { name: string; email: string; phone?: string; password?: string }) => { success: boolean; message?: string };
+  signup: (userData: { name: string; email: string; phone?: string; gender?: string; password?: string }) => { success: boolean; message?: string };
   updateUser: (userData: Partial<UserData>) => void;
   logout: () => void;
 }
@@ -99,10 +101,12 @@ export const useAuthStore = create<AuthStoreState>()(
         const nameTrim = (userData.name || "").trim();
         const emailTrim = (userData.email || "").trim();
         const phoneTrim = (userData.phone || "").trim();
+        const genderTrim = (userData.gender || "").trim();
         const passwordTrim = (userData.password || "").trim();
 
         const signupValidation = signUpSchema.safeParse({
           username: nameTrim,
+          gender: genderTrim,
           email: emailTrim,
           phone: phoneTrim,
           password: passwordTrim,
@@ -130,6 +134,7 @@ export const useAuthStore = create<AuthStoreState>()(
           name: nameTrim,
           email: emailTrim,
           phone: phoneTrim,
+          gender: genderTrim,
           password: passwordTrim,
           avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
         };

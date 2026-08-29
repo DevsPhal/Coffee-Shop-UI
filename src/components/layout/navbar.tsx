@@ -4,8 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MAIN_CATEGORIES } from "@/data/products";
 import "@/app/globals.scss";
 
 import { useCart } from "@/context/CartContext";
@@ -16,6 +17,7 @@ import { useMounted } from "@/hooks/useMounted";
 const navLinks = [
   { label: "Home", href: "/" },
   { label: "Menu", href: "/menu" },
+  { label: "Category", href: "/category" },
   { label: "Events", href: "/events" },
   { label: "Location", href: "/location" },
   { label: "Contact Us", href: "/contact" },
@@ -31,6 +33,8 @@ export function Navbar() {
   const pathname = usePathname();
   const { language, setLanguage, t } = useLanguage();
   const [isLangOpen, setIsLangOpen] = useState(false);
+  const [isCategoryHovered, setIsCategoryHovered] = useState(false);
+  const categoryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const langRef = useRef<HTMLDivElement>(null);
 
   const currentLangCode = mounted ? language : "en";
@@ -41,6 +45,17 @@ export function Navbar() {
   const userIsLoggedIn = mounted ? isLoggedIn : false;
   const displayTotalCount = mounted ? totalCount : 0;
   const displayT = (key: string) => (mounted ? t(key) : key);
+
+  const handleCategoryMouseEnter = () => {
+    if (categoryTimeoutRef.current) clearTimeout(categoryTimeoutRef.current);
+    setIsCategoryHovered(true);
+  };
+
+  const handleCategoryMouseLeave = () => {
+    categoryTimeoutRef.current = setTimeout(() => {
+      setIsCategoryHovered(false);
+    }, 150);
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -61,6 +76,7 @@ export function Navbar() {
   const mobileNavItems = [
     { key: "Home", href: "/", icon: "/icons/home.svg" },
     { key: "Menu", href: "/menuphone", icon: "/icons/menu.svg" },
+    { key: "Category", href: "/category", icon: "/icons/category.svg" },
     { key: "Events", href: "/events", icon: "/icons/event.svg" },
     { key: "Location", href: "/location", icon: "/icons/location.svg" },
     { key: "Contact", href: "/contact", icon: "/icons/contact.svg" },
@@ -79,6 +95,7 @@ export function Navbar() {
   const isMobileNavActive = (href: string) => {
     if (href === "/") return pathname === "/";
     if (href === "/menuphone") return pathname === "/menuphone" || pathname === "/menu" || pathname.startsWith("/product");
+    if (href === "/category") return pathname.startsWith("/category");
     if (href === "/events") return pathname.startsWith("/events") || pathname.startsWith("/event");
     if (href === "/userprofile" || href === "/login") return pathname.startsWith("/userprofile") || pathname.startsWith("/profile") || pathname.startsWith("/login");
     return pathname.startsWith(href);
@@ -184,7 +201,7 @@ export function Navbar() {
             {userIsLoggedIn ? (
               <Link
                 href="/userprofile"
-                className="hidden sm:inline-flex items-center justify-center p-2 rounded-full hover:bg-gray-100 transition-colors"
+                className="nav_desktop_only items-center justify-center p-2 rounded-full hover:bg-gray-100 transition-colors"
                 title="User Profile"
               >
                 <Image
@@ -197,7 +214,7 @@ export function Navbar() {
                 />
               </Link>
             ) : (
-              <Link href="/login" className="hidden sm:inline-flex">
+              <Link href="/login" className="nav_desktop_only">
                 <Button className="button_nav_login flex items-center gap-2">
                   <Image
                     src="/icons/login.svg"
@@ -215,7 +232,7 @@ export function Navbar() {
         </nav>
       </header>
 
-      {/* Fixed Bottom Icon Navigation Bar for Phone Size (md:hidden) including Events & Login */}
+      {/* Fixed Bottom Icon Navigation Bar for Phone Size including Events & Login */}
       {!(
         pathname === "/checkoutdone" ||
         pathname === "/checkout-done" ||
@@ -223,7 +240,7 @@ export function Navbar() {
         pathname?.startsWith("/payment") ||
         pathname === "/checkout"
       ) && (
-        <div className="mobile_nav_bottom_bar md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] py-2 px-1 w-full max-w-full overflow-x-hidden" suppressHydrationWarning>
+        <div className="mobile_nav_bottom_bar fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] py-2 px-1 w-full max-w-full overflow-x-hidden" suppressHydrationWarning>
           <div className="max-w-md mx-auto flex items-center justify-around">
             {mobileNavItems.map((item) => {
               const active = isMobileNavActive(item.href);

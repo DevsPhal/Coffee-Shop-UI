@@ -6,9 +6,12 @@ import SpecialTodaySection from "@/components/sections/SpecialTodaySection";
 import ReadyToOrderSection from "@/components/ui/ReadyToOrderSection";
 import { Card } from "@/components/cards/card";
 import { PRODUCTS } from "@/data/products";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
 export function HomepageView() {
+  const { t } = useLanguage();
+
   return (
     <div className="homepage_wrapper font-sans">
       <HeroCarousel />
@@ -20,10 +23,10 @@ export function HomepageView() {
       <section className="homepage_crafted_section">
         <div className="homepage_section_header">
           <h2 className="homepage_section_title">
-            Crafted with Passion
+            {t("Crafted with Passion")}
           </h2>
           <p className="homepage_section_subtitle">
-            Every item is made to order - no shortcuts, no compromises
+            {t("Every item is made to order - no shortcuts, no compromises")}
           </p>
         </div>
         <div className="homepage_cards_grid">
@@ -34,6 +37,8 @@ export function HomepageView() {
               title={item.title}
               price={item.price}
               originalPrice={item.originalPrice}
+              discountType={item.discountType}
+              discountAmount={item.discountAmount}
               promoDaysLeft={item.promoDaysLeft}
               image={item.image}
             />

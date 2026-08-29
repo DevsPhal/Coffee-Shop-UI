@@ -12,14 +12,105 @@ import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { shippingInformationSchema } from "@/lib/authSchema";
 import { cleanPhoneInput } from "@/lib/phoneUtils";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ChevronDown, Check } from "lucide-react";
+import { getItemCustomizationConfig, getProductByIdOrTitle } from "@/data/products";
+import { calculateSizePrice } from "@/store/useCartStore";
+import PaymentMethodModal from "@/components/ui/PaymentMethodModal";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
+
+const DISTRICT_OPTIONS = [
+  "Khan Boeng Keng Kang",
+  "Khan Chamkar Mon",
+  "Khan Chbar Ampov",
+  "Khan Chroy Changvar",
+  "Khan Dangkao",
+  "Khan Daun Penh",
+  "Khan Kambol",
+  "Khan Meanchey",
+  "Khan Prampir Makara",
+  "Khan Prek Pnov",
+  "Khan Pur Senchey",
+  "Khan Russei Keo",
+  "Khan Sen Sok",
+  "Khan Tuol Kouk",
+];
+
+function CustomDistrictSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full h-[44px] px-3.5 flex items-center justify-between bg-white border border-gray-200 hover:border-gray-300 rounded-xl text-xs sm:text-sm font-medium text-gray-900 shadow-2xs transition-all cursor-pointer select-none"
+        aria-expanded={isOpen}
+      >
+        <span className="truncate">{value || "Select District"}</span>
+        <ChevronDown
+          className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ml-2 ${
+            isOpen ? "rotate-180 text-[#A1255B]" : ""
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-60 overflow-y-auto bg-white border border-gray-100 rounded-2xl shadow-2xl p-1.5 space-y-0.5 animate-in fade-in duration-150">
+          {DISTRICT_OPTIONS.map((opt) => {
+            const isSelected = value === opt;
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => {
+                  onChange(opt);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer border-none text-left select-none ${
+                  isSelected
+                    ? "bg-[#A1255B] text-white shadow-2xs font-semibold"
+                    : "hover:bg-gray-100 text-gray-800"
+                }`}
+              >
+                <span className="truncate">{opt}</span>
+                {isSelected && <Check className="w-4 h-4 text-white shrink-0 ml-2" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function CheckoutpageView() {
   const router = useRouter();
   const { items, subtotal } = useCart();
   const { user, updateUser } = useAuth();
 
+  const { t } = useLanguage();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -35,6 +126,7 @@ export function CheckoutpageView() {
   const [address, setAddress] = useState("");
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "grab">("pickup");
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const [errors, setErrors] = useState<{
     fullName?: string;
@@ -153,6 +245,11 @@ export function CheckoutpageView() {
 
     setErrors({});
 
+    // Open Payment Method Modal to choose Cash or QR Code Scan
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleConfirmPaymentMethod = (chosenMethod: "QR Scan" | "Cash") => {
     // Update & sync shipping information to user profile if user is logged in
     if (user && updateUser) {
       updateUser({
@@ -170,6 +267,16 @@ export function CheckoutpageView() {
       });
     }
 
+    const deliveryLocation =
+      deliveryMethod === "grab"
+        ? [address, district, capital].filter(Boolean).join(", ") || "House 30A, St 590, Toul Kork"
+        : "G01";
+
+    const estimatedTime =
+      deliveryMethod === "grab"
+        ? "10 - 15 mins"
+        : "5 mins";
+
     try {
       localStorage.setItem(
         "checkout_delivery",
@@ -177,10 +284,18 @@ export function CheckoutpageView() {
           method: deliveryMethod,
           fee: deliveryFee,
           customerName: (fullName || "").trim() || user?.name || "Guest",
+          location: deliveryLocation,
+          estimatedTime,
+          paymentType: chosenMethod,
         })
       );
     } catch {}
-    router.push("/payment");
+
+    if (chosenMethod === "Cash") {
+      router.push("/checkoutdone");
+    } else {
+      router.push("/payment");
+    }
   };
 
   const handleCancelOrder = (e: React.MouseEvent) => {
@@ -216,10 +331,10 @@ export function CheckoutpageView() {
             href="/cart"
             className="checkout_page_breadcrumb_link"
           >
-            Shopping Cart
+            {t("Shopping Cart")}
           </Link>
           <span className="checkout_page_breadcrumb_separator">»</span>
-          <span className="checkout_page_breadcrumb_current">Checkout</span>
+          <span className="checkout_page_breadcrumb_current">{t("Checkout")}</span>
         </nav>
       </div>
 
@@ -228,12 +343,12 @@ export function CheckoutpageView() {
         <div className="checkout_page_form_section">
           {/* Shipping Information Section */}
           <div>
-            <h2 className="checkout_section_title">Shipping Information</h2>
+            <h2 className="checkout_section_title">{t("Shipping Information")}</h2>
 
             <div className="checkout_form_stack">
               <div className="checkout_form_row">
                 <div>
-                  <label className="checkout_field_label">Full Name</label>
+                  <label className="checkout_field_label">{t("Full Name")}</label>
                   <Input
                     type="text"
                     value={fullName}
@@ -248,7 +363,7 @@ export function CheckoutpageView() {
                 </div>
 
                 <div>
-                  <label className="checkout_field_label">Email</label>
+                  <label className="checkout_field_label">{t("Email Address")}</label>
                   <Input
                     type="email"
                     value={email}
@@ -266,7 +381,7 @@ export function CheckoutpageView() {
               {deliveryMethod === "pickup" ? (
                 <div className="checkout_form_row">
                   <div>
-                    <label className="checkout_field_label">Phone Number</label>
+                    <label className="checkout_field_label">{t("Phone Number")}</label>
                     <div className="checkout_phone_input_wrapper">
                       <div className="checkout_phone_prefix">
                         <Image
@@ -297,7 +412,7 @@ export function CheckoutpageView() {
                 <>
                   <div className="checkout_form_row">
                     <div>
-                      <label className="checkout_field_label">Phone Number</label>
+                      <label className="checkout_field_label">{t("Phone Number")}</label>
                       <div className="checkout_phone_input_wrapper">
                         <div className="checkout_phone_prefix">
                           <Image
@@ -305,7 +420,6 @@ export function CheckoutpageView() {
                             alt="Cambodia"
                             width={20}
                             height={14}
-                            style={{ width: "auto", height: "auto" }}
                             className="checkout_phone_flag"
                           />
                           <span className="checkout_phone_code">+855</span>
@@ -326,7 +440,7 @@ export function CheckoutpageView() {
                     </div>
 
                     <div>
-                      <label className="checkout_field_label">Capital</label>
+                      <label className="checkout_field_label">{t("Capital / City")}</label>
                       <div className="checkout_select_wrapper">
                         <select
                           value={capital}
@@ -334,7 +448,7 @@ export function CheckoutpageView() {
                           disabled
                           className="checkout_select checkout_input_disabled cursor-not-allowed opacity-75 bg-gray-50 pr-4"
                         >
-                          <option value="Phnom Penh">Phnom Penh</option>
+                          <option value="Phnom Penh">{t("Phnom Penh")}</option>
                         </select>
                       </div>
                       {errors.capital && <TooltipAlert message={errors.capital} />}
@@ -343,34 +457,11 @@ export function CheckoutpageView() {
 
                   <div className="checkout_form_row">
                     <div>
-                      <label className="checkout_field_label">District</label>
-                      <div className="checkout_select_wrapper min-w-0 w-full max-w-full overflow-hidden">
-                        <select
-                          value={district}
-                          onChange={(e) => setDistrict(e.target.value)}
-                          className="checkout_select min-w-0 w-full max-w-full truncate"
-                        >
-                          <option value="Khan Boeng Keng Kang">Khan Boeng Keng Kang</option>
-                          <option value="Khan Chamkar Mon">Khan Chamkar Mon</option>
-                          <option value="Khan Chbar Ampov">Khan Chbar Ampov</option>
-                          <option value="Khan Chroy Changvar">Khan Chroy Changvar</option>
-                          <option value="Khan Dangkao">Khan Dangkao</option>
-                          <option value="Khan Daun Penh">Khan Daun Penh</option>
-                          <option value="Khan Kambol">Khan Kambol</option>
-                          <option value="Khan Meanchey">Khan Meanchey</option>
-                          <option value="Khan Prampir Makara">Khan Prampir Makara</option>
-                          <option value="Khan Prek Pnov">Khan Prek Pnov</option>
-                          <option value="Khan Pur Senchey">Khan Pur Senchey</option>
-                          <option value="Khan Russei Keo">Khan Russei Keo</option>
-                          <option value="Khan Sen Sok">Khan Sen Sok</option>
-                          <option value="Khan Tuol Kouk">Khan Tuol Kouk</option>
-                        </select>
-                        <div className="checkout_select_icon">
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </div>
-                      </div>
+                      <label className="checkout_field_label">{t("District")}</label>
+                      <CustomDistrictSelect
+                        value={district}
+                        onChange={setDistrict}
+                      />
                       {errors.district && <TooltipAlert message={errors.district} />}
                     </div>
 
@@ -390,7 +481,7 @@ export function CheckoutpageView() {
                   </div>
 
                   <div>
-                    <label className="checkout_field_label">Address</label>
+                    <label className="checkout_field_label">{t("Delivery Address")}</label>
                     <Input
                       type="text"
                       value={address}
@@ -410,7 +501,7 @@ export function CheckoutpageView() {
 
           {/* Delivery Methods Section */}
           <div>
-            <h2 className="checkout_section_title">Delivery Methods</h2>
+            <h2 className="checkout_section_title">{t("Delivery Method")}</h2>
 
             <div className="checkout_delivery_options">
               {/* Store Pickup Option */}
@@ -432,7 +523,7 @@ export function CheckoutpageView() {
                     />
                   </div>
                   <div>
-                    <h3 className="checkout_delivery_title">Store Pickup</h3>
+                    <h3 className="checkout_delivery_title">{t("Pickup at Store")}</h3>
                     <p className="checkout_delivery_price">$0.00</p>
                   </div>
                 </div>
@@ -463,7 +554,7 @@ export function CheckoutpageView() {
                     />
                   </div>
                   <div>
-                    <h3 className="checkout_delivery_title">Delivery (Phnom Penh)</h3>
+                    <h3 className="checkout_delivery_title">{t("Home Delivery")}</h3>
                     <p className="checkout_delivery_price">$1.75</p>
                   </div>
                 </div>
@@ -480,73 +571,131 @@ export function CheckoutpageView() {
 
         {/* Right Column: Order Summary Card */}
         <div className="checkout_summary_card">
-          <h2 className="checkout_summary_title">Order Summary</h2>
+          <h2 className="checkout_summary_title">{t("Order Summary")}</h2>
 
           {/* Purchased Items List */}
           <div className="checkout_summary_items_list" suppressHydrationWarning>
             {items.length === 0 ? (
-              <p className="checkout_summary_empty" suppressHydrationWarning>No items in your cart.</p>
+              <p className="checkout_summary_empty" suppressHydrationWarning>{t("Your cart is empty")}</p>
             ) : (
-              items.map((item) => (
-                <div key={item.id} className="checkout_item_row">
-                  <div className="checkout_item_info">
-                    <div className="checkout_item_image_wrapper">
-                      {item.image ? (
-                        <Image
-                          src={item.image}
-                          alt={item.title}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : null}
-                    </div>
-                    <div className="checkout_item_details">
-                      <h3 className="checkout_item_title">{item.title}</h3>
-                      <p className="checkout_item_price" suppressHydrationWarning>${item.price.toFixed(2)}</p>
-                    </div>
-                  </div>
+              items.map((item, idx) => {
+                const config = getItemCustomizationConfig(item.title);
+                const prod = getProductByIdOrTitle(item.id, item.title);
+                const origPrice = item.originalPrice ?? prod?.originalPrice;
+                const hasDiscount = origPrice !== undefined && origPrice > item.price;
+                const adjustedOrigPrice = hasDiscount ? calculateSizePrice(origPrice!, item.size) : undefined;
+                const customDetails: string[] = [];
+                if (config.hasIce && item.iceLevel) customDetails.push(`Ice: ${item.iceLevel}`);
+                if (config.hasSugar && item.sugarLevel) customDetails.push(`Sugar: ${item.sugarLevel}`);
+                if (config.hasMilk && item.milkType) customDetails.push(`Milk: ${item.milkType}`);
 
-                  <span className="checkout_item_qty" suppressHydrationWarning>Quantity: {item.quantity}</span>
-                </div>
-              ))
+                return (
+                  <div key={`${item.id}-${idx}`} className="checkout_item_row">
+                    <div className="checkout_item_info">
+                      <div className="checkout_item_image_wrapper">
+                        {item.image ? (
+                          <Image
+                            src={item.image}
+                            alt={item.title}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : null}
+                      </div>
+                      <div className="checkout_item_details">
+                        <h3 className="checkout_item_title">{t(item.title)}</h3>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                          <p className="checkout_item_price font-extrabold text-[#A1255B]" suppressHydrationWarning>
+                            ${(item.price * item.quantity).toFixed(2)}
+                          </p>
+                          {item.size && (
+                            <span className="text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5 rounded-full">
+                              Size: {item.size}
+                            </span>
+                          )}
+                          {customDetails.map((detail, dIdx) => (
+                            <span
+                              key={dIdx}
+                              className="text-[10px] font-semibold text-gray-700 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded-md"
+                            >
+                              {detail}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <span className="checkout_item_qty" suppressHydrationWarning>{t("Quantity")}: {item.quantity}</span>
+                  </div>
+                );
+              })
             )}
           </div>
 
           {/* Pricing Breakdown */}
           <div className="checkout_summary_breakdown" suppressHydrationWarning>
-            <div className="checkout_summary_line">
-              <span className="checkout_summary_label">Subtotal:</span>
-              <span className="checkout_summary_value" suppressHydrationWarning>${subtotal.toFixed(2)}</span>
-            </div>
+            {(() => {
+              const fullSubtotal = items.reduce((acc, item) => {
+                const prod = getProductByIdOrTitle(item.id, item.title);
+                const origPrice = item.originalPrice ?? prod?.originalPrice;
+                const itemOrigPrice = (origPrice && origPrice > item.price) ? calculateSizePrice(origPrice, item.size) : item.price;
+                return acc + itemOrigPrice * item.quantity;
+              }, 0);
+
+              const totalDiscount = Math.max(0, fullSubtotal - subtotal);
+              const hasDiscount = totalDiscount > 0;
+
+              return (
+                <>
+                  <div className="checkout_summary_line">
+                    <span className="checkout_summary_label">{t("Subtotal:")}</span>
+                    <span className="checkout_summary_value" suppressHydrationWarning>
+                      ${(hasDiscount ? fullSubtotal : subtotal).toFixed(2)}
+                    </span>
+                  </div>
+
+                  {hasDiscount && (
+                    <div className="checkout_summary_line">
+                      <span className="checkout_summary_label">{t("Discount:")}</span>
+                      <span className="checkout_summary_value font-bold text-[#A1255B]" suppressHydrationWarning>
+                        -${totalDiscount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             <div className="checkout_summary_line">
-              <span className="checkout_summary_label">Delivery:</span>
+              <span className="checkout_summary_label">{t("Delivery Method")}:</span>
               <span className="checkout_summary_value" suppressHydrationWarning>${deliveryFee.toFixed(2)}</span>
             </div>
 
             <div className="checkout_summary_line_total">
-              <span className="checkout_summary_label_bold">Total:</span>
+              <span className="checkout_summary_label_bold">{t("Total:")}</span>
               <span className="checkout_summary_value" suppressHydrationWarning>${grandTotal.toFixed(2)}</span>
             </div>
           </div>
 
-          {/* Place Order Button */}
-          <button
-            type="button"
-            onClick={handlePlaceOrderNow}
-            className="checkout_submit_btn"
-          >
-            Place Order Now
-          </button>
+          <div className="flex flex-col gap-1.5 w-full mt-1">
+            {/* Place Order Button */}
+            <button
+              type="button"
+              onClick={handlePlaceOrderNow}
+              className="checkout_submit_btn"
+            >
+              {t("Place Order")}
+            </button>
 
-          {/* Cancel Button Under Place Order Now */}
-          <button
-            type="button"
-            onClick={handleCancelOrder}
-            className="checkout_cancel_btn"
-          >
-            Cancel
-          </button>
+            {/* Cancel Button Under Place Order Now */}
+            <button
+              type="button"
+              onClick={handleCancelOrder}
+              className="checkout_cancel_btn !mt-0"
+            >
+              {t("Close")}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -579,13 +728,21 @@ export function CheckoutpageView() {
             <button
               type="button"
               onClick={handleConfirmCancel}
-              className="w-full bg-[#f95700] hover:bg-[#e04e00] text-white font-medium py-2.5 px-4 rounded-xl text-sm transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              className="w-full bg-[#A1255B] hover:bg-[#881d52] text-white font-medium py-2.5 px-4 rounded-xl text-sm transition-all cursor-pointer shadow-sm active:scale-[0.98] border-none"
             >
               Yes
             </button>
           </div>
         </ModalContent>
       </Modal>
+
+      {/* PAYMENT METHOD SELECTION MODAL (Cash vs QR Scan) */}
+      <PaymentMethodModal
+        open={isPaymentModalOpen}
+        onOpenChange={setIsPaymentModalOpen}
+        grandTotal={grandTotal}
+        onConfirm={handleConfirmPaymentMethod}
+      />
     </div>
   );
 }

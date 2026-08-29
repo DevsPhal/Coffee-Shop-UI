@@ -6,21 +6,32 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CategoryDropdown } from "@/components/ui";
-import { PRODUCTS, Product, getResolvedProductImage } from "@/data/products";
+import { PRODUCTS, Product, getResolvedProductImage, filterProductsByCategory, getCategoryItemCount } from "@/data/products";
 import { useCart } from "@/context/CartContext";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 import { ShoppingBag, ChevronRight, ShoppingCart, Plus, Check, Search, Clock } from "lucide-react";
-import { calculatePromoTimeLeft } from "@/lib/promoValidation";
+import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidation";
 import "@/app/globals.scss";
 
 const CATEGORY_ICONS: Record<string, string> = {
+  all: "/icons/category.svg",
+  category: "/icons/category.svg",
+  "soft drink": "/icons/soft_drink.svg",
+  beverage: "/icons/coffee.svg",
+  snack: "/icons/snack.svg",
+  "ice coffee": "/icons/iced.svg",
+  "hot coffee": "/icons/hot.svg",
+  "fresh drink": "/icons/material.svg",
+  "pure water": "/icons/water.svg",
+  "pour water": "/icons/water.svg",
+  beer: "/icons/beer.svg",
+  noodle: "/icons/snack.svg",
   iced: "/icons/iced.svg",
   hot: "/icons/hot.svg",
   coffee: "/icons/coffee.svg",
   frappe: "/icons/frappe.svg",
   signature: "/icons/signature.svg",
-  snack: "/icons/snack.svg",
-  "soft drink": "/icons/soft_drink.svg",
-  beer: "/icons/beer.svg",
+  water: "/icons/water.svg",
   material: "/icons/material.svg",
 };
 
@@ -38,6 +49,7 @@ export function PhoneCard({
   onOpenInfo,
 }: PhoneCardProps) {
   const { addItem } = useCart();
+  const { t } = useLanguage();
   const [added, setAdded] = useState(false);
 
   const imgSrc = getResolvedProductImage(product.id, product.image);
@@ -57,14 +69,17 @@ export function PhoneCard({
     setTimeout(() => setAdded(false), 1200);
   };
 
-  const discountPercent =
-    product.originalPrice && product.originalPrice > product.price
-      ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-      : 0;
+  const discountInfo = formatDiscountBadge(
+    product.price,
+    product.originalPrice,
+    product.discountType,
+    product.discountAmount
+  );
 
   const promoResult = calculatePromoTimeLeft(product.promoEndDate, product.promoDaysLeft);
   const isPromotion =
-    ((product.originalPrice !== undefined && product.originalPrice > product.price) ||
+    (discountInfo.hasDiscount ||
+      (product.originalPrice !== undefined && product.originalPrice > product.price) ||
       Boolean(product.promoDaysLeft) ||
       Boolean(product.promoEndDate)) &&
     promoResult.isValid;
@@ -82,15 +97,15 @@ export function PhoneCard({
       <div className="image-container relative shrink-0">
         <Image
           src={imgSrc}
-          alt={product.title}
+          alt={t(product.title)}
           fill
           unoptimized
           sizes="(max-width: 640px) 80px, 88px"
           className="card-thumb"
         />
-        {discountPercent > 0 && isPromotion && (
+        {discountInfo.hasDiscount && discountInfo.badgeText && isPromotion && (
           <span className="discount_badge discount_badge_phone">
-            -{discountPercent}% OFF
+            {discountInfo.badgeText}
           </span>
         )}
         {isPromotion && (
@@ -109,7 +124,7 @@ export function PhoneCard({
         {/* Title + PROMO Badge + Info Icon */}
         <div className="title-row inline-flex items-center gap-1.5 min-w-0 max-w-full overflow-hidden flex-wrap">
           <h3 className="item-title truncate min-w-0 flex-initial">
-            {product.title}
+            {t(product.title)}
           </h3>
           {isPromotion && (
             <span className="bg-[#A1255B] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
@@ -131,7 +146,7 @@ export function PhoneCard({
 
         {/* Price Label */}
         <div className="price-label">
-          Price
+          {t("Price")}
         </div>
 
         {/* Price Value with Original Price Strikethrough */}
@@ -153,7 +168,7 @@ export function PhoneCard({
         onClick={handleAdd}
         className={`add-btn shrink-0 ${added ? "added" : "default"}`}
       >
-        {added ? "ADDED ✓" : "+ ADD"}
+        {added ? t("ADDED ✓") : t("+ ADD")}
       </button>
     </div>
   );
@@ -163,6 +178,7 @@ export function MenupageView() {
   const searchParams = useSearchParams();
   const queryCategory = searchParams.get("category");
   const { openCart, addItem, subtotal, totalCount } = useCart();
+  const { t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedId, setSelectedId] = useState<string>("1");
@@ -173,13 +189,22 @@ export function MenupageView() {
     setMounted(true);
   }, []);
 
-  const categories = [
+  const displayCategories = [
     "All",
-    ...Array.from(new Set(PRODUCTS.map((p) => p.category).filter(Boolean))),
+    "Beverage",
+    "Beer",
+    "Ice Coffee",
+    "Hot Coffee",
+    "Fresh Drink",
+    "Soft Drink",
+    "Pure Water",
+    "Energy Drink",
+    "Snack",
+    "Noodle",
   ];
 
   useEffect(() => {
-    if (queryCategory && categories.includes(queryCategory)) {
+    if (queryCategory) {
       setSelectedCategory(queryCategory);
     }
   }, [queryCategory]);
@@ -198,14 +223,7 @@ export function MenupageView() {
     };
   }, [activeModalProduct]);
 
-  const filteredProducts = PRODUCTS.filter((item) => {
-    const matchesCategory =
-      selectedCategory === "All" || item.category === selectedCategory;
-    const matchesSearch =
-      !searchQuery.trim() ||
-      item.title.toLowerCase().includes(searchQuery.toLowerCase().trim());
-    return matchesCategory && matchesSearch;
-  });
+  const filteredProducts = filterProductsByCategory(selectedCategory, searchQuery);
 
   return (
     <div className="menu-view-container relative w-full max-w-full overflow-x-hidden box-border">
@@ -214,22 +232,19 @@ export function MenupageView() {
         {/* Header Section */}
         <div className="menu-header w-full max-w-full overflow-hidden">
           <h1 className="menu-title">
-            Our Full Menu
+            {t("Our Full Menu")}
           </h1>
           <p className="menu-subtitle">
-            Sleek horizontal coffee cards customized for mobile phone screens.
+            {t("Sleek horizontal coffee cards customized for mobile phone screens.")}
           </p>
         </div>
 
         {/* Desktop Category Filter & Search Row */}
         <div className="category_desktop_row flex-col sm:flex-row items-center justify-between gap-4 my-6 px-2">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {categories.map((cat) => {
+            {displayCategories.map((cat) => {
               const isSelected = selectedCategory === cat;
-              const count =
-                cat === "All"
-                  ? PRODUCTS.length
-                  : PRODUCTS.filter((p) => p.category === cat).length;
+              const count = getCategoryItemCount(cat);
               const iconSrc = CATEGORY_ICONS[cat.toLowerCase()];
 
               return (
@@ -248,7 +263,7 @@ export function MenupageView() {
                       className="category_btn_icon"
                     />
                   )}
-                  <span>{cat}</span>
+                  <span>{t(cat)}</span>
                   <span className="category_badge">
                     {count}
                   </span>
@@ -268,7 +283,7 @@ export function MenupageView() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search product..."
+                placeholder={t("Search product...")}
                 className="w-full bg-transparent text-xs font-semibold text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
               />
               {searchQuery && (
@@ -287,7 +302,7 @@ export function MenupageView() {
               className="px-3.5 py-1.5 bg-[#A1255B] hover:bg-[#881d52] text-white text-xs font-bold rounded-full shadow-2xs transition-all flex items-center gap-1.5 shrink-0 cursor-pointer border-none"
             >
               <Search className="w-3 h-3 text-white" />
-              <span>Search</span>
+              <span>{t("Search")}</span>
             </button>
           </form>
         </div>
@@ -297,14 +312,9 @@ export function MenupageView() {
           {/* Category Dropdown Pill (Left - Thin & Slim) */}
           <div className="shrink-0">
             <CategoryDropdown
-              categories={categories}
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
-              getCategoryCount={(cat) =>
-                cat === "All"
-                  ? PRODUCTS.length
-                  : PRODUCTS.filter((p) => p.category === cat).length
-              }
+              getCategoryCount={getCategoryItemCount}
             />
           </div>
 
@@ -319,7 +329,7 @@ export function MenupageView() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
+                placeholder={t("Search...")}
                 className="w-full bg-transparent text-xs font-semibold text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
               />
               {searchQuery && (
@@ -357,7 +367,7 @@ export function MenupageView() {
 
           {filteredProducts.length === 0 && (
             <div className="no-products">
-              No products available in this category.
+              {t("No products available in this category.")}
             </div>
           )}
         </div>
@@ -366,10 +376,12 @@ export function MenupageView() {
 
       {/* Product Detail Modal (Rendered on document.body via Portal) */}
       {activeModalProduct && mounted && (() => {
-        const modalDiscountPercent =
-          activeModalProduct.originalPrice && activeModalProduct.originalPrice > activeModalProduct.price
-            ? Math.round(((activeModalProduct.originalPrice - activeModalProduct.price) / activeModalProduct.originalPrice) * 100)
-            : 0;
+        const modalDiscountInfo = formatDiscountBadge(
+          activeModalProduct.price,
+          activeModalProduct.originalPrice,
+          activeModalProduct.discountType,
+          activeModalProduct.discountAmount
+        );
 
         const modalPromoResult = calculatePromoTimeLeft(
           activeModalProduct.promoEndDate,
@@ -377,7 +389,7 @@ export function MenupageView() {
         );
 
         const isModalPromotion =
-          (modalDiscountPercent > 0 || (activeModalProduct.originalPrice !== undefined && activeModalProduct.originalPrice > activeModalProduct.price)) &&
+          (modalDiscountInfo.hasDiscount || (activeModalProduct.originalPrice !== undefined && activeModalProduct.originalPrice > activeModalProduct.price)) &&
           modalPromoResult.isValid;
 
         return createPortal(
@@ -405,9 +417,9 @@ export function MenupageView() {
                   unoptimized
                   className="modal-img"
                 />
-                {modalDiscountPercent > 0 && isModalPromotion && (
+                {modalDiscountInfo.hasDiscount && modalDiscountInfo.badgeText && isModalPromotion && (
                   <span className="discount_badge">
-                    -{modalDiscountPercent}% OFF
+                    {modalDiscountInfo.badgeText}
                   </span>
                 )}
                 {isModalPromotion && (
@@ -423,8 +435,8 @@ export function MenupageView() {
 
               <div>
                 <div className="modal-header-row items-baseline min-w-0 w-full overflow-hidden">
-                  <h3 className="modal-item-title truncate min-w-0 flex-1" title={activeModalProduct.title}>
-                    {activeModalProduct.title}
+                  <h3 className="modal-item-title truncate min-w-0 flex-1" title={t(activeModalProduct.title)}>
+                    {t(activeModalProduct.title)}
                   </h3>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {activeModalProduct.originalPrice && activeModalProduct.originalPrice > activeModalProduct.price && isModalPromotion && (
@@ -438,7 +450,7 @@ export function MenupageView() {
                   </div>
                 </div>
                 <p className="modal-item-desc">
-                  {activeModalProduct.description}
+                  {t(activeModalProduct.description)}
                 </p>
               </div>
 
@@ -446,10 +458,10 @@ export function MenupageView() {
                 <Link
                   href={`/product?id=${activeModalProduct.id}&title=${encodeURIComponent(
                     activeModalProduct.title
-                  )}&price=${activeModalProduct.price}${activeModalProduct.originalPrice ? `&originalPrice=${activeModalProduct.originalPrice}` : ""}${activeModalProduct.promoEndDate ? `&promoEndDate=${encodeURIComponent(activeModalProduct.promoEndDate)}` : ""}${activeModalProduct.promoDaysLeft ? `&promoDaysLeft=${encodeURIComponent(activeModalProduct.promoDaysLeft)}` : ""}&category=${encodeURIComponent(activeModalProduct.category)}&image=${encodeURIComponent(getResolvedProductImage(activeModalProduct.id, activeModalProduct.image))}`}
+                  )}&price=${activeModalProduct.price}${activeModalProduct.originalPrice ? `&originalPrice=${activeModalProduct.originalPrice}` : ""}${activeModalProduct.discountType ? `&discountType=${activeModalProduct.discountType}` : ""}${activeModalProduct.discountAmount !== undefined ? `&discountAmount=${activeModalProduct.discountAmount}` : ""}${activeModalProduct.promoEndDate ? `&promoEndDate=${encodeURIComponent(activeModalProduct.promoEndDate)}` : ""}${activeModalProduct.promoDaysLeft ? `&promoDaysLeft=${encodeURIComponent(activeModalProduct.promoDaysLeft)}` : ""}&category=${encodeURIComponent(activeModalProduct.category)}&image=${encodeURIComponent(getResolvedProductImage(activeModalProduct.id, activeModalProduct.image))}`}
                   className="modal-view-btn"
                 >
-                  View Full Details
+                  {t("VIEW FULL DETAILS")}
                 </Link>
               </div>
             </div>

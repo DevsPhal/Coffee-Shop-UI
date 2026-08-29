@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { useContactStore } from "@/store/useContactStore";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 import { cleanPhoneInput } from "@/lib/phoneUtils";
 import "@/app/globals.scss";
 
@@ -20,6 +21,7 @@ const SUBJECT_OPTIONS = [
 
 export function ContactForm() {
   const { user, updateUser } = useAuth();
+  const { t } = useLanguage();
   const {
     formData,
     isSubmitting,
@@ -66,9 +68,9 @@ export function ContactForm() {
           <CheckCircle2 className="w-6 h-6" />
         </div>
         <div>
-          <h3 className="contact_form_success_title">Message Sent!</h3>
+          <h3 className="contact_form_success_title">{t("Message Sent!")}</h3>
           <p className="contact_form_success_desc">
-            Thank you, <strong suppressHydrationWarning>{formData.fullName}</strong>. We've received your message regarding <span suppressHydrationWarning>"{formData.topic}"</span> and will respond to <u suppressHydrationWarning>{formData.email}</u> shortly.
+            {t("Thank you,")} <strong suppressHydrationWarning>{formData.fullName}</strong>. {t("We've received your message regarding")} <span suppressHydrationWarning>"{t(formData.topic)}"</span> {t("and will respond to")} <u suppressHydrationWarning>{formData.email}</u> {t("shortly.")}
           </p>
         </div>
         <div className="contact_form_submit_wrapper">
@@ -76,7 +78,7 @@ export function ContactForm() {
             onClick={resetForm}
             className="button_pill_primary cursor-pointer"
           >
-            Send Another Message
+            {t("Send Another Message")}
           </Button>
         </div>
       </div>
@@ -90,13 +92,13 @@ export function ContactForm() {
           <div className="mb-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-[#A1255B] bg-[#fff1f2] border border-[#fecdd3] rounded-full" suppressHydrationWarning>
               <User className="w-3.5 h-3.5" />
-              Connected with {user.name}
+              {t("Connected with")} {user.name}
             </span>
           </div>
         )}
-        <h2 className="contact_form_title">Send Us a Message</h2>
+        <h2 className="contact_form_title">{t("Send Us a Message")}</h2>
         <p className="contact_form_subtitle">
-          Have a question, catering request, or feedback? Fill out the form below and we'll get back to you!
+          {t("Have a question, catering request, or feedback? Fill out the form below and we'll get back to you!")}
         </p>
       </div>
 
@@ -104,7 +106,7 @@ export function ContactForm() {
         {/* Full Name Input */}
         <div>
           <label htmlFor="contact-fullName" className="contact_form_label">
-            Full Name <span className="contact_form_required">*</span>
+            {t("Full Name")} <span className="contact_form_required">*</span>
           </label>
           <div className="contact_form_input_wrapper">
             <div className="contact_form_input_icon">
@@ -116,12 +118,12 @@ export function ContactForm() {
               name="fullName"
               value={formData.fullName}
               onChange={handleInputChange}
-              placeholder="e.g. Sok Sovann"
+              placeholder={t("e.g. Sok Sovann")}
               className="contact_form_input"
               aria-invalid={!!errors.fullName}
             />
           </div>
-          {errors.fullName && <TooltipAlert message={errors.fullName} />}
+          {errors.fullName && <TooltipAlert message={t(errors.fullName)} />}
         </div>
 
         {/* Email & Phone Row */}
@@ -129,7 +131,7 @@ export function ContactForm() {
           {/* Email Address */}
           <div>
             <label htmlFor="contact-email" className="contact_form_label">
-              Email Address <span className="contact_form_required">*</span>
+              {t("Email Address")} <span className="contact_form_required">*</span>
             </label>
             <div className="contact_form_input_wrapper">
               <div className="contact_form_input_icon">
@@ -146,13 +148,13 @@ export function ContactForm() {
                 aria-invalid={!!errors.email}
               />
             </div>
-            {errors.email && <TooltipAlert message={errors.email} />}
+            {errors.email && <TooltipAlert message={t(errors.email)} />}
           </div>
 
           {/* Phone / Telegram */}
           <div>
             <label htmlFor="contact-phone" className="contact_form_label">
-              Phone / Telegram <span className="contact_form_optional">(Optional)</span>
+              {t("Phone / Telegram")} <span className="contact_form_optional">({t("Optional")})</span>
             </label>
             <div className="contact_form_input_wrapper">
               <div className="contact_form_input_icon">
@@ -169,14 +171,14 @@ export function ContactForm() {
                 aria-invalid={!!errors.phone}
               />
             </div>
-            {errors.phone && <TooltipAlert message={errors.phone} />}
+            {errors.phone && <TooltipAlert message={t(errors.phone)} />}
           </div>
         </div>
 
         {/* Select Topic Pills */}
         <div>
           <label className="contact_form_label">
-            Select Topic
+            {t("Select Topic")}
           </label>
           <div className="contact_form_topic_list">
             {SUBJECT_OPTIONS.map((sub) => {
@@ -188,18 +190,18 @@ export function ContactForm() {
                   onClick={() => setTopic(sub)}
                   className={`contact_form_topic_btn ${active ? "active" : ""}`}
                 >
-                  {sub}
+                  {t(sub)}
                 </button>
               );
             })}
           </div>
-          {errors.topic && <TooltipAlert message={errors.topic} />}
+          {errors.topic && <TooltipAlert message={t(errors.topic)} />}
         </div>
 
         {/* Message Input */}
         <div>
           <label htmlFor="contact-message" className="contact_form_label">
-            Your Message <span className="contact_form_required">*</span>
+            {t("Your Message")} <span className="contact_form_required">*</span>
           </label>
           <div className="contact_form_input_wrapper">
             <div className="contact_form_input_icon_top">
@@ -211,12 +213,12 @@ export function ContactForm() {
               rows={3}
               value={formData.message}
               onChange={handleInputChange}
-              placeholder="Tell us what you're looking for or share your thoughts..."
+              placeholder={t("Tell us what you're looking for or share your thoughts...")}
               className="contact_form_textarea"
               aria-invalid={!!errors.message}
             />
           </div>
-          {errors.message && <TooltipAlert message={errors.message} />}
+          {errors.message && <TooltipAlert message={t(errors.message)} />}
         </div>
 
         {/* Submit Button */}
@@ -229,12 +231,12 @@ export function ContactForm() {
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                Sending Message...
+                {t("Sending Message...")}
               </>
             ) : (
               <>
                 <Send className="w-4 h-4 mr-1" />
-                Send Message
+                {t("Send Message")}
               </>
             )}
           </Button>

@@ -22,12 +22,14 @@ type FormErrors = {
 };
 
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 
 interface LoginPageViewProps {
   initialViewMode?: "login" | "forgot" | "create";
 }
 
 export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps = {}) {
+  const { t } = useLanguage();
   const router = useRouter();
   const { login } = useAuth();
   const [username, setUsername] = useState("");
@@ -137,15 +139,15 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                 <User className="w-10 h-10 stroke-[1.5]" />
               </div>
               <h1 className="login_title">
-                Login to your account
+                {t("Login to your account")}
               </h1>
               <p className="login_subtitle">
-                Enter your credential to login
+                {t("Enter your credential to login")}
               </p>
               <form onSubmit={handleSubmit} className="w-full space-y-4" noValidate>
                 <div>
                   <label className="login_input_label">
-                    Username
+                    {t("Username")}
                   </label>
                   <div className="relative flex items-center">
                     <span className="absolute left-3 text-gray-400 pointer-events-none">
@@ -173,7 +175,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                 </div>
                 <div>
                   <label className="login_input_label">
-                    Password
+                    {t("Password")}
                   </label>
                   <div className="relative flex items-center">
                     <Input
@@ -220,7 +222,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                       {keepLoggedIn && <Check className="w-3 h-3 stroke-[3]" />}
                     </div>
                     <span className="text-xs text-gray-700 font-medium">
-                      Keep me logged in
+                      {t("Keep me logged in")}
                     </span>
                   </label>
 
@@ -229,7 +231,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                     onClick={() => setViewMode("forgot")}
                     className="login_forgot_link cursor-pointer border-none bg-transparent"
                   >
-                    Forgot password?
+                    {t("Forgot password?")}
                   </button>
                 </div>
 
@@ -237,11 +239,11 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                   type="submit"
                   className="login_submit_button"
                 >
-                  Login
+                  {t("Login")}
                 </Button>
                 <div className="text-center">
                   <span className="text-sm text-gray-600">
-                    Don't have an account?
+                    {t("Don't have an account?")}
                   </span>
                   &nbsp;
                   <button
@@ -249,7 +251,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                     onClick={() => setViewMode("create")}
                     className="login_forgot_link cursor-pointer border-none bg-transparent"
                   >
-                    Sign up
+                    {t("Sign up")}
                   </button>
                 </div>
               </form>

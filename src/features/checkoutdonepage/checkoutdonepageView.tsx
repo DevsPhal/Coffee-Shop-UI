@@ -18,9 +18,13 @@ import {
   ConciergeBell,
   UtensilsCrossed,
 } from "lucide-react";
+import { getItemCustomizationConfig, getProductByIdOrTitle } from "@/data/products";
+import { calculateSizePrice } from "@/store/useCartStore";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
 export function CheckoutdonepageView() {
+  const { t } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlOrderId = searchParams.get("id") || searchParams.get("orderId");
@@ -47,6 +51,15 @@ export function CheckoutdonepageView() {
 
   // Read stored order info
   useEffect(() => {
+    let storedDelivery = {
+      method: "pickup",
+      fee: 0,
+      customerName: customerName || user?.name || "Guest",
+      location: "G01",
+      estimatedTime: "5 mins",
+      paymentType: "QR Scan",
+    };
+
     try {
       const stored = localStorage.getItem("checkout_delivery");
       if (stored) {
@@ -55,32 +68,40 @@ export function CheckoutdonepageView() {
         if (typeof parsed.fee === "number") {
           setDeliveryInfo({ method: parsed.method || "pickup", fee: parsed.fee });
         }
+        storedDelivery = {
+          method: parsed.method || "pickup",
+          fee: typeof parsed.fee === "number" ? parsed.fee : 0,
+          customerName: parsed.customerName || customerName || user?.name || "Guest",
+          location: parsed.location || (parsed.fee > 0 ? "House 30A, St 590, Toul Kork" : "G01"),
+          estimatedTime: parsed.estimatedTime || (parsed.fee > 0 ? "10 - 15 mins" : "5 mins"),
+          paymentType: parsed.paymentType || "QR Scan",
+        };
       }
     } catch {}
-  }, []);
 
-  // Record order ONLY when completing checkout with active cart items (NOT when tracking an existing order ID)
-  useEffect(() => {
     if (!urlOrderId && !orderCreatedRef.current && items && items.length > 0) {
       orderCreatedRef.current = true;
-      const activeCustomerName = customerName || user?.name || "Guest";
-      const fee = deliveryInfo.fee;
-      const isDelivery = fee > 0 || deliveryInfo.method === "grab" || deliveryInfo.method === "delivery";
+      const fee = storedDelivery.fee;
+      const isDelivery = fee > 0 || storedDelivery.method === "grab" || storedDelivery.method === "delivery";
       const sub = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
       const total = sub + fee;
 
       const createdOrder = addOrder({
         userId: user?.userId || undefined,
-        customerName: activeCustomerName,
-        paymentType: "QR Scan",
+        customerName: storedDelivery.customerName,
+        paymentType: storedDelivery.paymentType,
         deliveryMethod: isDelivery ? "delivery" : "pickup",
-        location: isDelivery ? "House 30A, St 590, Toul Kork" : "G01",
-        estimatedTime: isDelivery ? "15 - 25 mins" : "5 mins",
+        location: storedDelivery.location,
+        estimatedTime: storedDelivery.estimatedTime,
         items: items.map((i) => ({
           id: i.id,
           title: i.title,
           price: i.price,
           quantity: i.quantity,
+          size: i.size || "M",
+          iceLevel: i.iceLevel,
+          sugarLevel: i.sugarLevel,
+          milkType: i.milkType,
           image: i.image,
         })),
         subtotal: sub,
@@ -98,7 +119,7 @@ export function CheckoutdonepageView() {
 
       clearCart();
     }
-  }, [urlOrderId, items, user, customerName, deliveryInfo, addOrder, clearCart]);
+  }, [urlOrderId, items, user, addOrder, clearCart]);
 
   useEffect(() => {
     if (hasToastedRef.current) return;
@@ -120,7 +141,7 @@ export function CheckoutdonepageView() {
   const displayItems = isMounted && selectedOrder?.items && selectedOrder.items.length > 0
     ? selectedOrder.items
     : [
-        { id: "1", title: "Amacano", price: 2.25, quantity: 1, image: "" },
+        { id: "1", title: "Amacano", price: 2.25, quantity: 1, size: "M", image: "" },
       ];
 
   const calculatedSubtotal = isMounted && selectedOrder ? selectedOrder.subtotal : displayItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -128,7 +149,7 @@ export function CheckoutdonepageView() {
   const grandTotal = isMounted && selectedOrder ? selectedOrder.grandTotal : calculatedSubtotal + displayDeliveryFee;
   const displayCustomerName = isMounted ? (selectedOrder ? selectedOrder.customerName : customerName || user?.name || "Ream") : "Ream";
   const displayLocation = isMounted ? (selectedOrder ? selectedOrder.location : (deliveryInfo.fee === 0 ? "G01" : "House 30A, St 590, Toul Kork")) : "G01";
-  const displayEstimatedTime = isMounted ? (selectedOrder ? selectedOrder.estimatedTime : (displayDeliveryFee > 0 ? "15 - 25 mins" : "5 mins")) : "5 mins";
+  const displayEstimatedTime = isMounted ? (selectedOrder ? selectedOrder.estimatedTime : (displayDeliveryFee > 0 ? "10 - 15 mins" : "5 mins")) : "5 mins";
 
   const [currentStep, setCurrentStep] = useState<number>(2);
 
@@ -191,12 +212,14 @@ export function CheckoutdonepageView() {
             <CheckCircle2 className="w-10 h-10" />
           </div>
           <h1 className="banner_title" suppressHydrationWarning>
-            {effectiveStep >= 3 ? "Order Ready!" : "Order Confirmed!"}
+            {t(effectiveStep >= 3 ? "Order Ready!" : "Order Confirmed!")}
           </h1>
           <p className="banner_subtitle" suppressHydrationWarning>
-            {effectiveStep >= 3
-              ? "Your order is ready! Enjoy your freshly prepared drinks."
-              : "Thank you for ordering with 590st CAFE. Your order is being freshly prepared!"}
+            {t(
+              effectiveStep >= 3
+                ? "Your order is ready! Enjoy your freshly prepared drinks."
+                : "Thank you for ordering with 590st CAFE. Your order is being freshly prepared!"
+            )}
           </p>
         </div>
       </div>
@@ -206,7 +229,7 @@ export function CheckoutdonepageView() {
         <div className="progress_status_card">
           <h2 className="progress_status_header">
             <Receipt className="w-5 h-5 text-[#A1255B]" />
-            Order Progress Status
+            {t("Order Progress Status")}
           </h2>
 
           {/* Timeline Stepper */}
@@ -226,7 +249,7 @@ export function CheckoutdonepageView() {
               <div className="stepper_circle stepper_circle_active">
                 <Check className="w-5 h-5" />
               </div>
-              <span className="stepper_label stepper_label_active">Confirmed</span>
+              <span className="stepper_label stepper_label_active">{t("Confirmed")}</span>
             </div>
 
             {/* Step 2: Preparing */}
@@ -242,7 +265,7 @@ export function CheckoutdonepageView() {
                 {effectiveStep >= 3 ? <Check className="w-5 h-5" /> : "2"}
               </div>
               <span className={`stepper_label ${effectiveStep >= 3 ? "stepper_label_active" : "stepper_label_active"}`} suppressHydrationWarning>
-                Preparing
+                {t("Preparing")}
               </span>
             </div>
 
@@ -264,7 +287,7 @@ export function CheckoutdonepageView() {
                 }`}
                 suppressHydrationWarning
               >
-                {displayDeliveryFee > 0 ? (effectiveStep >= 3 ? "Delivered" : "Delivering") : (effectiveStep >= 3 ? "Ready!" : "Ready")}
+                {t(displayDeliveryFee > 0 ? (effectiveStep >= 3 ? "Delivered" : "Delivering") : (effectiveStep >= 3 ? "Ready!" : "Ready"))}
               </span>
             </div>
           </div>
@@ -274,32 +297,32 @@ export function CheckoutdonepageView() {
       {/* 3. ORDER DETAILS SUMMARY CARD */}
       <div className="main_content">
         <div className="card_box">
-          <h2 className="card_title">Order details</h2>
-          <p className="card_subtitle">See complete details for your order</p>
+          <h2 className="card_title">{t("Order details")}</h2>
+          <p className="card_subtitle">{t("See complete details for your order")}</p>
 
           {/* Metadata Key-Value Rows */}
           <div className="meta_row_group">
             <div className="meta_row">
-              <span className="label_muted">Customer:</span>
+              <span className="label_muted">{t("Customer:")}</span>
               <span className="value_brand" suppressHydrationWarning>
                 {displayCustomerName}
               </span>
             </div>
 
             <div className="meta_row">
-              <span className="label_muted">Payment type:</span>
-              <span className="value_dark">QR Scan</span>
+              <span className="label_muted">{t("Payment type:")}</span>
+              <span className="value_dark">{t(selectedOrder?.paymentType || (isMounted ? (JSON.parse(localStorage.getItem("checkout_delivery") || "{}").paymentType || "QR Scan") : "QR Scan"))}</span>
             </div>
 
             <div className="meta_row">
-              <span className="label_muted">Location:</span>
+              <span className="label_muted">{t("Location:")}</span>
               <span className="value_brand" suppressHydrationWarning>
                 {displayLocation}
               </span>
             </div>
 
             <div className="meta_row">
-              <span className="label_muted">Estimated time:</span>
+              <span className="label_muted">{t("Estimated time:")}</span>
               <span className="value_brand" suppressHydrationWarning>
                 {displayEstimatedTime}
               </span>
@@ -310,34 +333,85 @@ export function CheckoutdonepageView() {
           <hr className="divider" />
 
           {/* Order Items List */}
-          <div className="meta_row_group">
-            {displayItems.map((item, idx) => (
-              <div key={item.id || idx} className="meta_row">
-                <span className="value_dark">
-                  {item.quantity}x {item.title}
-                </span>
-                <span className="value_brand" suppressHydrationWarning>
-                  $ {(item.price * item.quantity).toFixed(2)}
-                </span>
-              </div>
-            ))}
+          <div className="meta_row_group divide-y divide-gray-100/60">
+            {displayItems.map((item, idx) => {
+              const config = getItemCustomizationConfig(item.title);
+              const customDetails: string[] = [];
+              if (config.hasIce && item.iceLevel) customDetails.push(`Ice: ${item.iceLevel}`);
+              if (config.hasSugar && item.sugarLevel) customDetails.push(`Sugar: ${item.sugarLevel}`);
+              if (config.hasMilk && item.milkType) customDetails.push(`Milk: ${item.milkType}`);
+
+              return (
+                <div key={item.id || idx} className="pt-2 first:pt-0 space-y-1">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span
+                      className="value_dark font-semibold text-xs sm:text-sm truncate min-w-0 flex-1"
+                      title={`${item.quantity}x ${item.title} ${item.size ? `(Size: ${item.size})` : ""}`}
+                    >
+                      {item.quantity}x {t(item.title)} {item.size ? `(${t("Size")}: ${item.size})` : ""}
+                    </span>
+                    <span className="value_brand font-bold text-xs sm:text-sm shrink-0 whitespace-nowrap pl-1" suppressHydrationWarning>
+                      $ {(item.price * item.quantity).toFixed(2)}
+                    </span>
+                  </div>
+
+                  {customDetails.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                      {customDetails.map((detail, dIdx) => (
+                        <span
+                          key={dIdx}
+                          className="inline-block text-[10px] font-semibold text-pink-700 bg-pink-50 border border-pink-100 rounded-md px-1.5 py-0.5"
+                        >
+                          {detail}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Divider */}
           <hr className="divider_sm" />
 
-          {/* Subtotal */}
-          <div className="meta_row">
-            <span className="label_muted">Subtotal:</span>
-            <span className="value_brand" suppressHydrationWarning>
-              $ {calculatedSubtotal.toFixed(2)}
-            </span>
-          </div>
+          {/* Subtotal & Discount */}
+          {(() => {
+            const fullSubtotal = displayItems.reduce((acc, item) => {
+              const prod = getProductByIdOrTitle(item.id, item.title);
+              const origPrice = (item as any).originalPrice ?? prod?.originalPrice;
+              const itemOrigPrice = (origPrice && origPrice > item.price) ? calculateSizePrice(origPrice, item.size) : item.price;
+              return acc + itemOrigPrice * item.quantity;
+            }, 0);
+
+            const totalDiscount = Math.max(0, fullSubtotal - calculatedSubtotal);
+            const hasDiscount = totalDiscount > 0;
+
+            return (
+              <>
+                <div className="meta_row">
+                  <span className="label_muted">{t("Subtotal:")}</span>
+                  <span className="value_brand" suppressHydrationWarning>
+                    $ {(hasDiscount ? fullSubtotal : calculatedSubtotal).toFixed(2)}
+                  </span>
+                </div>
+
+                {hasDiscount && (
+                  <div className="meta_row">
+                    <span className="label_muted">{t("Discount:")}</span>
+                    <span className="value_brand font-bold text-[#A1255B]" suppressHydrationWarning>
+                      -$ {totalDiscount.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {/* Delivery Fee */}
           {displayDeliveryFee > 0 && (
             <div className="meta_row">
-              <span className="label_muted">Delivery:</span>
+              <span className="label_muted">{t("Delivery Method")}:</span>
               <span className="value_brand" suppressHydrationWarning>
                 $ {displayDeliveryFee.toFixed(2)}
               </span>
@@ -346,7 +420,7 @@ export function CheckoutdonepageView() {
 
           {/* Grand Total */}
           <div className="meta_row">
-            <span className="label_muted font-bold text-gray-900">Grand total:</span>
+            <span className="label_muted font-bold text-gray-900">{t("Grand total:")}</span>
             <span className="value_grand_total" suppressHydrationWarning>
               $ {grandTotal.toFixed(2)}
             </span>
@@ -361,11 +435,11 @@ export function CheckoutdonepageView() {
             className="btn_desktop_staff"
           >
             <Bell className="w-5 h-5 mr-2 shrink-0" />
-            <span>{staffCalled ? "Staff Notified" : "Call Staff"}</span>
+            <span>{t(staffCalled ? "Staff Notified" : "Call Staff")}</span>
           </button>
           <Link href="/menu" onClick={handleBackToMenu} className="btn_desktop_menu">
             <UtensilsCrossed className="w-5 h-5 mr-2 shrink-0" />
-            <span>Back to Menu</span>
+            <span>{t("Back to Menu")}</span>
           </Link>
         </div>
       </div>
@@ -379,11 +453,11 @@ export function CheckoutdonepageView() {
             className="btn_mobile_staff"
           >
             <ConciergeBell className="w-5 h-5 shrink-0" />
-            <span>{staffCalled ? "Staff Notified" : "Call Staff"}</span>
+            <span>{t(staffCalled ? "Staff Notified" : "Call Staff")}</span>
           </button>
           <Link href="/menuphone" onClick={handleBackToMenu} className="btn_mobile_menu">
             <UtensilsCrossed className="w-5 h-5 shrink-0" />
-            <span>Back to Menu</span>
+            <span>{t("Back to Menu")}</span>
           </Link>
         </div>,
         document.body
@@ -395,16 +469,16 @@ export function CheckoutdonepageView() {
           <div className="modal_icon_badge">
             <Check className="w-6 h-6" />
           </div>
-          <h3 className="modal_title">Staff Notified</h3>
+          <h3 className="modal_title">{t("Staff Notified")}</h3>
           <p className="modal_description">
-            A staff member has been requested and will assist you shortly.
+            {t("A staff member has been requested and will assist you shortly.")}
           </p>
           <button
             type="button"
             onClick={() => setCallStaffModal(false)}
             className="btn_modal_close"
           >
-            Got it
+            {t("Got it")}
           </button>
         </ModalContent>
       </Modal>
