@@ -39,7 +39,7 @@ function CustomModalOptionDropdown({
 
   return (
     <div className="mb-4">
-      <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+      <label className="block text-[11px] text-gray-700 uppercase tracking-wider mb-1.5">
         {t(label)}
       </label>
       <div ref={ref} className="relative w-full text-left">
@@ -154,9 +154,6 @@ export function SelectSizeModal({
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-pink-50 text-[#A1255B] flex items-center justify-center font-bold">
-              <Coffee className="w-4 h-4" />
-            </div>
             <h3 className="text-base font-extrabold text-gray-900 tracking-tight">
               {t("Customize Your Order")}
             </h3>
@@ -171,15 +168,15 @@ export function SelectSizeModal({
         </div>
 
         {/* Product Brief */}
-        <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100 mb-4">
-          <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-gray-200 shrink-0">
+        <div className="box_product flex items-center gap-3 p-3 mb-4">
+          <div className="box_product relative w-12 h-12 overflow-hidden shrink-0">
             {product.image ? (
               <Image
                 src={product.image}
                 alt={t(product.title)}
                 fill
                 unoptimized
-                className="object-cover"
+                className="object-cover img"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-xs text-gray-400 font-bold">
@@ -206,7 +203,7 @@ export function SelectSizeModal({
               {/* Size Selection */}
               {config.hasSize && (
                 <div className="mb-4">
-                  <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-2">
+                  <label className="block text-[11px] text-gray-700 uppercase tracking-wider mb-2">
                     {t(
                       config.sizeOptions.includes("Can")
                         ? "Packaging Option:"
@@ -245,7 +242,7 @@ export function SelectSizeModal({
                           key={sz}
                           type="button"
                           onClick={() => setSelectedSize(sz)}
-                          className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                          className={`flex flex-col items-center py-1 justify-center transition-all cursor-pointer border ${
                             isSel
                               ? "bg-[#A1255B] border-[#A1255B] text-white shadow-sm scale-[1.02]"
                               : "bg-white text-gray-700 hover:bg-gray-50 border-gray-200"
@@ -308,7 +305,7 @@ export function SelectSizeModal({
           <button
             type="button"
             onClick={handleConfirm}
-            className="w-full bg-[#A1255B] hover:bg-[#881d52] text-white font-bold py-3 px-4 rounded-full text-sm shadow-md shadow-[#A1255B]/20 transition-all cursor-pointer border-none flex items-center justify-center gap-2 active:scale-98"
+            className="w-full bg-[#A1255B] hover:bg-[#881d52] text-white py-3 px-4 text-sm shadow-md shadow-[#A1255B]/20 transition-all cursor-pointer border-none flex items-center justify-center gap-2 active:scale-98"
           >
             <ShoppingBag className="w-4 h-4" />
             <span>{actionType === "cart" ? t("Add to Cart") : t("Proceed to Checkout")}</span>
