@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useLanguage } from "@/components/ui/translatetokhmer_clean";
 import "@/app/globals.scss";
 
 interface AboutGalleryItem {
@@ -79,19 +80,20 @@ const ABOUT_ITEMS: AboutGalleryItem[] = [
 
 export function AboutpageView() {
   const [selectedItem, setSelectedItem] = useState<AboutGalleryItem | null>(null);
+  const { t } = useLanguage();
 
   return (
    <div className="about-container">
   <div className="about-wrapper">
     <div className="product_detail_header">
-      <h1 className="product_detail_title">About Us</h1>
+      <h1 className="product_detail_title">{t("About Us")}</h1>
 
       <nav className="product_detail_breadcrumb" aria-label="Breadcrumb">
         <Link href="/" className="breadcrumb_link">
-          Home
+          {t("Home")}
         </Link>
         <span className="breadcrumb_separator">»</span>
-        <span className="breadcrumb_current">About Us</span>
+        <span className="breadcrumb_current">{t("About Us")}</span>
       </nav>
     </div>
     <div className="bento-grid">
@@ -104,7 +106,7 @@ export function AboutpageView() {
         >
           <Image
             src={item.image}
-            alt={item.title}
+            alt={t(item.title)}
             fill
             unoptimized
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
@@ -113,10 +115,10 @@ export function AboutpageView() {
           <div className="card-overlay" />
           <div className="card-content">
             <h3 className="card-title">
-              {item.title}
+              {t(item.title)}
             </h3>
             <p className="card-description">
-              {item.description}
+              {t(item.description)}
             </p>
           </div>
         </div>
@@ -144,7 +146,7 @@ export function AboutpageView() {
         <div className="modal-image-wrapper">
           <Image
             src={selectedItem.image}
-            alt={selectedItem.title}
+            alt={t(selectedItem.title)}
             fill
             unoptimized
             className="modal-image"
@@ -153,10 +155,10 @@ export function AboutpageView() {
 
         <div className="modal-body">
           <h2 className="modal-title">
-            {selectedItem.title}
+            {t(selectedItem.title)}
           </h2>
           <p className="modal-description">
-            {selectedItem.description}
+            {t(selectedItem.description)}
           </p>
         </div>
 
@@ -166,7 +168,7 @@ export function AboutpageView() {
             onClick={() => setSelectedItem(null)}
             className="modal-action-btn"
           >
-            Close
+            {t("Close")}
           </button>
         </div>
       </div>

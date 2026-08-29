@@ -43,6 +43,10 @@ export const signUpSchema = z.object({
     .trim()
     .min(1, { message: "Please enter your username." })
     .min(3, { message: "Username must be at least 3 characters." }),
+  gender: z
+    .string()
+    .trim()
+    .optional(),
   email: z
     .string()
     .trim()
@@ -73,6 +77,10 @@ export const adminSignUpSchema = z.object({
     .trim()
     .min(1, { message: "Please enter your username." })
     .min(3, { message: "Username must be at least 3 characters." }),
+  gender: z
+    .string()
+    .trim()
+    .optional(),
   email: z
     .string()
     .trim()

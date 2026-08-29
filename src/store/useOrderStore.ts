@@ -7,6 +7,10 @@ export const orderItemSchema = z.object({
   title: z.string(),
   price: z.number(),
   quantity: z.number(),
+  size: z.string().optional().default("M"),
+  iceLevel: z.string().optional(),
+  sugarLevel: z.string().optional(),
+  milkType: z.string().optional(),
   image: z.string().optional(),
 });
 
@@ -17,7 +21,7 @@ export const orderRecordSchema = z.object({
   paymentType: z.string().default("QR Scan"),
   deliveryMethod: z.enum(["pickup", "delivery", "grab"]).default("pickup"),
   location: z.string().default("G01"),
-  estimatedTime: z.string().default("15 - 25 mins"),
+  estimatedTime: z.string().default("10 - 15 mins"),
   items: z.array(orderItemSchema),
   subtotal: z.number(),
   deliveryFee: z.number(),
@@ -29,26 +33,7 @@ export const orderRecordSchema = z.object({
 export type OrderItemRecord = z.infer<typeof orderItemSchema>;
 export type OrderRecord = z.infer<typeof orderRecordSchema>;
 
-const initialMockOrders: OrderRecord[] = [
-  {
-    id: "ORD-590-1001",
-    userId: "00621",
-    customerName: "Ream",
-    paymentType: "QR Scan",
-    deliveryMethod: "delivery",
-    location: "House 30A, St 590, Toul Kork",
-    estimatedTime: "15 - 25 mins",
-    items: [
-      { id: "1", title: "Amacano", price: 1.75, quantity: 2, image: "/images/Amacano.png" },
-      { id: "2", title: "Cambodia Beer", price: 1.50, quantity: 1, image: "/images/cambodiabeer.png" },
-    ],
-    subtotal: 5.00,
-    deliveryFee: 1.75,
-    grandTotal: 6.75,
-    status: "Preparing",
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-  },
-];
+const initialMockOrders: OrderRecord[] = [];
 
 interface OrderStoreState {
   ordersHistory: OrderRecord[];
@@ -73,7 +58,7 @@ export const useOrderStore = create<OrderStoreState>()(
           paymentType: input.paymentType || "QR Scan",
           deliveryMethod: input.deliveryMethod || "pickup",
           location: input.location || "G01",
-          estimatedTime: input.estimatedTime || (input.deliveryFee > 0 ? "15 - 25 mins" : "5 mins"),
+          estimatedTime: input.estimatedTime || (input.deliveryFee > 0 ? "10 - 15 mins" : "5 mins"),
           items: input.items || [],
           subtotal: input.subtotal || 0,
           deliveryFee: input.deliveryFee || 0,

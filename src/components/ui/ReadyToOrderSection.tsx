@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
 export interface ReadyToOrderSectionProps {
@@ -25,6 +26,7 @@ export function ReadyToOrderSection({
   className = "",
 }: ReadyToOrderSectionProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -41,12 +43,12 @@ export function ReadyToOrderSection({
     <section className={`ready_to_order_section ${className}`}>
       {/* Heading */}
       <h2 className="ready_to_order_title">
-        {title}
+        {t(title)}
       </h2>
 
       {/* Subtitle / Description */}
       <p className="ready_to_order_desc">
-        {description}
+        {t(description)}
       </p>
 
       {/* Action Buttons */}
@@ -54,14 +56,14 @@ export function ReadyToOrderSection({
         {/* Primary Button */}
         <Link href={targetPrimaryHref}>
           <Button className="button_pill_primary">
-            {primaryBtnText}
+            {t(primaryBtnText)}
           </Button>
         </Link>
 
         {/* Secondary Button */}
         <Link href={secondaryBtnHref}>
           <Button className="button_pill_secondary">
-            {secondaryBtnText}
+            {t(secondaryBtnText)}
           </Button>
         </Link>
       </div>

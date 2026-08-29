@@ -127,3 +127,63 @@ export function calculatePromoTimeLeft(
     status: "expired",
   };
 }
+
+export interface DiscountInfo {
+  hasDiscount: boolean;
+  badgeText: string | null;
+  discountType: "percentage" | "fixed";
+  discountAmount: number;
+}
+
+/**
+ * Formats discount badge string based on discount type and amounts.
+ * - Percentage: "-25% OFF"
+ * - Fixed dollar amount: "-$0.50 OFF" or "-$1.00 OFF"
+ */
+export function formatDiscountBadge(
+  price?: number,
+  originalPrice?: number,
+  discountType?: "percentage" | "fixed",
+  discountAmount?: number
+): DiscountInfo {
+  if (originalPrice && price && originalPrice > price) {
+    const diff = originalPrice - price;
+    if (discountType === "fixed") {
+      const fixedVal = discountAmount !== undefined ? discountAmount : diff;
+      return {
+        hasDiscount: true,
+        badgeText: `-$${fixedVal.toFixed(2)} OFF`,
+        discountType: "fixed",
+        discountAmount: fixedVal,
+      };
+    } else {
+      const percent =
+        discountAmount !== undefined
+          ? discountAmount
+          : Math.round((diff / originalPrice) * 100);
+      return {
+        hasDiscount: percent > 0,
+        badgeText: percent > 0 ? `-${percent}% OFF` : null,
+        discountType: "percentage",
+        discountAmount: percent,
+      };
+    }
+  }
+
+  if (discountType === "fixed" && discountAmount && discountAmount > 0) {
+    return {
+      hasDiscount: true,
+      badgeText: `-$${discountAmount.toFixed(2)} OFF`,
+      discountType: "fixed",
+      discountAmount,
+    };
+  }
+
+  return {
+    hasDiscount: false,
+    badgeText: null,
+    discountType: "percentage",
+    discountAmount: 0,
+  };
+}
+

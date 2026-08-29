@@ -61,6 +61,7 @@ interface ContactStoreState {
   validateField: <K extends keyof ContactMessageInput>(field: K, value: ContactMessageInput[K]) => void;
   resetForm: () => void;
   submitMessage: (currentUser?: { userId?: string; name?: string; email?: string } | null) => Promise<{ success: boolean; message?: string }>;
+  clearHistory: () => void;
 }
 
 export const useContactStore = create<ContactStoreState>()(
@@ -182,6 +183,10 @@ export const useContactStore = create<ContactStoreState>()(
         });
 
         return { success: true };
+      },
+
+      clearHistory: () => {
+        set({ messagesHistory: [] });
       },
     }),
     {
