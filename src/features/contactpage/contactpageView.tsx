@@ -53,9 +53,6 @@ export function ContactpageView() {
         </div>
         <div className="contact_page_info_card">
           <div>
-            <div className="contact_info_badge">
-              <Coffee className="w-3.5 h-3.5 mr-1" /> 590st CAFE
-            </div>
             <h2 className="contact_info_title">{t("Get in Touch Directly")}</h2>
             <p className="contact_info_desc">
               {t("Whether you want to place a custom order, ask about catering, or just say hello, we are always happy to connect!")}
