@@ -66,12 +66,37 @@ export const signUpSchema = z.object({
 
 export type SignUpFormValues = z.infer<typeof signUpSchema>;
 
+// Zod Schema for Telegram Sign Up Validation (without email field)
+export const telegramSignUpSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(1, { message: "Please enter your username." })
+    .min(3, { message: "Username must be at least 3 characters." }),
+  gender: z
+    .string()
+    .trim()
+    .optional(),
+  phone: z
+    .string()
+    .trim()
+    .min(1, { message: "Please enter your phone number." })
+    .regex(/^[0-9+\s-]{8,15}$/, { message: "Phone number must be valid (8-15 digits)." }),
+  password: z
+    .string()
+    .trim()
+    .min(1, { message: "Please enter a password." })
+    .min(3, { message: "Password must be at least 3 characters." }),
+});
+
+export type TelegramSignUpFormValues = z.infer<typeof telegramSignUpSchema>;
+
 // Zod Schema for Admin Sign Up Validation
 export const adminSignUpSchema = z.object({
   role: z
     .string()
     .trim()
-    .min(1, { message: "Please select your position/role." }),
+    .optional(),
   username: z
     .string()
     .trim()

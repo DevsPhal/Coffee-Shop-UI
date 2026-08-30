@@ -151,7 +151,7 @@ export function CheckoutpageView() {
     }
   }, [user]);
 
-  const deliveryFee = deliveryMethod === "grab" ? 1.75 : 0.0;
+  const deliveryFee = deliveryMethod === "grab" ? 0.50 : 0.0;
   const grandTotal = subtotal + deliveryFee;
 
   const validateSingleField = (
@@ -555,7 +555,7 @@ export function CheckoutpageView() {
                   </div>
                   <div>
                     <h3 className="checkout_delivery_title">{t("Home Delivery")}</h3>
-                    <p className="checkout_delivery_price">$1.75</p>
+                    <p className="checkout_delivery_price">$0.50</p>
                   </div>
                 </div>
 
