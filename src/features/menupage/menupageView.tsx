@@ -159,7 +159,7 @@ export function MenupageView() {
           
           {/* Left Column: Sidebar Category Navigation Panel (Brand Colors) */}
           <aside className="md:col-span-1 space-y-4">
-            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-2xs">
+            <div className="menu_filter">
               <h2 className="text-xs font-black tracking-wider text-[#A1255B] uppercase mb-4 pb-2 border-b border-gray-100 flex items-center justify-between">
                 <span>{t("CATEGORIES")}</span>
                 <Filter className="w-3.5 h-3.5 text-[#A1255B]" />
@@ -171,7 +171,7 @@ export function MenupageView() {
                   <button
                     type="button"
                     onClick={() => setSelectedCategory("Featured")}
-                    className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer border-none text-left ${
+                    className={`btn_menu transition-all cursor-pointer border-none text-left ${
                       selectedCategory === "Featured"
                         ? "bg-[#A1255B] text-white shadow-2xs font-bold"
                         : "hover:bg-gray-100 text-gray-700"
@@ -190,7 +190,7 @@ export function MenupageView() {
                       <span className="truncate">{t("Featured Products")}</span>
                     </div>
                     <span
-                      className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
+                      className={`txt_no ${
                         selectedCategory === "Featured"
                           ? "bg-white/20 text-white"
                           : "bg-gray-100 text-gray-600 border border-gray-200"
@@ -206,7 +206,7 @@ export function MenupageView() {
                   <button
                     type="button"
                     onClick={() => setSelectedCategory("All")}
-                    className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer border-none text-left ${
+                    className={`btn_menu transition-all cursor-pointer border-none text-left ${
                       selectedCategory === "All" || selectedCategory === "all"
                         ? "bg-[#A1255B] text-white shadow-2xs font-bold"
                         : "hover:bg-gray-100 text-gray-700"
@@ -225,7 +225,7 @@ export function MenupageView() {
                       <span className="truncate">{t("All Products")}</span>
                     </div>
                     <span
-                      className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
+                      className={`txt_no ${
                         selectedCategory === "All" || selectedCategory === "all"
                           ? "bg-white/20 text-white"
                           : "bg-gray-100 text-gray-600 border border-gray-200"

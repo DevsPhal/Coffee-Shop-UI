@@ -313,14 +313,14 @@ export function OrderpageView() {
       <h1 className="order_page_title">{t("Shopping Cart")}</h1>
 
       {items.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border border-gray-100 shadow-sm max-w-md mx-auto">
+        <div className="text-center py-16 bg-white border border-gray-100 shadow-sm max-w-md mx-auto">
           <p className="text-gray-500 font-medium mb-6 text-sm">
             {t("Your shopping cart is empty.")}
           </p>
           <button
             type="button"
             onClick={handleContinueShopping}
-            className="inline-block bg-[#A1255B] hover:bg-[#881d52] text-white font-bold py-3 px-8 rounded-full text-xs transition-colors cursor-pointer border-none shadow-md shadow-[#A1255B]/20"
+            className="inline-block bg-[#A1255B] hover:bg-[#881d52] text-white font-bold py-3 px-8 text-xs transition-colors cursor-pointer border-none shadow-md shadow-[#A1255B]/20"
           >
             {t("Explore Menu & Add Drinks")}
           </button>

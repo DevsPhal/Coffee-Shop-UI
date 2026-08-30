@@ -165,7 +165,7 @@ export function PaymentMethodModal({
             type="button"
             onClick={handleConfirmClick}
             disabled={isSubmitting}
-            className={`w-full bg-[#A1255B] hover:bg-[#881d52] text-white font-bold py-3 px-4 rounded-full text-sm shadow-md shadow-[#A1255B]/20 transition-all cursor-pointer border-none flex items-center justify-center gap-2 active:scale-98 ${
+            className={`w-full bg-[#A1255B] hover:bg-[#881d52] text-white  py-3 px-4 text-sm shadow-md shadow-[#A1255B]/20 transition-all cursor-pointer border-none flex items-center justify-center gap-2 active:scale-98 ${
               isSubmitting ? "opacity-90 cursor-wait" : ""
             }`}
           >

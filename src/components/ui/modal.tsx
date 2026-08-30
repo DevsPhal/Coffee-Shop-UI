@@ -51,7 +51,7 @@ function ModalContent({
         <DialogPrimitive.Popup
           data-slot="modal-content"
           className={cn(
-            "pointer-events-auto relative w-full max-w-sm gap-4 border border-gray-100 bg-white p-6 shadow-[0_20px_50px_rgba(0,0,0,0.18)] transition-all duration-200 rounded-2xl outline-none data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
+            "modal_sm pointer-events-auto relative w-full max-w-sm gap-4 border border-gray-100 bg-white p-6 shadow-[0_20px_50px_rgba(0,0,0,0.18)] transition-all duration-200 rounded-2xl outline-none data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
             className
           )}
           {...props}
