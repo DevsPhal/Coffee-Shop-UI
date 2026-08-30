@@ -143,7 +143,7 @@ export function AdminloginpageView({ initialViewMode = "login" }: Adminloginpage
           {viewMode === "forgot" ? (
             <Forgot onBackToLogin={() => setViewMode("login")} />
           ) : viewMode === "create" ? (
-            <Create onBackToLogin={() => setViewMode("login")} isAdmin={true} defaultRole="Admin" />
+            <Create onBackToLogin={() => setViewMode("login")} isAdmin={true} />
           ) : (
             <>
               {/* Avatar Circle */}

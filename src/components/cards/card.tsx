@@ -80,6 +80,34 @@ export function Card({
   const handleOpenAddModal = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    const customizationConfig = getItemCustomizationConfig(title, category);
+
+    // If item has no size/drink customization options (e.g. Topping / Fried Egg), directly add to cart
+    if (
+      !customizationConfig.hasSize &&
+      !customizationConfig.hasIce &&
+      !customizationConfig.hasSugar &&
+      !customizationConfig.hasMilk
+    ) {
+      if (onAddToCart) {
+        onAddToCart();
+      } else {
+        addItem(
+          {
+            id: id || title,
+            title,
+            price,
+            image: imgSrc,
+          },
+          false
+        );
+      }
+      setAdded(true);
+      setTimeout(() => setAdded(false), 1200);
+      return;
+    }
+
     setModalActionType("cart");
     setIsSizeModalOpen(true);
   };
@@ -87,6 +115,33 @@ export function Card({
   const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    const customizationConfig = getItemCustomizationConfig(title, category);
+
+    // If item has no size/drink customization options (e.g. Topping / Fried Egg), directly go to checkout
+    if (
+      !customizationConfig.hasSize &&
+      !customizationConfig.hasIce &&
+      !customizationConfig.hasSugar &&
+      !customizationConfig.hasMilk
+    ) {
+      if (onBuyNow) {
+        onBuyNow();
+      } else {
+        addItem(
+          {
+            id: id || title,
+            title,
+            price,
+            image: imgSrc,
+          },
+          false
+        );
+      }
+      router.push("/checkout");
+      return;
+    }
+
     setModalActionType("checkout");
     setIsSizeModalOpen(true);
   };
@@ -226,10 +281,10 @@ export function Card({
           <button
             type="button"
             onClick={handleOpenAddModal}
-            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full font-bold text-xs sm:text-sm uppercase tracking-wider text-white shadow-md transition-all duration-200 shrink-0 add-btn ${
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full font-bold text-xs sm:text-sm uppercase tracking-wider text-white shrink-0 add-btn ${
               added
                 ? "bg-emerald-600 shadow-emerald-600/30 scale-95 added"
-                : "bg-[#931B42] hover:bg-[#7b1435] shadow-[#931B42]/30 hover:shadow-lg active:scale-95 default"
+                : "default"
             }`}
           >
             {added ? t("Added ✓") : t("+ ADD")}

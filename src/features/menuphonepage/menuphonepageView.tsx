@@ -6,26 +6,34 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CategoryDropdown } from "@/components/ui";
-import { PRODUCTS, Product, getResolvedProductImage, filterProductsByCategory, getCategoryItemCount } from "@/data/products";
+import { PRODUCTS, Product, getResolvedProductImage, filterProductsByCategory, getCategoryItemCount, getItemCustomizationConfig } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { ShoppingBag, ChevronRight, ShoppingCart, Plus, Check, Search, Clock } from "lucide-react";
 import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidation";
+import SelectSizeModal from "@/components/ui/SelectSizeModal";
 import "@/app/globals.scss";
 
 const CATEGORY_ICONS: Record<string, string> = {
   all: "/icons/category.svg",
   category: "/icons/category.svg",
-  "soft drink": "/icons/soft_drink.svg",
   beverage: "/icons/coffee.svg",
-  snack: "/icons/snack.svg",
-  "ice coffee": "/icons/iced.svg",
-  "hot coffee": "/icons/hot.svg",
   "fresh drink": "/icons/material.svg",
+  snack: "/icons/snack.svg",
+  beer: "/icons/beer.svg",
+  "soft drink": "/icons/soft_drink.svg",
+  "ice coffee": "/icons/iced.svg",
+  "iced coffee": "/icons/iced.svg",
+  "hot coffee": "/icons/hot.svg",
+  "iced tea": "/icons/material.svg",
+  "hot tea": "/icons/hot.svg",
+  passion: "/icons/material.svg",
   "pure water": "/icons/water.svg",
   "pour water": "/icons/water.svg",
-  beer: "/icons/beer.svg",
+  "energy drink": "/icons/soft_drink.svg",
+  noddle: "/icons/snack.svg",
   noodle: "/icons/snack.svg",
+  eggs: "/icons/snack.svg",
   iced: "/icons/iced.svg",
   hot: "/icons/hot.svg",
   coffee: "/icons/coffee.svg",
@@ -51,16 +59,54 @@ export function PhoneCard({
   const { addItem } = useCart();
   const { t } = useLanguage();
   const [added, setAdded] = useState(false);
+  const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
 
   const imgSrc = getResolvedProductImage(product.id, product.image);
+  const customizationConfig = getItemCustomizationConfig(product.title, product.category);
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    // If item has size or drink customization options, open modal popup
+    if (
+      customizationConfig.hasSize ||
+      customizationConfig.hasIce ||
+      customizationConfig.hasSugar ||
+      customizationConfig.hasMilk
+    ) {
+      setIsSizeModalOpen(true);
+      return;
+    }
+
+    // Otherwise (e.g. Topping / Fried Egg), directly add to cart
     addItem(
       {
         id: product.id,
         title: product.title,
         price: product.price,
+        image: imgSrc,
+      },
+      false
+    );
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1200);
+  };
+
+  const handleConfirmSizeModal = (
+    chosenSize: string,
+    chosenIce?: string,
+    chosenSugar?: string,
+    chosenMilk?: string
+  ) => {
+    addItem(
+      {
+        id: product.id,
+        title: product.title,
+        price: product.price,
+        size: chosenSize,
+        iceLevel: chosenIce,
+        sugarLevel: chosenSugar,
+        milkType: chosenMilk,
         image: imgSrc,
       },
       false
@@ -88,89 +134,106 @@ export function PhoneCard({
   const promoStatus = promoResult.status;
 
   return (
-    <div
-      onClick={onSelect}
-      className={`phone-card ${isSelected ? "selected" : "default"}`}
-      suppressHydrationWarning
-    >
-      {/* Left: Drink Image Container */}
-      <div className="image-container relative shrink-0">
-        <Image
-          src={imgSrc}
-          alt={t(product.title)}
-          fill
-          unoptimized
-          sizes="(max-width: 640px) 80px, 88px"
-          className="card-thumb"
-        />
-        {discountInfo.hasDiscount && discountInfo.badgeText && isPromotion && (
-          <span className="discount_badge discount_badge_phone">
-            {discountInfo.badgeText}
-          </span>
-        )}
-        {isPromotion && (
-          <div
-            className={`promo_clock_badge promo_clock_badge_phone promo_clock_${promoStatus}`}
-            title={`Promotion ends in ${displayPromoTime}`}
-          >
-            <Clock className="w-3 h-3 shrink-0" />
-            <span className="promo_clock_text">{displayPromoTime}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Middle: Drink Info (Title, Discount Tag, Info Icon, Price) */}
-      <div className="card-info flex-1 min-w-0 overflow-hidden">
-        {/* Title + PROMO Badge + Info Icon */}
-        <div className="title-row inline-flex items-center gap-1.5 min-w-0 max-w-full overflow-hidden flex-wrap">
-          <h3 className="item-title truncate min-w-0 flex-initial">
-            {t(product.title)}
-          </h3>
-          {isPromotion && (
-            <span className="bg-[#A1255B] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
-              PROMO
-            </span>
-          )}
-          <button
-            type="button"
-            title="Product Details"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onOpenInfo) onOpenInfo(product);
-            }}
-            className="info-btn shrink-0"
-          >
-            i
-          </button>
-        </div>
-
-        {/* Price Label */}
-        <div className="price-label">
-          {t("Price")}
-        </div>
-
-        {/* Price Value with Original Price Strikethrough */}
-        <div className="price-value flex items-center gap-1.5 flex-wrap">
-          {product.originalPrice && product.originalPrice > product.price && isPromotion && (
-            <span className="line-through text-xs text-gray-400 font-medium">
-              ${product.originalPrice.toFixed(2)}
-            </span>
-          )}
-          <span className="text-[#A1255B] font-extrabold">
-            $ {product.price.toFixed(2)}
-          </span>
-        </div>
-      </div>
-
-      {/* Right: + ADD Button */}
-      <button
-        type="button"
-        onClick={handleAdd}
-        className={`add-btn shrink-0 ${added ? "added" : "default"}`}
+    <>
+      <div
+        onClick={onSelect}
+        className={`phone-card ${isSelected ? "selected" : "default"}`}
+        suppressHydrationWarning
       >
-        {added ? t("ADDED ✓") : t("+ ADD")}
-      </button>
-    </div>
+        {/* Left: Drink Image Container */}
+        <div className="image-container relative shrink-0">
+          <Image
+            src={imgSrc}
+            alt={t(product.title)}
+            fill
+            unoptimized
+            sizes="(max-width: 640px) 80px, 88px"
+            className="card-thumb"
+          />
+          {discountInfo.hasDiscount && discountInfo.badgeText && isPromotion && (
+            <span className="discount_badge discount_badge_phone">
+              {discountInfo.badgeText}
+            </span>
+          )}
+          {isPromotion && (
+            <div
+              className={`promo_clock_badge promo_clock_badge_phone promo_clock_${promoStatus}`}
+              title={`Promotion ends in ${displayPromoTime}`}
+            >
+              <Clock className="w-3 h-3 shrink-0" />
+              <span className="promo_clock_text">{displayPromoTime}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Middle: Drink Info (Title, Discount Tag, Info Icon, Price) */}
+        <div className="card-info flex-1 min-w-0 overflow-hidden">
+          {/* Title + PROMO Badge + Info Icon */}
+          <div className="title-row inline-flex items-center gap-1.5 min-w-0 max-w-full overflow-hidden flex-wrap">
+            <h3 className="item-title truncate min-w-0 flex-initial">
+              {t(product.title)}
+            </h3>
+            {isPromotion && (
+              <span className="bg-[#A1255B] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
+                PROMO
+              </span>
+            )}
+            <button
+              type="button"
+              title="Product Details"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onOpenInfo) onOpenInfo(product);
+              }}
+              className="info-btn shrink-0"
+            >
+              i
+            </button>
+          </div>
+
+          {/* Price Label */}
+          <div className="price-label">
+            {t("Price")}
+          </div>
+
+          {/* Price Value with Original Price Strikethrough */}
+          <div className="price-value flex items-center gap-1.5 flex-wrap">
+            {product.originalPrice && product.originalPrice > product.price && isPromotion && (
+              <span className="line-through text-xs text-gray-400 font-medium">
+                ${product.originalPrice.toFixed(2)}
+              </span>
+            )}
+            <span className="text-[#A1255B] font-extrabold">
+              $ {product.price.toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        {/* Right: + ADD Button */}
+        <button
+          type="button"
+          onClick={handleAdd}
+          className={`add-btn shrink-0 ${added ? "added" : "default"}`}
+        >
+          {added ? t("ADDED ✓") : t("+ ADD")}
+        </button>
+      </div>
+
+      {/* Select Size / Customization Modal Popup */}
+      <SelectSizeModal
+        open={isSizeModalOpen}
+        onOpenChange={setIsSizeModalOpen}
+        product={{
+          id: product.id,
+          title: product.title,
+          price: product.price,
+          category: product.category,
+          image: imgSrc,
+        }}
+        actionType="cart"
+        onConfirm={handleConfirmSizeModal}
+      />
+    </>
   );
 }
 
@@ -191,16 +254,18 @@ export function MenupageView() {
 
   const displayCategories = [
     "All",
+    "Fresh Drink",
+    "Iced Coffee",
+    "Hot Coffee",
+    "Iced Tea",
+    "Hot Tea",
     "Beverage",
     "Beer",
-    "Ice Coffee",
-    "Hot Coffee",
-    "Fresh Drink",
     "Soft Drink",
     "Pure Water",
-    "Energy Drink",
     "Snack",
-    "Noodle",
+    "Noddle",
+    "Topping",
   ];
 
   useEffect(() => {

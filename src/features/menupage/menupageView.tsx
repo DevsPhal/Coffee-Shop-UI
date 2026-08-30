@@ -24,8 +24,8 @@ export function MenupageView() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("newest");
   const [expandedMains, setExpandedMains] = useState<Record<string, boolean>>({
+    fresh_drink: true,
     beverage: true,
-    soft_drink: true,
     snack: true,
   });
 
@@ -34,6 +34,20 @@ export function MenupageView() {
       setSelectedCategory(queryCategory);
     }
   }, [queryCategory]);
+
+  // Auto-expand parent main category in sidebar whenever selectedCategory changes
+  useEffect(() => {
+    if (!selectedCategory) return;
+    MAIN_CATEGORIES.forEach((main) => {
+      const isMainMatch = selectedCategory.toLowerCase() === main.name.toLowerCase();
+      const isSubMatch = main.subCategories.some(
+        (s) => s.name.toLowerCase() === selectedCategory.toLowerCase()
+      );
+      if (isMainMatch || isSubMatch) {
+        setExpandedMains((prev) => ({ ...prev, [main.id]: true }));
+      }
+    });
+  }, [selectedCategory]);
 
   const toggleExpand = (mainId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -63,41 +77,79 @@ export function MenupageView() {
     <div className="menu_page_wrapper font-sans min-h-screen pb-16 bg-[#F9FAFC]">
       <div className="menu_page_container max-w-7xl mx-auto px-4 sm:px-6 pt-4">
         
-        {/* Centered Menu Page Header (Matching Image) */}
+        {/* Centered Menu Page Header */}
         <div className="menu_page_header text-center my-4 sm:my-6">
           <h1 className="menu_page_title text-2xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
             {t("Our Full Menu")}
           </h1>
-          <p className="menu_page_subtitle text-xs sm:text-base text-gray-500 max-w-xl mx-auto mt-2">
+          <p className="menu_page_subtitle text-xs sm:text-base text-gray-500 max-w-xl mx-auto mt-2 font-medium">
             {t("Handcrafted beverages & bites, made to order just for you.")}
           </p>
         </div>
 
-        {/* Category Title & Sort By Control Row */}
+        {/* Category Title & Search / Sort Control Toolbar Row */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-gray-200">
-          <div>
+          <div className="flex items-center gap-3">
             <h2 className="text-xl sm:text-2xl font-extrabold text-[#A1255B] tracking-tight">
               {getPageTitle()}
             </h2>
+            <span className="text-xs font-bold text-gray-500 bg-gray-100 border border-gray-200 px-2.5 py-0.5 rounded-full">
+              {sortedProducts.length} {t(sortedProducts.length === 1 ? "Item" : "Items")}
+            </span>
           </div>
 
-          {/* Sort By Dropdown Control */}
-          <div className="flex items-center gap-2 self-end sm:self-auto">
-            <span className="text-xs sm:text-sm font-semibold text-gray-600">
-              {t("Sort by:")}
-            </span>
-            <div className="relative">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-1.5 pr-8 text-xs sm:text-sm font-semibold text-gray-800 hover:border-[#A1255B] focus:outline-none focus:ring-1 focus:ring-[#A1255B] cursor-pointer transition-all"
+          {/* Right Toolbar Controls: Search Bar & Sort Dropdown */}
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            {/* Search Input Bar */}
+            <form
+              onSubmit={(e) => e.preventDefault()}
+              className="flex items-center bg-white border border-gray-200 focus-within:border-[#A1255B] focus-within:ring-1 focus-within:ring-[#A1255B] rounded-full p-1 pl-3.5 shadow-2xs transition-all flex-1 sm:flex-none sm:w-64"
+            >
+              <Search className="w-4 h-4 text-gray-400 shrink-0 mr-2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t("Search product...")}
+                className="w-full bg-transparent text-xs sm:text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="text-gray-400 hover:text-gray-700 text-xs font-bold bg-gray-100 hover:bg-gray-200 w-4 h-4 rounded-full flex items-center justify-center cursor-pointer shrink-0 mr-1 transition-colors"
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+              <button
+                type="submit"
+                className="w-8 h-8 bg-[#A1255B] hover:bg-[#881d52] text-white rounded-full shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none active:scale-95 ml-1"
+                title="Search"
               >
-                <option value="newest">{t("Newest")}</option>
-                <option value="price-asc">{t("Price: Low to High")}</option>
-                <option value="price-desc">{t("Price: High to Low")}</option>
-                <option value="name-asc">{t("Name: A-Z")}</option>
-              </select>
-              <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Search className="w-4 h-4 text-white" />
+              </button>
+            </form>
+
+            {/* Sort By Dropdown Control */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs sm:text-sm font-semibold text-gray-600">
+                {t("Sort by:")}
+              </span>
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-1.5 pr-8 text-xs sm:text-sm font-semibold text-gray-800 hover:border-[#A1255B] focus:outline-none focus:ring-1 focus:ring-[#A1255B] cursor-pointer transition-all"
+                >
+                  <option value="newest">{t("Newest")}</option>
+                  <option value="price-asc">{t("Price: Low to High")}</option>
+                  <option value="price-desc">{t("Price: High to Low")}</option>
+                  <option value="name-asc">{t("Name: A-Z")}</option>
+                </select>
+                <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
           </div>
         </div>
@@ -125,7 +177,18 @@ export function MenupageView() {
                         : "hover:bg-gray-100 text-gray-700"
                     }`}
                   >
-                    <span>{t("Featured Products")}</span>
+                    <div className="flex items-center gap-2 min-w-0 truncate">
+                      <Image
+                        src="/icons/signature.svg"
+                        alt=""
+                        width={16}
+                        height={16}
+                        className={`w-4 h-4 object-contain shrink-0 ${
+                          selectedCategory === "Featured" ? "brightness-0 invert" : ""
+                        }`}
+                      />
+                      <span className="truncate">{t("Featured Products")}</span>
+                    </div>
                     <span
                       className={`txt_no ${
                         selectedCategory === "Featured"
@@ -149,7 +212,18 @@ export function MenupageView() {
                         : "hover:bg-gray-100 text-gray-700"
                     }`}
                   >
-                    <span>{t("All Products")}</span>
+                    <div className="flex items-center gap-2 min-w-0 truncate">
+                      <Image
+                        src="/icons/category.svg"
+                        alt=""
+                        width={16}
+                        height={16}
+                        className={`w-4 h-4 object-contain shrink-0 ${
+                          selectedCategory === "All" || selectedCategory === "all" ? "brightness-0 invert" : ""
+                        }`}
+                      />
+                      <span className="truncate">{t("All Products")}</span>
+                    </div>
                     <span
                       className={`txt_no ${
                         selectedCategory === "All" || selectedCategory === "all"
@@ -182,7 +256,20 @@ export function MenupageView() {
                             : "hover:bg-gray-100 text-gray-800"
                         }`}
                       >
-                        <span className="truncate">{t(main.name)}</span>
+                        <div className="flex items-center gap-2 min-w-0 truncate">
+                          {main.icon && (
+                            <Image
+                              src={main.icon}
+                              alt=""
+                              width={16}
+                              height={16}
+                              className={`w-4 h-4 object-contain shrink-0 ${
+                                isMainSelected ? "brightness-0 invert" : ""
+                              }`}
+                            />
+                          )}
+                          <span className="truncate">{t(main.name)}</span>
+                        </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
@@ -202,7 +289,7 @@ export function MenupageView() {
 
                       {/* Accordion Subcategories List (Indented under Main Category) */}
                       {isExpanded && (
-                        <ul className="space-y-1 mt-1 pl-4">
+                        <ul className="space-y-1 mt-1 pl-3">
                           {/* All Subcategory Item */}
                           <li>
                             <button
@@ -214,8 +301,19 @@ export function MenupageView() {
                                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                               }`}
                             >
-                              <span>{t("All")} {t(main.name)}</span>
-                              <span className="text-[10px] text-gray-400">({mainCount})</span>
+                              <div className="flex items-center gap-2 min-w-0 truncate">
+                                {main.icon && (
+                                  <Image
+                                    src={main.icon}
+                                    alt=""
+                                    width={14}
+                                    height={14}
+                                    className="w-3.5 h-3.5 object-contain shrink-0 opacity-70"
+                                  />
+                                )}
+                                <span className="truncate">{t("All")} {t(main.name)}</span>
+                              </div>
+                              <span className="text-[10px] text-gray-400 shrink-0">({mainCount})</span>
                             </button>
                           </li>
 
@@ -229,14 +327,27 @@ export function MenupageView() {
                                 <button
                                   type="button"
                                   onClick={() => setSelectedCategory(sub.name)}
-                                  className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer border-none text-left ${
+                                  className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border-none text-left ${
                                     isSubSelected
-                                      ? "text-[#A1255B] font-bold bg-pink-50/70"
-                                      : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                      ? "bg-[#A1255B] text-white font-extrabold shadow-2xs"
+                                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                                   }`}
                                 >
-                                  <span className="truncate">{t(sub.name)}</span>
-                                  <span className="text-[10px] text-gray-400">({subCount})</span>
+                                  <div className="flex items-center gap-2 min-w-0 truncate">
+                                    {sub.icon && (
+                                      <Image
+                                        src={sub.icon}
+                                        alt=""
+                                        width={16}
+                                        height={16}
+                                        className={`w-4 h-4 object-contain shrink-0 ${
+                                          isSubSelected ? "brightness-0 invert" : ""
+                                        }`}
+                                      />
+                                    )}
+                                    <span className="truncate">{t(sub.name)}</span>
+                                  </div>
+                                  <span className={`text-[10px] shrink-0 ${isSubSelected ? "text-white/80 font-bold" : "text-gray-400"}`}>({subCount})</span>
                                 </button>
                               </li>
                             );
@@ -253,42 +364,6 @@ export function MenupageView() {
           {/* Right Column: Main Content Area (Product Grid & Category Headers) */}
           <main className="md:col-span-3 space-y-6">
             
-            {/* Search Input Bar Pill */}
-            <div className="max-w-md ml-auto">
-              <form
-                onSubmit={(e) => e.preventDefault()}
-                className="flex items-center bg-white border border-gray-200 focus-within:border-[#A1255B] focus-within:ring-1 focus-within:ring-[#A1255B] rounded-full p-1 pl-3.5 shadow-2xs transition-all"
-              >
-                <Search className="w-4 h-4 text-gray-400 shrink-0 mr-2 pointer-events-none" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t("Search product...")}
-                  className="w-full bg-transparent text-xs sm:text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    className="text-gray-400 hover:text-gray-700 text-xs font-bold bg-gray-100 hover:bg-gray-200 w-4 h-4 rounded-full flex items-center justify-center cursor-pointer shrink-0 mr-1 transition-colors"
-                    title="Clear search"
-                  >
-                    ✕
-                  </button>
-                )}
-                <button
-                  type="submit"
-                  className="w-8 h-8 bg-[#A1255B] hover:bg-[#881d52] text-white rounded-full shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none active:scale-95 ml-1"
-                  title="Search"
-                >
-                  <Search className="w-4 h-4 text-white" />
-                </button>
-              </form>
-            </div>
-
-
-
             {/* Product Card Grid (3 Columns on Desktop) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedProducts.map((item) => (
