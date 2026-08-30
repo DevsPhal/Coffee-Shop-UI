@@ -203,6 +203,7 @@ export function MenupageView() {
                         : "hover:bg-gray-100 text-gray-700"
                     }`}
                   >
+                    {/* test */}
                     <div className="flex items-center gap-2 min-w-0 truncate">
                       <Image
                         src="/icons/category.svg"
