@@ -2,13 +2,13 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Mail, Eye, EyeOff, UserPlus, Phone, ChevronDown, Users, Check, Send } from "lucide-react";
+import { User, Eye, EyeOff, UserPlus, Phone, ChevronDown, Users, Check, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import "@/app/globals.scss";
 
-import { signUpSchema } from "@/lib/authSchema";
+import { telegramSignUpSchema } from "@/lib/authSchema";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { cleanPhoneInput } from "@/lib/phoneUtils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
@@ -16,24 +16,21 @@ import { useLanguage } from "@/components/ui/translatetokhmer";
 type FormErrors = {
   username?: string;  
   gender?: string;
-  email?: string;
   phone?: string;
   password?: string;
 };
 
-interface CreateProps {
+interface CreateWithTelegramProps {
   onBackToLogin: () => void;
-  onRegisterWithTelegram?: () => void;
-  isAdmin?: boolean;
+  onRegisterWithEmail?: () => void;
 }
 
-export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false }: CreateProps) {
+export function CreateWithTelegram({ onBackToLogin, onRegisterWithEmail }: CreateWithTelegramProps) {
   const { t } = useLanguage();
   const router = useRouter();
   const { signup } = useAuth();
   const [username, setUsername] = useState("");
   const [gender, setGender] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -64,7 +61,7 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
       setErrors((prev) => ({ ...prev, [field]: undefined }));
       return;
     }
-    const fieldSchema = signUpSchema.shape[field];
+    const fieldSchema = telegramSignUpSchema.shape[field];
     if (!fieldSchema) return;
     const result = fieldSchema.safeParse(value);
 
@@ -84,24 +81,22 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate with Zod
-    const formData = { username, gender, email, phone, password };
+    // Validate with Zod schema for Telegram registration
+    const formData = { username, gender, phone, password };
 
-    const validationResult = signUpSchema.safeParse(formData);
+    const validationResult = telegramSignUpSchema.safeParse(formData);
 
     if (!validationResult.success) {
       const fieldErrors = validationResult.error.flatten().fieldErrors;
       const newErrors: FormErrors = {
         username: fieldErrors.username?.[0],
         gender: fieldErrors.gender?.[0],
-        email: fieldErrors.email?.[0],
         phone: fieldErrors.phone?.[0],
         password: fieldErrors.password?.[0],
       };
       setErrors(newErrors);
       if (newErrors.username) setActiveInput("username");
       else if (newErrors.gender) setActiveInput("gender");
-      else if (newErrors.email) setActiveInput("email");
       else if (newErrors.phone) setActiveInput("phone");
       else if (newErrors.password) setActiveInput("password");
       return;
@@ -109,10 +104,11 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
 
     setErrors({});
 
-    // Register user in AuthContext & save profile data
+    // Register user in AuthContext (generates telegram email fallback)
+    const generatedEmail = `${username.toLowerCase().replace(/\s+/g, "")}@telegram.user`;
     const res = signup({
       name: username,
-      email: email,
+      email: generatedEmail,
       phone: phone,
       gender: gender,
       password: password,
@@ -131,15 +127,15 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
   return (
     <div className="w-full space-y-4">
       <div className="flex justify-center">
-        <div className="login_avatar_circle">
-          <UserPlus className="w-10 h-10 stroke-[1.5]" />
+        <div className="login_avatar_circle relative bg-pink-50 border-pink-200 text-[#A1255B]">
+          <Send className="w-9 h-9 stroke-[1.8] ml-[-2px] text-[#A1255B]" />
         </div>
       </div>
-      <h1 className="login_title">
-        {t(isAdmin ? "Create an admin account" : "Create an account")}
+      <h1 className="login_title flex items-center justify-center gap-2">
+        <span>{t("Register with Telegram")}</span>
       </h1>
       <p className="login_subtitle">
-        {t("Enter your details below to create your account")}
+        {t("Create an account linked directly to your Telegram phone number")}
       </p>
 
       <form onSubmit={handleSubmit} className="w-full space-y-3" noValidate>
@@ -198,7 +194,7 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
             />
           </button>
 
-          {/* Clean Custom Floating Dropdown Menu */}
+          {/* Custom Dropdown Menu */}
           {isGenderOpen && (
             <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-full bg-white border border-gray-100 rounded-2xl shadow-lg p-1.5 space-y-0.5 animate-in fade-in duration-150">
               {["Male", "Female", "Other"].map((option) => {
@@ -230,40 +226,13 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
           )}
         </div>
 
-        {/* Email Field */}
+        {/* Phone Number with Telegram Input Field */}
         <div>
-          <label className="login_input_label">
-            {t("Email Address")}
-          </label>
-          <div className="relative flex items-center">
-            <span className="absolute left-3 text-gray-400 pointer-events-none">
-              <Mail className="w-4 h-4 text-gray-400" />
+          <label className="login_input_label flex items-center justify-between">
+            <span>{t("Phone Number with Telegram")}</span>
+            <span className="text-[10px] text-[#A1255B] font-extrabold uppercase bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100">
+              Telegram
             </span>
-            <Input
-              type="email"
-              value={email}
-              onFocus={() => {
-                setActiveInput("email");
-                if (email.trim()) validateField("email", email);
-              }}
-              onChange={(e) => {
-                const val = e.target.value;
-                setEmail(val);
-                validateField("email", val);
-              }}
-              placeholder="enter your email address"
-              className="login_input_field"
-            />
-          </div>
-          {errors.email && (
-            <TooltipAlert message={errors.email} />
-          )}
-        </div>
-
-        {/* Phone Number Input Field */}
-        <div>
-          <label className="login_input_label">
-            {t("Phone Number")}
           </label>
           <div className="relative flex items-center">
             <span className="absolute left-3 text-gray-400 pointer-events-none">
@@ -328,28 +297,29 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
           )}
         </div>
 
-        {/* Register with Telegram Button under Password Field */}
-        {onRegisterWithTelegram && (
-          <div className="pt-1">
-            <button
-              type="button"
-              onClick={onRegisterWithTelegram}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full border border-sky-200 bg-sky-50/80 hover:bg-sky-100 text-sky-700 text-xs sm:text-sm font-bold transition-all cursor-pointer select-none active:scale-98"
-            >
-              <Send className="w-4 h-4 text-sky-600 shrink-0" />
-              <span>{t("Register with Telegram")}</span>
-            </button>
-          </div>
-        )}
-
+        {/* Submit Button */}
         <Button
           type="submit"
           className="login_submit_button mt-2"
         >
-          {t("Sign Up")}
+          <Send className="w-4 h-4 text-white mr-1.5" />
+          <span>{t("Sign Up with Telegram")}</span>
         </Button>
 
-        <div className="text-center pt-1">
+        {/* Option to Switch Back to Standard Email Registration */}
+        {onRegisterWithEmail && (
+          <div className="text-center pt-2">
+            <button
+              type="button"
+              onClick={onRegisterWithEmail}
+              className="text-xs font-bold text-[#A1255B] hover:underline cursor-pointer border-none bg-transparent"
+            >
+              {t("← Register with Email instead")}
+            </button>
+          </div>
+        )}
+
+        <div className="text-center pt-1 border-t border-gray-100 mt-3">
           <span className="text-xs text-gray-600 font-medium">
             {t("Already have an account?")}
           </span>
@@ -367,4 +337,4 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
   );
 }
 
-export default Create;
+export default CreateWithTelegram;

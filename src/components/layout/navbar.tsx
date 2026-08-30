@@ -241,7 +241,7 @@ export function Navbar() {
         pathname === "/checkout"
       ) && (
         <div className="mobile_nav_bottom_bar fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] py-2 px-1 w-full max-w-full overflow-x-hidden" suppressHydrationWarning>
-          <div className="max-w-md mx-auto flex items-center justify-around">
+          <div className="max-w-md mx-auto flex items-center justify-around gap_10">
             {mobileNavItems.map((item) => {
               const active = isMobileNavActive(item.href);
 

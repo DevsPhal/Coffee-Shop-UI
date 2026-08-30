@@ -19,10 +19,16 @@ export function calculateSizePrice(basePrice: number, size?: string): number {
   if (s === "DOUBLE") {
     return Math.round(basePrice * 2 * 100) / 100; // x2 price double
   }
-  if (s === "L" || s === "1500ML") {
+  if (s === "1500ML") {
+    return 0.65;
+  }
+  if (s === "1000ML") {
+    return 0.35;
+  }
+  if (s === "L") {
     return Math.round(basePrice * 1.20 * 100) / 100; // +20% for Large size
   }
-  return basePrice; // M, S, 1, 1000ML, etc.
+  return basePrice; // M, S, 1, etc.
 }
 
 // Zod Schema for Cart Item validation

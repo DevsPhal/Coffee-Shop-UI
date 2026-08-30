@@ -92,8 +92,8 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "pour water": "ទឹកបរិសុទ្ធ",
     "Energy Drink": "ភេសជ្ជៈបន្ថែមថាមពល",
     "energy drink": "ភេសជ្ជៈបន្ថែមថាមពល",
-    Beer: "ប៊ីយែរ",
-    beer: "ប៊ីយែរ",
+    Beer: "ស្រាបៀ",
+    beer: "ស្រាបៀ",
     Noodle: "មី",
     noodle: "មី",
     Iced: "ត្រជាក់",
@@ -108,6 +108,10 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     signature: "ប្រចាំហាង",
     Water: "ទឹកបរិសុទ្ធ",
     water: "ទឹកបរិសុទ្ធ",
+    Topping: "គ្រឿងបន្ថែម",
+    topping: "គ្រឿងបន្ថែម",
+    Toppings: "គ្រឿងបន្ថែម",
+    toppings: "គ្រឿងបន្ថែម",
     Material: "សម្ភារៈ",
     material: "សម្ភារៈ",
 
@@ -118,22 +122,52 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "Ice Latte": "ឡាតេទឹកកក",
     "Iced Latte": "ឡាតេទឹកកក",
     "Coca Cola": "កូកាកូឡា",
-    "Indonesia Noodle": "មីឥណ្ឌូនេស៊ី",
+    "Indonesia Noodle": "អ៊ិនដូមី",
+    "Indomie": "អ៊ិនដូមី",
     "Fresh Passion Fruit Juice": "ទឹកប៉ាស៊ីយ៉ុងស្រស់",
+    "Passion Juice": "ទឹកប៉ាស៊ីយ៉ុង",
+    "Passion Fruit": "ទឹកប៉ាស៊ីយ៉ុង",
     "Black Coffee": "កាហ្វេខ្មៅ",
     "Cappuccino": "កាពូឈីណូ",
     "Cappuccino Frappe": "កាពូឈីណូក្រឡុក",
-    "Cambodia Beer": "ប៊ីយែរ ខេមបូឌា",
+    "Cambodia Beer": "ស្រាបៀ កម្ពុជា",
+    "Carlsberg Beer": "ស្រាបៀ Carlsberg",
+    "Angkor Sky": "ស្រាបៀ Angkor Sky",
     "Blue soda": "សូដាពណ៌ខៀវ",
     "Hot Chocolate": "សូកូឡាក្តៅ",
+    "Mocha": "ម៉ាឆា",
+    "mocha": "ម៉ាឆា",
+    "Matcha": "ម៉ាឆា",
+    "matcha": "ម៉ាឆា",
     "Sting": "ស្ទីង",
-    "Cambodia": "ទឹកបរិសុទ្ធ ខេមបូឌា",
+    "Cambodia": "ទឹកសុទ្ធ កម្ពុជា",
+    "Cambodia Water": "ទឹកសុទ្ធ កម្ពុជា",
+    "Angkor Water": "ទឹកសុទ្ធ អង្គរ",
+    "Hi-Tech Water": "ទឹកសុទ្ធ ហាយថិច",
+    "Honey Lemon Tea": "តែក្រូចឆ្មាទឹកឃ្មុំ",
+    "Hot Honey Lemon Tea": "តែក្រូចឆ្មាទឹកឃ្មុំក្តៅ",
+    "Hot Jasmine Green Tea": "តែក្រូចឆ្មាទឹកឃ្មុំ",
+    "Iced Passion Lemon Tea": "តែក្រូចឆ្មាទឹកឃ្មុំ",
+    "Green Tea": "តែបៃតង",
+    "Mie Jeat": "មី ជាតិ",
+    "Mie jeat": "មី ជាតិ",
+    "Omachi": "អូម៉ាជី",
 
-    // General UI Text
     "All Products": "ផលិតផលទាំងអស់",
     "Featured Products": "ផលិតផលពិសេស",
+    "590 Signature": "ប្រចាំហាង 590",
+    "Party Together": "ជប់លៀងជាមួយគ្នា",
+    "Chess Master": "កំពូលអ្នកលេងអុក",
+    "Night Enjoying with Song of DJZ": "រាត្រីរីករាយជាមួយតន្ត្រី DJZ",
+    "Our signature 590 Coffee, handcrafted iced espresso blends, and chilled coffee favorites.": "កាហ្វេ 590 ប្រចាំហាងរបស់យើង ភេសជ្ជៈកាហ្វេទឹកកកធ្វើដោយដៃ និងភេសជ្ជៈកាហ្វេពេញនិយម។",
+    "Premium Cambodian beer brewed with European hops, crisp & cold.": "ស្រាបៀ កម្ពុជា គុណភាពខ្ពស់ ផលិតតាមស្តង់ដារអឺរ៉ុប ត្រជាក់ស្រស់ស្រាយ។",
+    "Premium Cambodian lager beer brewed with European hops, crisp & cold.": "ស្រាបៀ កម្ពុជា គុណភាពខ្ពស់ ផលិតតាមស្តង់ដារអឺរ៉ុប ត្រជាក់ស្រស់ស្រាយ។",
+    "Premium Cambodian beer brewed with fine European standard hops, crisp and refreshing with a smooth finish.": "ស្រាបៀ កម្ពុជា គុណភាពខ្ពស់ ផលិតតាមស្តង់ដារអឺរ៉ុប ត្រជាក់ស្រស់ស្រាយ។",
     "View All": "មើលទាំងអស់",
-    "Browse collection": "រាវរកការប្រមូលផ្តុំ",
+    "Browse collection": "ស្វែងរកប្រភេទ",
+    "Browse Collection": "ស្វែងរកប្រភេទ",
+    "Explore Category": "ស្វែងរកប្រភេទ",
+    "Explore category": "ស្វែងរកប្រភេទ",
     "View products": "មើលផលិតផល",
     "Show More": "បង្ហាញបន្ថែម",
     "Show Less": "បង្ហាញតិចជាង",
@@ -175,9 +209,12 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "+ ADD": "+ កុម្ម៉ង់",
     "បន្ថែម": "កុម្ម៉ង់",
     "+ បន្ថែម": "+ កុម្ម៉ង់",
-    "Main Store": "ហាងចម្បង",
+    "Main Store": "ទីតាំងផ្ទាល់",
     "Toul Kork, Phnom Penh": "ទួលគោក, ភ្នំពេញ",
-    "590st CAFE Main Store": "ហាងកាហ្វេ 590st CAFE ទីស្នាក់ការកណ្តាល",
+    "590st CAFE Main Store": "ទីតាំងផ្ទាល់របស់ ហាងកាហ្វេ 590st CAFE",
+    "ហាងកាហ្វេ 590st CAFE ទីតាំងផ្ទាល់": "ទីតាំងផ្ទាល់របស់ ហាងកាហ្វេ 590st CAFE",
+    "ទីស្នាក់ការកណ្តាល": "ទីតាំងផ្ទាល់",
+    "ទីស្នាក់ការកណ្ដាល": "ទីតាំងផ្ទាល់",
     "Visit us to experience freshly crafted coffee, delicious beverages, and a cozy atmosphere perfect for relaxation, meeting friends, or working.": "អញ្ជើញមកកាន់ហាងយើងខ្ញុំដើម្បីរីករាយជាមួយកាហ្វេឆ្ងាញ់ៗ ភេសជ្ជៈ និងបរិយាកាសកក់ក្តៅ។",
     Address: "អាសយដ្ឋាន",
     "House No. 30A, Street 590, Toul Kork District, Phnom Penh 12101, Cambodia": "ផ្ទះលេខ 30A ផ្លូវ 590 ខណ្ឌទួលគោក រាជធានីភ្នំពេញ ១២១០១ កម្ពុជា",
@@ -384,10 +421,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         if (res.ok) {
           const data = await res.json();
           if (data && data[0] && Array.isArray(data[0])) {
-            let translatedText = data[0].map((item: any) => item[0]).join("");
+            let translatedText = (data[0] as Array<[string]>).map((item) => item?.[0] || "").join("");
             if (translatedText) {
               if (!text.endsWith(".")) {
-                translatedText = translatedText.replace(/[\.]+$/, "").trim();
+                translatedText = translatedText.replace(/[\.។]+$/, "").trim();
               }
               newTranslations[text] = translatedText;
               newTranslations[text.trim()] = translatedText;
@@ -404,7 +441,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
             if (data2?.responseData?.translatedText) {
               let translatedText = data2.responseData.translatedText;
               if (!text.endsWith(".")) {
-                translatedText = translatedText.replace(/[\.]+$/, "").trim();
+                translatedText = translatedText.replace(/[\.។]+$/, "").trim();
               }
               newTranslations[text] = translatedText;
               newTranslations[text.trim()] = translatedText;

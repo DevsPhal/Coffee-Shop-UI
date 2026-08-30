@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Forgot } from "@/components/ui/forgot";
 import { Create } from "@/components/ui/create";
+import { CreateWithTelegram } from "@/components/ui/createwithtelegram";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
@@ -25,7 +26,7 @@ import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 
 interface LoginPageViewProps {
-  initialViewMode?: "login" | "forgot" | "create";
+  initialViewMode?: "login" | "forgot" | "create" | "createwithtelegram";
 }
 
 export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps = {}) {
@@ -36,7 +37,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
-  const [viewMode, setViewMode] = useState<"login" | "forgot" | "create">(initialViewMode);
+  const [viewMode, setViewMode] = useState<"login" | "forgot" | "create" | "createwithtelegram">(initialViewMode);
   const [errors, setErrors] = useState<FormErrors>({});
   const [activeInput, setActiveInput] = useState<keyof FormErrors | null>(null);
   const validateField = (field: keyof FormErrors, value: string) => {
@@ -132,7 +133,15 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
           {viewMode === "forgot" ? (
             <Forgot onBackToLogin={() => setViewMode("login")} />
           ) : viewMode === "create" ? (
-            <Create onBackToLogin={() => setViewMode("login")} />
+            <Create
+              onBackToLogin={() => setViewMode("login")}
+              onRegisterWithTelegram={() => setViewMode("createwithtelegram")}
+            />
+          ) : viewMode === "createwithtelegram" ? (
+            <CreateWithTelegram
+              onBackToLogin={() => setViewMode("login")}
+              onRegisterWithEmail={() => setViewMode("create")}
+            />
           ) : (
             <>
               <div className="login_avatar_circle">

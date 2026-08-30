@@ -44,16 +44,16 @@ const EVENT_ITEMS: EventItem[] = [
   },
   {
     id: "2",
-    title: "Night Enjoying Acoustic Music",
+    title: "Night Enjoying with Song of DJZ",
     description:
-      "Enjoy relaxing acoustic music performances while sipping handcrafted coffee.",
+      "Enjoy relaxing music performances while sipping handcrafted coffee.",
     image: "/images/music.png",
     colSpan: "span_col_1",
     link: facebookSocialLink,
   },
   {
     id: "4",
-    title: "Chess Game Night",
+    title: "Chess Master",
     description:
       "Gather with friends for fun board game matches and special drink discounts.",
     image: "/images/chess.jpg",
@@ -62,7 +62,7 @@ const EVENT_ITEMS: EventItem[] = [
   },
   {
     id: "6",
-    title: "Brew Pairing",
+    title: "Party Together",
     description:
       "Indulge in freshly baked French croissants paired perfectly with cold brews.",
     image: "/images/beer.jpg",
