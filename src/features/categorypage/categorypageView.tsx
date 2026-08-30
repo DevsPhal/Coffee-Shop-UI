@@ -172,18 +172,17 @@ export function CategorypageView() {
         </div>
 
         {/* Category Quick Filter Pills Navigation (Horizontal Edge-to-Edge Touch Scroll on Phone) */}
-        <div className="flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-gray-200">
+        <div className="flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0 ">
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider hidden sm:inline flex items-center gap-1">
               <Filter className="w-3.5 h-3.5" />
-              <span>{t("Filter")}:</span>
             </span>
 
             {/* All Tab */}
             <button
               type="button"
               onClick={() => setSelectedMainFilter("all")}
-              className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer select-none border whitespace-nowrap ${
+              className={`px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer select-none border whitespace-nowrap ${
                 selectedMainFilter === "all"
                   ? "bg-[#A1255B] text-white border-[#A1255B] shadow-md scale-[1.02]"
                   : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
@@ -200,13 +199,13 @@ export function CategorypageView() {
                   key={main.id}
                   type="button"
                   onClick={() => setSelectedMainFilter(main.id)}
-                  className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer select-none border flex items-center gap-2 whitespace-nowrap ${
+                  className={`px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-bold transition-all cursor-pointer select-none border flex items-center gap-2 whitespace-nowrap ${
                     isSelected
                       ? "bg-[#A1255B] text-white border-[#A1255B] shadow-md scale-[1.02]"
                       : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                   }`}
                 >
-                  <span className={isSelected ? "text-white" : "text-[#A1255B]"}>
+                  <span className={isSelected ? "text-white" : "text-[#f0383e]"}>
                     {MAIN_CATEGORY_ICONS[main.id]}
                   </span>
                   <span>{t(main.name)}</span>
@@ -225,7 +224,7 @@ export function CategorypageView() {
                 {/* Main Category Header Bar */}
                 <div className="flex items-center justify-between pb-3 border-b-2 border-gray-100">
                   <div className="flex items-center gap-2.5 sm:gap-3">
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-pink-50 border border-pink-100 flex items-center justify-center text-[#A1255B] shadow-2xs shrink-0">
+                    <div className="w-9 h-9 flex items-center justify-center text-[#f0383e] shrink-0">
                       {MAIN_CATEGORY_ICONS[main.id] || <Layers className="w-5 h-5" />}
                     </div>
                     <div>
@@ -243,7 +242,7 @@ export function CategorypageView() {
                   {/* View All Menu Link */}
                   <Link
                     href={`${menuBaseUrl}?category=${encodeURIComponent(main.name)}`}
-                    className="group flex items-center gap-1 text-xs sm:text-sm font-bold text-[#A1255B] hover:text-[#881d52] transition-colors py-1.5 px-3 rounded-xl bg-pink-50/80 hover:bg-pink-100/70 border border-pink-100 shrink-0"
+                    className="group flex items-center gap-1 text-xs sm:text-sm font-bold text-[#f0383e] hover:text-[#881d52] transition-colors shrink-0"
                   >
                     <span>{t("View All")}</span>
                     <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
@@ -264,7 +263,7 @@ export function CategorypageView() {
                       <Link
                         key={sub.id}
                         href={`${menuBaseUrl}?category=${encodeURIComponent(sub.name)}`}
-                        className="group bg-white rounded-xl sm:rounded-3xl border border-gray-200/80 hover:border-[#A1255B]/40 shadow-2xs hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between cursor-pointer active:scale-[0.99]"
+                        className="group bg-white  border border-gray-200/80 hover:border-[#A1255B]/40 shadow-2xs hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between cursor-pointer active:scale-[0.99]"
                       >
                         <div>
                           {/* Image Box Container with Dark Gradient Overlay */}
@@ -279,14 +278,6 @@ export function CategorypageView() {
                             
                             {/* Gradient Overlay */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-
-                            {/* Top Floating Badge (Optional) */}
-                            {meta.badge && (
-                              <div className="absolute top-2 left-2 sm:top-5 sm:left-5 px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-white/90 backdrop-blur-md border border-white/50 text-[9px] sm:text-xs font-extrabold text-gray-900 shadow-2xs flex items-center gap-0.5 sm:gap-1">
-                                <Flame className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-[#A1255B]" />
-                                <span>{t(meta.badge)}</span>
-                              </div>
-                            )}
 
                             {/* Bottom Title Tag inside Image */}
                             <div className="absolute bottom-2 left-2 right-2 sm:bottom-5 sm:left-5 sm:right-5 text-white">
@@ -307,7 +298,7 @@ export function CategorypageView() {
                               {meta.tags.slice(0, 3).map((tag, i) => (
                                 <span
                                   key={i}
-                                  className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-lg bg-gray-100 text-gray-600 text-[9px] sm:text-xs font-medium border border-gray-200/60 whitespace-nowrap shrink-0"
+                                  className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 bg-gray-100 text-gray-600 text-[8px] sm:text-xs font-medium border border-gray-200/60 whitespace-nowrap shrink-0"
                                 >
                                   {t(tag)}
                                 </span>
@@ -321,7 +312,7 @@ export function CategorypageView() {
                           <span className="text-[10px] sm:text-xs font-extrabold text-[#A1255B] group-hover:text-[#881d52] transition-colors truncate">
                             {t("Explore Category")}
                           </span>
-                          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-pink-50 group-hover:bg-[#A1255B] text-[#A1255B] group-hover:text-white flex items-center justify-center transition-all duration-300 shadow-2xs shrink-0">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 bg-pink-50 group-hover:bg-[#A1255B] text-[#A1255B] group-hover:text-white flex items-center justify-center transition-all duration-300 shadow-2xs shrink-0">
                             <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                           </div>
                         </div>
@@ -346,7 +337,7 @@ export function CategorypageView() {
                   setSearchQuery("");
                   setSelectedMainFilter("all");
                 }}
-                className="px-4 py-2 rounded-full bg-[#A1255B] text-white text-xs font-bold hover:bg-[#881d52] transition-colors cursor-pointer"
+                className="px-4 py-2 bg-[#A1255B] text-white text-xs font-bold hover:bg-[#881d52] transition-colors cursor-pointer"
               >
                 {t("Reset Filters")}
               </button>

@@ -93,7 +93,7 @@ export function MenupageView() {
             <h2 className="text-xl sm:text-2xl font-extrabold text-[#A1255B] tracking-tight">
               {getPageTitle()}
             </h2>
-            <span className="text-xs font-bold text-gray-500 bg-gray-100 border border-gray-200 px-2.5 py-0.5 rounded-full">
+            <span className="text-xs text-gray-600 ">
               {sortedProducts.length} {t(sortedProducts.length === 1 ? "Item" : "Items")}
             </span>
           </div>
@@ -171,29 +171,20 @@ export function MenupageView() {
                   <button
                     type="button"
                     onClick={() => setSelectedCategory("Featured")}
-                    className={`btn_menu transition-all cursor-pointer border-none text-left ${
+                    className={`btn_menu transition-all cursor-pointer w-full flex justify-between py-2 px-2 border-none text-left ${
                       selectedCategory === "Featured"
-                        ? "bg-[#A1255B] text-white shadow-2xs font-bold"
+                        ? "bg-[#A1255B]  text-white"
                         : "hover:bg-gray-100 text-gray-700"
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 truncate">
-                      <Image
-                        src="/icons/signature.svg"
-                        alt=""
-                        width={16}
-                        height={16}
-                        className={`w-4 h-4 object-contain shrink-0 ${
-                          selectedCategory === "Featured" ? "brightness-0 invert" : ""
-                        }`}
-                      />
                       <span className="truncate">{t("Featured Products")}</span>
                     </div>
                     <span
                       className={`txt_no ${
                         selectedCategory === "Featured"
-                          ? "bg-white/20 text-white"
-                          : "bg-gray-100 text-gray-600 border border-gray-200"
+                          ? "text-white"
+                          : "text-gray-600"
                       }`}
                     >
                       {getCategoryItemCount("Featured")}
@@ -206,7 +197,7 @@ export function MenupageView() {
                   <button
                     type="button"
                     onClick={() => setSelectedCategory("All")}
-                    className={`btn_menu transition-all cursor-pointer border-none text-left ${
+                    className={`btn_menu py-2 px-2 flex justify-between align-center w-full transition-all cursor-pointer border-none text-left ${
                       selectedCategory === "All" || selectedCategory === "all"
                         ? "bg-[#A1255B] text-white shadow-2xs font-bold"
                         : "hover:bg-gray-100 text-gray-700"
@@ -227,8 +218,8 @@ export function MenupageView() {
                     <span
                       className={`txt_no ${
                         selectedCategory === "All" || selectedCategory === "all"
-                          ? "bg-white/20 text-white"
-                          : "bg-gray-100 text-gray-600 border border-gray-200"
+                          ? "text-white"
+                          : "text-gray-600"
                       }`}
                     >
                       {getCategoryItemCount("All")}
