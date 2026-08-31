@@ -50,7 +50,7 @@ export function PaymentMethodModal({
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-pink-50 text-[#A1255B] flex items-center justify-center font-bold">
+            <div className="w-8 h-8 bg-pink-50 text-[#f0383e] flex items-center justify-center font-bold">
               <CreditCard className="w-4 h-4" />
             </div>
             <h3 className="text-base font-extrabold text-gray-900 tracking-tight">
@@ -69,7 +69,7 @@ export function PaymentMethodModal({
         </div>
 
         {/* Total Price Banner */}
-        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-pink-50/60 border border-pink-100 mb-5">
+        <div className="flex items-center justify-between p-3.5  bg-pink-50/60 border border-pink-100 mb-5">
           <span className="text-xs font-semibold text-gray-600">{t("Total:")}</span>
           <span className="text-base font-black text-[#A1255B]" suppressHydrationWarning>
             ${grandTotal.toFixed(2)}
@@ -81,7 +81,7 @@ export function PaymentMethodModal({
           {/* QR Code Option */}
           <div
             onClick={() => !isSubmitting && setSelectedMethod("QR Scan")}
-            className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none ${
+            className={`flex items-center justify-between p-3.5  border transition-all cursor-pointer select-none ${
               selectedMethod === "QR Scan"
                 ? "border-[#A1255B] bg-pink-50/40 shadow-sm ring-1 ring-[#A1255B]"
                 : "border-gray-200 hover:border-gray-300 bg-white"
@@ -121,7 +121,7 @@ export function PaymentMethodModal({
           {/* Cash Option */}
           <div
             onClick={() => !isSubmitting && setSelectedMethod("Cash")}
-            className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none ${
+            className={`flex items-center justify-between p-3.5  border transition-all cursor-pointer select-none ${
               selectedMethod === "Cash"
                 ? "border-[#A1255B] bg-pink-50/40 shadow-sm ring-1 ring-[#A1255B]"
                 : "border-gray-200 hover:border-gray-300 bg-white"

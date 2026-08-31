@@ -46,7 +46,7 @@ function CustomModalOptionDropdown({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between bg-pink-50/60 hover:bg-pink-100/60 border border-pink-200 text-[#A1255B] font-bold text-xs rounded-xl py-2.5 px-3.5 transition-all cursor-pointer select-none"
+          className="w-full flex items-center justify-between bg-pink-50/60 hover:bg-pink-100/60 border border-pink-200 text-[#A1255B] font-medium text-xs py-2.5 px-3.5 transition-all cursor-pointer select-none"
         >
           <span>{t(value)}</span>
           <ChevronDown
