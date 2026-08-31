@@ -375,7 +375,7 @@ export function CheckoutdonepageView() {
                       {customDetails.map((detail, dIdx) => (
                         <span
                           key={dIdx}
-                          className="inline-block text-[10px] font-semibold text-pink-700 bg-pink-50 border border-pink-100 rounded-md px-1.5 py-0.5"
+                          className="inline-block text-[10px] font-semibold text-pink-700 bg-pink-50 border border-pink-100 px-1.5 py-0.5"
                         >
                           {detail}
                         </span>

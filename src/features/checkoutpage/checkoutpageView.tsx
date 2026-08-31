@@ -609,14 +609,14 @@ export function CheckoutpageView() {
                             ${(item.price * item.quantity).toFixed(2)}
                           </p>
                           {item.size && (
-                            <span className="text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5 rounded-full">
+                            <span className="text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5 ">
                               Size: {item.size}
                             </span>
                           )}
                           {customDetails.map((detail, dIdx) => (
                             <span
                               key={dIdx}
-                              className="text-[10px] font-semibold text-gray-700 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded-md"
+                              className="text-[10px] font-semibold text-gray-700 bg-gray-100 border border-gray-200 px-1.5 py-0.5 "
                             >
                               {detail}
                             </span>
