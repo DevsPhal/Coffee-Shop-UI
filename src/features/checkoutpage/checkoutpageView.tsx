@@ -15,7 +15,7 @@ import { cleanPhoneInput } from "@/lib/phoneUtils";
 import { AlertCircle, ChevronDown, Check } from "lucide-react";
 import { getItemCustomizationConfig, getProductByIdOrTitle } from "@/data/products";
 import { calculateSizePrice } from "@/store/useCartStore";
-import PaymentMethodModal from "@/components/ui/PaymentMethodModal";
+import { PaymentMethodModal } from "@/components/ui/PaymentMethodModal";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
@@ -141,13 +141,13 @@ export function CheckoutpageView() {
   // Automatically pre-fill shipping fields from logged-in user profile
   useEffect(() => {
     if (user) {
-      if (user.name) setFullName((prev) => (prev ? prev : user.name));
-      if (user.email) setEmail((prev) => (prev ? prev : user.email));
-      if (user.phone) setPhone((prev) => (prev ? prev : cleanPhoneInput(user.phone)));
-      if (user.capital) setCapital((prev) => (prev ? prev : user.capital));
-      if (user.district) setDistrict((prev) => (prev ? prev : user.district));
-      if (user.zipCode) setZipCode((prev) => (prev ? prev : user.zipCode));
-      if (user.address) setAddress((prev) => (prev ? prev : user.address));
+      if (user.name) setFullName((prev) => (prev ? prev : user.name || ""));
+      if (user.email) setEmail((prev) => (prev ? prev : user.email || ""));
+      if (user.phone) setPhone((prev) => (prev ? prev : cleanPhoneInput(user.phone || "")));
+      if (user.capital) setCapital((prev) => (prev ? prev : user.capital || "Phnom Penh"));
+      if (user.district) setDistrict((prev) => (prev ? prev : user.district || "Khan Boeng Keng Kang"));
+      if (user.zipCode) setZipCode((prev) => (prev ? prev : user.zipCode || "120000"));
+      if (user.address) setAddress((prev) => (prev ? prev : user.address || ""));
     }
   }, [user]);
 
@@ -211,7 +211,7 @@ export function CheckoutpageView() {
     });
 
     if (!validationResult.success) {
-      const fieldErrors = validationResult.error.flatten().fieldErrors;
+      const fieldErrors = validationResult.error.flatten().fieldErrors as Record<string, string[] | undefined>;
       const newErrors = {
         fullName: fieldErrors.fullName?.[0],
         email: fieldErrors.email?.[0],

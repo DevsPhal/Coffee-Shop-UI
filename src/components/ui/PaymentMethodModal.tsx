@@ -139,10 +139,10 @@ export function PaymentMethodModal({
               </div>
               <div>
                 <h4 className="text-sm font-bold text-gray-900 leading-tight">
-                  {t("Cash on Delivery")}
+                  {t("Cash")}
                 </h4>
                 <p className="text-[11px] text-gray-500 mt-0.5">
-                  {t("Pay cash upon pickup or delivery")}
+                  {t("Pay cash upon pickup")}
                 </p>
               </div>
             </div>
