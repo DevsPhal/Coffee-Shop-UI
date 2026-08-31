@@ -45,9 +45,24 @@ export function CheckoutdonepageView() {
   const hasToastedRef = useRef(false);
   const orderCreatedRef = useRef(false);
 
+  const [selectedCurrency, setSelectedCurrency] = useState<"USD" | "KHR">("USD");
+
   useEffect(() => {
     setIsMounted(true);
+    try {
+      const storedCurr = localStorage.getItem("payment_currency");
+      if (storedCurr === "KHR" || storedCurr === "USD") {
+        setSelectedCurrency(storedCurr);
+      }
+    } catch {}
   }, []);
+
+  const formatMoney = (amount: number) => {
+    if (selectedCurrency === "KHR") {
+      return `${Math.round(amount * 4000).toLocaleString()} ៛`;
+    }
+    return `$ ${amount.toFixed(2)}`;
+  };
 
   // Read stored order info
   useEffect(() => {
@@ -351,7 +366,7 @@ export function CheckoutdonepageView() {
                       {item.quantity}x {t(item.title)} {item.size ? `(${t("Size")}: ${item.size})` : ""}
                     </span>
                     <span className="value_brand font-bold text-xs sm:text-sm shrink-0 whitespace-nowrap pl-1" suppressHydrationWarning>
-                      $ {(item.price * item.quantity).toFixed(2)}
+                      {formatMoney(item.price * item.quantity)}
                     </span>
                   </div>
 
@@ -392,7 +407,7 @@ export function CheckoutdonepageView() {
                 <div className="meta_row">
                   <span className="label_muted">{t("Subtotal:")}</span>
                   <span className="value_brand" suppressHydrationWarning>
-                    $ {(hasDiscount ? fullSubtotal : calculatedSubtotal).toFixed(2)}
+                    {formatMoney(hasDiscount ? fullSubtotal : calculatedSubtotal)}
                   </span>
                 </div>
 
@@ -400,7 +415,7 @@ export function CheckoutdonepageView() {
                   <div className="meta_row">
                     <span className="label_muted">{t("Discount:")}</span>
                     <span className="value_brand font-bold text-[#A1255B]" suppressHydrationWarning>
-                      -$ {totalDiscount.toFixed(2)}
+                      {selectedCurrency === "KHR" ? `-${Math.round(totalDiscount * 4000).toLocaleString()} ៛` : `-$ ${totalDiscount.toFixed(2)}`}
                     </span>
                   </div>
                 )}
@@ -413,7 +428,7 @@ export function CheckoutdonepageView() {
             <div className="meta_row">
               <span className="label_muted">{t("Delivery Method")}:</span>
               <span className="value_brand" suppressHydrationWarning>
-                $ {displayDeliveryFee.toFixed(2)}
+                {formatMoney(displayDeliveryFee)}
               </span>
             </div>
           )}
@@ -422,7 +437,7 @@ export function CheckoutdonepageView() {
           <div className="meta_row">
             <span className="label_muted font-bold text-gray-900">{t("Grand total:")}</span>
             <span className="value_grand_total" suppressHydrationWarning>
-              $ {grandTotal.toFixed(2)}
+              {formatMoney(grandTotal)}
             </span>
           </div>
         </div>
