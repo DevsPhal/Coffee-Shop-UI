@@ -162,7 +162,7 @@ export function CategorypageView() {
       <div className="menu_page_container max-w-7xl mx-auto px-4 sm:px-6 pt-3 sm:pt-8 space-y-6 sm:space-y-10">
         
         {/* Clean Light Page Header */}
-        <div className="text-center my-3 sm:my-8">
+        <div className="title_category_page text-center my-3 sm:my-8">
           <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
             {t("Our Categories")}
           </h1>
