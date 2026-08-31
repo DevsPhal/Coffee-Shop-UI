@@ -178,7 +178,7 @@ export function CreateWithTelegram({ onBackToLogin, onRegisterWithEmail }: Creat
           <button
             type="button"
             onClick={() => setIsGenderOpen(!isGenderOpen)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-full border border-[#94a3b8] bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-[#475569] transition-all cursor-pointer select-none text-left"
+            className="w-full flex items-center justify-between px-3.5 py-2.5 border border-[#94a3b8] bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-[#475569] transition-all cursor-pointer select-none text-left"
             aria-expanded={isGenderOpen}
           >
             <div className="flex items-center gap-2.5 min-w-0">

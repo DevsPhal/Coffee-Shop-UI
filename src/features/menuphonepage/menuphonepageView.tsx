@@ -203,7 +203,7 @@ export function PhoneCard({
                 ${product.originalPrice.toFixed(2)}
               </span>
             )}
-            <span className="text-[#A1255B] font-extrabold">
+            <span className="text-[#f0383e] font-extrabold">
               $ {product.price.toFixed(2)}
             </span>
           </div>
@@ -386,7 +386,7 @@ export function MenupageView() {
           {/* Product Search Form Input with Search Button (Right) */}
           <form
             onSubmit={(e) => e.preventDefault()}
-            className="flex items-center flex-1 min-w-0 bg-white border border-gray-200 focus-within:border-[#A1255B] rounded-full p-1 shadow-2xs transition-all"
+            className="flex items-center flex-1 min-w-0 bg-white border border-gray-200 focus-within:border-[#A1255B] p-1 shadow-2xs transition-all"
           >
             <div className="flex items-center flex-1 min-w-0 pl-2.5 pr-1">
               <Search className="w-3.5 h-3.5 text-gray-400 shrink-0 mr-1.5 pointer-events-none" />
@@ -395,13 +395,13 @@ export function MenupageView() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t("Search...")}
-                className="w-full bg-transparent text-xs font-semibold text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
+                className="w-full bg-transparent text-xs font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="text-gray-400 hover:text-gray-700 text-[10px] font-bold bg-gray-100 w-3.5 h-3.5 rounded-full flex items-center justify-center cursor-pointer shrink-0 ml-1"
+                  className="text-gray-400 hover:text-gray-700 text-[10px] font-bold bg-gray-100 w-3.5 h-3.5 flex items-center justify-center cursor-pointer shrink-0 ml-1"
                   title="Clear search"
                 >
                   ✕
@@ -410,7 +410,7 @@ export function MenupageView() {
             </div>
             <button
               type="submit"
-              className="p-1.5 bg-[#A1255B] hover:bg-[#881d52] text-white rounded-full shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none"
+              className="p-1.5 bg-[#A1255B] hover:bg-[#881d52] text-white shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none"
               title="Search"
             >
               <Search className="w-3.5 h-3.5 text-white" />
@@ -509,7 +509,7 @@ export function MenupageView() {
                         ${activeModalProduct.originalPrice.toFixed(2)}
                       </span>
                     )}
-                    <span className="modal-item-price text-[#A1255B] font-extrabold text-base sm:text-lg">
+                    <span className="modal-item-price text-[#f0383e] font-extrabold text-base sm:text-lg">
                       $ {activeModalProduct.price.toFixed(2)}
                     </span>
                   </div>

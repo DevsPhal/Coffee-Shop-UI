@@ -103,7 +103,7 @@ export function MenupageView() {
             {/* Search Input Bar */}
             <form
               onSubmit={(e) => e.preventDefault()}
-              className="flex items-center bg-white border border-gray-200 focus-within:border-[#A1255B] focus-within:ring-1 focus-within:ring-[#A1255B] rounded-full p-1 pl-3.5 shadow-2xs transition-all flex-1 sm:flex-none sm:w-64"
+              className="flex items-center bg-white border border-gray-200 focus-within:border-[#A1255B] focus-within:ring-1 focus-within:ring-[#A1255B] p-1 pl-3.5 shadow-2xs transition-all flex-1 sm:flex-none sm:w-64"
             >
               <Search className="w-4 h-4 text-gray-400 shrink-0 mr-2 pointer-events-none" />
               <input
@@ -117,7 +117,7 @@ export function MenupageView() {
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="text-gray-400 hover:text-gray-700 text-xs font-bold bg-gray-100 hover:bg-gray-200 w-4 h-4 rounded-full flex items-center justify-center cursor-pointer shrink-0 mr-1 transition-colors"
+                  className="text-gray-400 hover:text-gray-700 text-xs font-bold bg-gray-100 hover:bg-gray-200 w-4 h-4 flex items-center justify-center cursor-pointer shrink-0 mr-1 transition-colors"
                   title="Clear search"
                 >
                   ✕
@@ -125,7 +125,7 @@ export function MenupageView() {
               )}
               <button
                 type="submit"
-                className="w-8 h-8 bg-[#A1255B] hover:bg-[#881d52] text-white rounded-full shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none active:scale-95 ml-1"
+                className="w-8 h-8 bg-[#A1255B] hover:bg-[#881d52] text-white shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none active:scale-95 ml-1"
                 title="Search"
               >
                 <Search className="w-4 h-4 text-white" />
@@ -141,7 +141,7 @@ export function MenupageView() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-1.5 pr-8 text-xs sm:text-sm font-semibold text-gray-800 hover:border-[#A1255B] focus:outline-none focus:ring-1 focus:ring-[#A1255B] cursor-pointer transition-all"
+                  className="appearance-none bg-white border border-gray-300 px-3 py-1.5 pr-8 text-xs sm:text-sm font-semibold text-gray-800 hover:border-[#A1255B] focus:outline-none focus:ring-1 focus:ring-[#A1255B] cursor-pointer transition-all"
                 >
                   <option value="newest">{t("Newest")}</option>
                   <option value="price-asc">{t("Price: Low to High")}</option>

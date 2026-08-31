@@ -182,7 +182,7 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
           <button
             type="button"
             onClick={() => setIsGenderOpen(!isGenderOpen)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-full border border-[#94a3b8] bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-[#475569] transition-all cursor-pointer select-none text-left"
+            className="w-full flex items-center justify-between px-3.5 py-2.5 border border-[#94a3b8] bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-[#475569] transition-all cursor-pointer select-none text-left"
             aria-expanded={isGenderOpen}
           >
             <div className="flex items-center gap-2.5 min-w-0">
@@ -334,7 +334,7 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
             <button
               type="button"
               onClick={onRegisterWithTelegram}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full border border-sky-200 bg-sky-50/80 hover:bg-sky-100 text-sky-700 text-xs sm:text-sm font-bold transition-all cursor-pointer select-none active:scale-98"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-sky-200 bg-sky-50/80 hover:bg-sky-100 text-sky-700 text-xs sm:text-sm font-medium transition-all cursor-pointer select-none active:scale-98"
             >
               <Send className="w-4 h-4 text-sky-600 shrink-0" />
               <span>{t("Register with Telegram")}</span>
