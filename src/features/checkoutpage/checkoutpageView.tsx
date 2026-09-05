@@ -484,6 +484,7 @@ export function CheckoutpageView() {
                   <div>
                     <label className="checkout_field_label">{t("Phone Number")}</label>
                     <div className="checkout_phone_input_wrapper">
+                      {/* recently added phone prefix */} 
                       <div className="checkout_phone_prefix">
                         <Image
                           src="/images/cambodia.svg"
