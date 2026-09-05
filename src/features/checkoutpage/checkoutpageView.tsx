@@ -12,7 +12,7 @@ import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { shippingInformationSchema } from "@/lib/authSchema";
 import { cleanPhoneInput } from "@/lib/phoneUtils";
-import { AlertCircle, ChevronDown, Check } from "lucide-react";
+import { AlertCircle, ChevronDown, Check, MapPin, Navigation, Compass, Search, Loader2 } from "lucide-react";
 import { getItemCustomizationConfig, getProductByIdOrTitle } from "@/data/products";
 import { calculateSizePrice } from "@/store/useCartStore";
 import { PaymentMethodModal } from "@/components/ui/PaymentMethodModal";
@@ -127,6 +127,16 @@ export function CheckoutpageView() {
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "grab">("pickup");
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  
+  // Location Picker State
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number }>({
+    lat: 11.5621, // Phnom Penh default lat
+    lng: 104.9160, // Phnom Penh default lng
+  });
+  const [tempAddress, setTempAddress] = useState("");
+  const [isLocating, setIsLocating] = useState(false);
+  const [searchLocationQuery, setSearchLocationQuery] = useState("");
 
   const [errors, setErrors] = useState<{
     fullName?: string;
@@ -138,7 +148,98 @@ export function CheckoutpageView() {
     address?: string;
   }>({});
 
-  // Automatically pre-fill shipping fields from logged-in user profile
+  // Location Picker Helper Functions
+  const handleOpenMapModal = () => {
+    setIsMapModalOpen(true);
+    setTempAddress(address || `${district}, ${capital}`);
+    if (navigator.geolocation && !address) {
+      handleDetectCurrentLocation();
+    }
+  };
+
+  const handleDetectCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.add({
+        type: "warning",
+        description: "Geolocation is not supported by your browser.",
+      });
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setMapCoords({ lat: latitude, lng: longitude });
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+          );
+          const data = await res.json();
+          if (data && data.display_name) {
+            const formatted = data.display_name.split(",").slice(0, 4).join(", ");
+            setTempAddress(formatted);
+          } else {
+            setTempAddress(`Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)} (Phnom Penh)`);
+          }
+        } catch {
+          setTempAddress(`Street 590, Toul Kork, Phnom Penh (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (error) => {
+        setIsLocating(false);
+        toast.add({
+          type: "warning",
+          description: "Could not retrieve exact location. Defaulting to Phnom Penh region.",
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleSearchLocation = async () => {
+    if (!searchLocationQuery.trim()) return;
+    setIsLocating(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          searchLocationQuery + ", Cambodia"
+        )}`
+      );
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const first = data[0];
+        const newLat = parseFloat(first.lat);
+        const newLng = parseFloat(first.lon);
+        setMapCoords({ lat: newLat, lng: newLng });
+        setTempAddress(first.display_name.split(",").slice(0, 4).join(", "));
+      } else {
+        toast.add({
+          type: "warning",
+          description: "Location not found. Please try another query.",
+        });
+      }
+    } catch {
+      toast.add({
+        type: "error",
+        description: "Error searching location.",
+      });
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
+  const handleConfirmLocation = () => {
+    const finalAddr = tempAddress.trim() || `${district}, ${capital}`;
+    setAddress(finalAddr);
+    validateSingleField("address", finalAddr);
+    setIsMapModalOpen(false);
+    toast.add({
+      type: "success",
+      description: "Delivery address updated from map!",
+    });
+  };
   useEffect(() => {
     if (user) {
       if (user.name) setFullName((prev) => (prev ? prev : user.name || ""));
@@ -481,17 +582,26 @@ export function CheckoutpageView() {
                   </div>
 
                   <div>
-                    <label className="checkout_field_label">{t("Delivery Address")}</label>
-                    <Input
-                      type="text"
-                      value={address}
-                      onChange={(e) => {
-                        setAddress(e.target.value);
-                        validateSingleField("address", e.target.value);
-                      }}
-                      placeholder="enter your address"
-                      className="checkout_input"
-                    />
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="checkout_field_label mb-0">{t("Delivery Address")}</label>
+                    </div>
+                    <div className="relative flex items-center">
+                      <Input
+                        type="text"
+                        readOnly
+                        value={address}
+                        onClick={handleOpenMapModal}
+                        placeholder={t("Click pin button to select location on map")}
+                        className="checkout_input pr-28 cursor-pointer select-none bg-gray-50/50 hover:bg-gray-50 transition-colors"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleOpenMapModal}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 bg-[#A1255B] hover:bg-[#881d52] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95 border-none"
+                      >
+                        <MapPin className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                     {errors.address && <TooltipAlert message={errors.address} />}
                   </div>
                 </>
@@ -743,6 +853,112 @@ export function CheckoutpageView() {
         grandTotal={grandTotal}
         onConfirm={handleConfirmPaymentMethod}
       />
+
+      {/* INTERACTIVE DYNAMIC GOOGLE MAP LOCATION PICKER MODAL */}
+      <Modal open={isMapModalOpen} onOpenChange={setIsMapModalOpen}>
+        <ModalContent className="max-w-xl p-0 overflow-hidden rounded-2xl border border-gray-100 shadow-2xl">
+          {/* Header */}
+          <div className="bg-[#A1255B] text-white p-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-amber-300" />
+              <div>
+                <h3 className="text-base font-bold leading-tight">{t("Select Delivery Location")}</h3>
+                <p className="text-xs text-white/80">{t("Drag or pinpoint your current location on the map")}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Action Bar */}
+          <div className="p-3 bg-gray-50 border-b border-gray-100 flex flex-wrap sm:flex-nowrap gap-2 items-center">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchLocationQuery}
+                onChange={(e) => setSearchLocationQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearchLocation()}
+                placeholder={t("Search street, landmark, or area...")}
+                className="w-full pl-9 pr-3 py-2 bg-white text-xs sm:text-sm  border border-gray-200 outline-none focus:border-[#A1255B] transition-colors"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleSearchLocation}
+              className="px-3 py-2 bg-gray-800 hover:bg-gray-900 text-white text-xs font-semibold  border-none cursor-pointer transition-all"
+            >
+              {t("Search")}
+            </button>
+            <button
+              type="button"
+              onClick={handleDetectCurrentLocation}
+              disabled={isLocating}
+              className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold  border-none cursor-pointer transition-all shadow-xs disabled:opacity-50"
+            >
+              {isLocating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Navigation className="w-3.5 h-3.5" />
+              )}
+              <span>{t("Locate Me")}</span>
+            </button>
+          </div>
+
+          {/* Dynamic Google Map Embed */}
+          <div className="relative w-full h-72 sm:h-80 bg-gray-100">
+            <iframe
+              title="Google Map Location Picker"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              allowFullScreen
+              src={`https://maps.google.com/maps?q=${mapCoords.lat},${mapCoords.lng}&z=16&output=embed`}
+            />
+
+            {/* Pin Overlay Badge */}
+            <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-md text-xs font-medium text-gray-800 flex items-center gap-1.5 border border-white">
+              <Compass className="w-4 h-4 text-[#A1255B] animate-spin" style={{ animationDuration: '8s' }} />
+              <span>
+                {mapCoords.lat.toFixed(4)}, {mapCoords.lng.toFixed(4)}
+              </span>
+            </div>
+          </div>
+
+          {/* Address Confirmation Panel */}
+          <div className="p-4 bg-white space-y-3">
+            <div>
+              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-1">
+                {t("Confirmed Location Address")}
+              </label>
+              <textarea
+                rows={2}
+                value={tempAddress}
+                onChange={(e) => setTempAddress(e.target.value)}
+                placeholder={t("Address details will appear here...")}
+                className="w-full p-2.5 bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:border-[#A1255B] focus:bg-white transition-all resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setIsMapModalOpen(false)}
+                className="w-full bg-white hover:bg-gray-100 text-gray-700 font-semibold py-2.5 px-4 text-xs sm:text-sm border border-gray-200 transition-all cursor-pointer"
+              >
+                {t("Cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLocation}
+                className="w-full bg-[#A1255B] hover:bg-[#881d52] text-white font-semibold py-2.5 px-4 text-xs sm:text-sm transition-all cursor-pointer shadow-md border-none flex items-center justify-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>{t("Confirm Location")}</span>
+              </button>
+            </div>
+          </div>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
