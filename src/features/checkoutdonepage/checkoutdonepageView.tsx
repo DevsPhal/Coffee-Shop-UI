@@ -1,13 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCart } from "@/context/CartContext";
-import { useAuth } from "@/context/AuthContext";
-import { useOrderStore } from "@/store/useOrderStore";
+import { useMounted } from "@/hooks/useMounted";
 import { toast } from "@/components/ui/toast";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import {
@@ -15,191 +12,156 @@ import {
   Receipt,
   CheckCircle2,
   Bell,
+  Coffee,
   ConciergeBell,
   UtensilsCrossed,
+  XCircle,
 } from "lucide-react";
-import { getItemCustomizationConfig, getProductByIdOrTitle } from "@/data/products";
-import { calculateSizePrice } from "@/store/useCartStore";
+import { isAuthenticated } from "@/lib/authStorage";
+import { useGetCurrentUserQuery } from "@/store/api/authApi";
+import { useGetMyOrderQuery, useRequestOrderAssistanceMutation } from "@/store/api/orderApi";
+import { apiErrorMessage } from "@/store/api/baseApi";
+import { ICE_LABELS, MILK_LABELS, SUGAR_LABELS } from "@/store/api/optionMapping";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
+
+const subscribeToStorage = (notify: () => void) => {
+  window.addEventListener("storage", notify);
+  return () => window.removeEventListener("storage", notify);
+};
+const readStoredCheckout = () => {
+  try { return localStorage.getItem("checkout_delivery"); } catch { return null; }
+};
 
 export function CheckoutdonepageView() {
   const { t } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const urlOrderId = searchParams.get("id") || searchParams.get("orderId");
+  const urlOrderId = searchParams.get("id") || searchParams.get("orderId") || "";
 
-  const { items, clearCart } = useCart();
-  const { user } = useAuth();
-  const { addOrder, getOrderById, ordersHistory } = useOrderStore();
-
-  const [isMounted, setIsMounted] = useState(false);
-  const [activeOrderId, setActiveOrderId] = useState<string>("");
-  const [callStaffModal, setCallStaffModal] = useState(false);
-  const [staffCalled, setStaffCalled] = useState(false);
-  const [customerName, setCustomerName] = useState<string>("");
-  const [deliveryInfo, setDeliveryInfo] = useState<{ method: string; fee: number }>({
-    method: "pickup",
-    fee: 0,
+  const { data: currentUser } = useGetCurrentUserQuery(undefined, {
+    skip: !isAuthenticated(),
   });
-  const hasToastedRef = useRef(false);
-  const orderCreatedRef = useRef(false);
 
-  const [selectedCurrency, setSelectedCurrency] = useState<"USD" | "KHR">("USD");
+  const isMounted = useMounted();
+  const storedCheckout = useSyncExternalStore(subscribeToStorage, readStoredCheckout, () => null);
+  const stored = useMemo(() => {
+    try { return JSON.parse(storedCheckout ?? "null") as {
+      orderId?: string; customerName?: string; location?: string; estimatedTime?: string; paymentType?: string;
+    } | null; } catch { return null; }
+  }, [storedCheckout]);
+  const targetId = urlOrderId || stored?.orderId || "";
+  // Legacy orders can use details saved for this exact order, never for another order.
+  const delivery = stored?.orderId === targetId ? stored : null;
+  const [callStaffModal, setCallStaffModal] = useState(false);
+  const [notifiedOrderId, setNotifiedOrderId] = useState<string | null>(null);
+  const staffCalled = notifiedOrderId === targetId;
+  const [requestAssistance, { isLoading: isCallingStaff }] = useRequestOrderAssistanceMutation();
 
-  useEffect(() => {
-    setIsMounted(true);
-    try {
-      const storedCurr = localStorage.getItem("payment_currency");
-      if (storedCurr === "KHR" || storedCurr === "USD") {
-        setSelectedCurrency(storedCurr);
-      }
-    } catch {}
-  }, []);
+  // The real order, straight from /api/customer/orders/{id}.
+  //
+  // Polled, because the whole point of this screen is watching it change: every step of the
+  // tracker below is a barista pressing a button on the queue board, and this request is the
+  // only way the customer's phone hears about it. (No skipPollingIfUnfocused — that needs
+  // RTK's setupListeners, which this app does not install.)
+  const { currentData: order, error: orderError, refetch } = useGetMyOrderQuery(targetId, {
+    skip: !targetId,
+    refetchOnMountOrArgChange: true,
+    pollingInterval: 10000,
+  });
 
-  const formatMoney = (amount: number) => {
-    if (selectedCurrency === "KHR") {
-      return `${Math.round(amount * 4000).toLocaleString()} ៛`;
+  const displayItems = order?.items ?? [];
+  const calculatedSubtotal = displayItems.reduce((sum, item) => sum + Number(item.subtotal), 0);
+  const displayDeliveryFee = Number(order?.deliveryFee ?? 0);
+  const grandTotal = Number(order?.totalAmount ?? 0);
+  const selectedCurrency = order?.bakongCurrency === "KHR" && order.bakongAmount != null ? "KHR" : "USD";
+  const formatMoney = (amount: number) => selectedCurrency === "KHR" && grandTotal > 0
+    ? `${Math.round(amount * Number(order?.bakongAmount) / grandTotal).toLocaleString()} ៛`
+    : `$ ${amount.toFixed(2)}`;
+  const displayCustomerName =
+    order?.contactName || order?.customerName || delivery?.customerName || currentUser?.fullName || "Customer";
+  const displayLocation = order?.deliveryAddress || (order?.fulfillmentMethod === "PICKUP" ? "Pickup at store" : delivery?.location) || "Pickup at store";
+  const displayEstimatedTime = delivery?.estimatedTime || (order?.fulfillmentMethod === "DELIVERY" ? "10–15 mins (estimate)" : "5 mins (estimate)");
+
+
+  /**
+   * Where the order sits on the three-step tracker, derived straight from its status rather
+   * than mirrored into state — so when the poll above brings back a new status, the tracker
+   * moves on its own with nothing left to keep in sync.
+   *
+   *   PENDING / PAID -> 1  placed, waiting on the counter
+   *   PREPARING      -> 2  a barista has picked it up
+   *   COMPLETED      -> 3  made, ready to collect
+   *
+   * CANCELLED sits outside the three steps entirely and takes over the banner instead.
+   */
+  const currentStep =
+    order?.status === "COMPLETED" || order?.status === "DELIVERED"
+      ? 3
+      : order?.status === "PREPARING" || order?.status === "OUT_FOR_DELIVERY"
+        ? 2
+        : 1;
+  const isCancelled = order?.status === "CANCELLED";
+  const isUnpaid = order?.status === "PENDING";
+
+  // Held at step 1 until mounted so the first client paint matches the server's, where the
+  // order has not been fetched yet.
+  const effectiveStep = isMounted ? currentStep : 1;
+
+  const bannerTitle = isCancelled
+    ? "Order Cancelled"
+    : isUnpaid
+      ? "Payment Pending"
+      : effectiveStep >= 3
+        ? "Order Ready!"
+        : effectiveStep === 2
+          ? "Being Prepared"
+          : "Order Confirmed!";
+
+  const bannerSubtitle = isCancelled
+    ? "This order was cancelled and you have not been charged."
+    : isUnpaid
+      ? order?.paymentMethod === "CASH" ? "Please pay at the counter. We will update your order once payment is collected." : "We have your order — it starts as soon as payment goes through."
+      : effectiveStep >= 3
+        ? "Your order is ready! Enjoy your freshly prepared drinks."
+        : effectiveStep === 2
+          ? "A barista is making your order right now."
+          : "Thank you for ordering with 590st CAFE. You are in the queue.";
+
+  // The tracker's three stops. Step 3 is worded for whichever way the order reaches the
+  // customer, and doneLabel is what a step reads once it has actually happened.
+  const steps: { step: number; label: string; doneLabel?: string }[] = [
+    { step: 1, label: "Confirmed" },
+    { step: 2, label: "Preparing" },
+    displayDeliveryFee > 0
+      ? { step: 3, label: "Delivering", doneLabel: "Delivered" }
+      : { step: 3, label: "Ready", doneLabel: "Ready!" },
+  ];
+
+  /**
+   * Each circle is in one of three states. Step 1 is the only one that can still be "current":
+   * an unpaid order has been placed but not confirmed. The moment payment lands step 1 is
+   * simply done, and the live edge of the tracker moves to whatever the barista is doing —
+   * which is why a paid, unstarted order shows a tick on "Confirmed" and nothing pulsing.
+   */
+  const stepState = (step: number): "done" | "current" | "todo" => {
+    if (isCancelled) return "todo";
+    if (step === 1) return isUnpaid ? "current" : "done";
+    if (step === 2) {
+      return effectiveStep >= 3 ? "done" : effectiveStep === 2 ? "current" : "todo";
     }
-    return `$ ${amount.toFixed(2)}`;
+    return effectiveStep >= 3 ? "done" : "todo";
   };
 
-  // Read stored order info
-  useEffect(() => {
-    let storedDelivery = {
-      method: "pickup",
-      fee: 0,
-      customerName: customerName || user?.name || "Guest",
-      location: "G01",
-      estimatedTime: "5 mins",
-      paymentType: "QR Scan",
-    };
-
+  const handleCallStaff = async () => {
+    if (isCallingStaff || !targetId || staffCalled) return;
     try {
-      const stored = localStorage.getItem("checkout_delivery");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.customerName) setCustomerName(parsed.customerName);
-        if (typeof parsed.fee === "number") {
-          setDeliveryInfo({ method: parsed.method || "pickup", fee: parsed.fee });
-        }
-        storedDelivery = {
-          method: parsed.method || "pickup",
-          fee: typeof parsed.fee === "number" ? parsed.fee : 0,
-          customerName: parsed.customerName || customerName || user?.name || "Guest",
-          location: parsed.location || (parsed.fee > 0 ? "House 30A, St 590, Toul Kork" : "G01"),
-          estimatedTime: parsed.estimatedTime || (parsed.fee > 0 ? "10 - 15 mins" : "5 mins"),
-          paymentType: parsed.paymentType || "QR Scan",
-        };
-      }
-    } catch {}
-
-    if (!urlOrderId && !orderCreatedRef.current && items && items.length > 0) {
-      orderCreatedRef.current = true;
-      const fee = storedDelivery.fee;
-      const isDelivery = fee > 0 || storedDelivery.method === "grab" || storedDelivery.method === "delivery";
-      const sub = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-      const total = sub + fee;
-
-      const createdOrder = addOrder({
-        userId: user?.userId || undefined,
-        customerName: storedDelivery.customerName,
-        paymentType: storedDelivery.paymentType,
-        deliveryMethod: isDelivery ? "delivery" : "pickup",
-        location: storedDelivery.location,
-        estimatedTime: storedDelivery.estimatedTime,
-        items: items.map((i) => ({
-          id: i.id,
-          title: i.title,
-          price: i.price,
-          quantity: i.quantity,
-          size: i.size || "M",
-          iceLevel: i.iceLevel,
-          sugarLevel: i.sugarLevel,
-          milkType: i.milkType,
-          image: i.image,
-        })),
-        subtotal: sub,
-        deliveryFee: fee,
-        grandTotal: total,
-        status: "Preparing",
-      });
-
-      if (createdOrder) {
-        setActiveOrderId(createdOrder.id);
-        try {
-          localStorage.setItem("active_order_id", createdOrder.id);
-        } catch {}
-      }
-
-      clearCart();
+      await requestAssistance(targetId).unwrap();
+      setNotifiedOrderId(targetId);
+      setCallStaffModal(true);
+    } catch (error) {
+      toast.add({ type: "error", description: apiErrorMessage(error as never, "Could not notify staff. Please try again.") });
     }
-  }, [urlOrderId, items, user, addOrder, clearCart]);
-
-  useEffect(() => {
-    if (hasToastedRef.current) return;
-    hasToastedRef.current = true;
-    toast.add({
-      type: "success",
-      description: "Checkout complete! Order is confirmed and being prepared.",
-    });
-  }, []);
-
-  // Look up target order
-  const storedActiveId = isMounted && typeof window !== "undefined" ? localStorage.getItem("active_order_id") || "" : "";
-  const targetId = urlOrderId || activeOrderId || storedActiveId;
-  const selectedOrder = isMounted && targetId
-    ? getOrderById(targetId) || ordersHistory.find((o) => o.id === targetId)
-    : (isMounted ? ordersHistory[0] : undefined);
-
-  // Compute totals & display properties from target order
-  const displayItems = isMounted && selectedOrder?.items && selectedOrder.items.length > 0
-    ? selectedOrder.items
-    : [
-        { id: "1", title: "Amacano", price: 2.25, quantity: 1, size: "M", image: "" },
-      ];
-
-  const calculatedSubtotal = isMounted && selectedOrder ? selectedOrder.subtotal : displayItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const displayDeliveryFee = isMounted && selectedOrder ? selectedOrder.deliveryFee : deliveryInfo.fee;
-  const grandTotal = isMounted && selectedOrder ? selectedOrder.grandTotal : calculatedSubtotal + displayDeliveryFee;
-  const displayCustomerName = isMounted ? (selectedOrder ? selectedOrder.customerName : customerName || user?.name || "Ream") : "Ream";
-  const displayLocation = isMounted ? (selectedOrder ? selectedOrder.location : (deliveryInfo.fee === 0 ? "G01" : "House 30A, St 590, Toul Kork")) : "G01";
-  const displayEstimatedTime = isMounted ? (selectedOrder ? selectedOrder.estimatedTime : (displayDeliveryFee > 0 ? "10 - 15 mins" : "5 mins")) : "5 mins";
-
-  const [currentStep, setCurrentStep] = useState<number>(2);
-
-  const effectiveStep = isMounted ? currentStep : 2;
-
-  // Auto advance step 2 (Preparing) to step 3 (Ready / Completed) after 5 minutes
-  useEffect(() => {
-    if (selectedOrder?.status === "Completed") {
-      setCurrentStep(3);
-      return;
-    }
-
-    // 5 minutes timer (5 * 60 * 1000 = 300,000 ms) before marking order as Ready!
-    const timer = setTimeout(() => {
-      setCurrentStep(3);
-      toast.add({
-        type: "success",
-        description: "Order is Ready! Please enjoy your fresh coffee.",
-      });
-
-      if (selectedOrder) {
-        useOrderStore.setState((state) => ({
-          ordersHistory: state.ordersHistory.map((o) =>
-            o.id === selectedOrder.id ? { ...o, status: "Completed" } : o
-          ),
-        }));
-      }
-    }, 5 * 60 * 1000);
-
-    return () => clearTimeout(timer);
-  }, [selectedOrder]);
-
-  const handleCallStaff = () => {
-    setStaffCalled(true);
-    setCallStaffModal(true);
   };
 
   const handleBackToMenu = (e: React.MouseEvent) => {
@@ -211,8 +173,23 @@ export function CheckoutdonepageView() {
     }
   };
 
+  if (!isMounted || (targetId && !order && !orderError)) {
+    return <p role="status" className="p-10 text-center">{t("Loading your order...")}</p>;
+  }
+  if (!targetId || (!order && orderError)) {
+    return <div role="alert" className="space-y-4 p-10 text-center">
+      <p>{targetId ? apiErrorMessage(orderError as never, "Could not load this order.") : "Choose an order to track."}</p>
+      {targetId && <button type="button" onClick={() => { void refetch(); }} className="mr-4 underline">{t("Try again")}</button>}
+      <Link href="/orderhistory" className="underline">{t("View my orders")}</Link>
+    </div>;
+  }
+
   return (
     <div className="checkout_done_page">
+      {orderError && <p role="alert" className="p-3 text-center text-amber-700">Could not refresh order progress. Retrying automatically.</p>}
+      {isUnpaid && order?.paymentMethod !== "CASH" && <div className="p-4 text-center">
+        <Link href={`/payment?orderId=${encodeURIComponent(targetId)}`} className="inline-block rounded-xl bg-[#A1255B] px-5 py-3 font-bold text-white">Continue to payment</Link>
+      </div>}
       {/* 1. TOP BANNER SECTION WITH RESORT POOL BACKGROUND */}
       <div className="banner_section">
         <div
@@ -223,18 +200,23 @@ export function CheckoutdonepageView() {
         />
 
         <div className="banner_content">
-          <div className="banner_icon_badge animate-bounce">
-            <CheckCircle2 className="w-10 h-10" />
+          <div
+            className={`banner_icon_badge ${isCancelled ? "" : "animate-bounce"}`}
+            suppressHydrationWarning
+          >
+            {isCancelled ? (
+              <XCircle className="w-10 h-10" />
+            ) : effectiveStep === 2 ? (
+              <Coffee className="w-10 h-10" />
+            ) : (
+              <CheckCircle2 className="w-10 h-10" />
+            )}
           </div>
           <h1 className="banner_title" suppressHydrationWarning>
-            {t(effectiveStep >= 3 ? "Order Ready!" : "Order Confirmed!")}
+            {t(bannerTitle)}
           </h1>
           <p className="banner_subtitle" suppressHydrationWarning>
-            {t(
-              effectiveStep >= 3
-                ? "Your order is ready! Enjoy your freshly prepared drinks."
-                : "Thank you for ordering with 590st CAFE. Your order is being freshly prepared!"
-            )}
+            {t(bannerSubtitle)}
           </p>
         </div>
       </div>
@@ -252,59 +234,53 @@ export function CheckoutdonepageView() {
             {/* Background Base Line */}
             <div className="stepper_bg_line" />
             
-            {/* Animated Flow Line */}
+            {/* Animated Flow Line — reaches step 1 while the order is only queued, half way
+                once a barista starts it, all the way when it is ready. */}
             <div
               className={`stepper_flow_line ${
-                effectiveStep >= 3 ? "stepper_flow_line_full" : "stepper_flow_line_half"
+                effectiveStep >= 3
+                  ? "stepper_flow_line_full"
+                  : effectiveStep === 2
+                    ? "stepper_flow_line_half"
+                    : "stepper_flow_line_start"
               }`}
+              suppressHydrationWarning
             />
 
-            {/* Step 1: Confirmed */}
-            <div className="stepper_step">
-              <div className="stepper_circle stepper_circle_active">
-                <Check className="w-5 h-5" />
-              </div>
-              <span className="stepper_label stepper_label_active">{t("Confirmed")}</span>
-            </div>
-
-            {/* Step 2: Preparing */}
-            <div className="stepper_step">
-              <div
-                className={`stepper_circle ${
-                  effectiveStep >= 3
-                    ? "stepper_circle_active"
-                    : "stepper_circle_active stepper_circle_pulse animate-pulse"
-                }`}
-                suppressHydrationWarning
-              >
-                {effectiveStep >= 3 ? <Check className="w-5 h-5" /> : "2"}
-              </div>
-              <span className={`stepper_label ${effectiveStep >= 3 ? "stepper_label_active" : "stepper_label_active"}`} suppressHydrationWarning>
-                {t("Preparing")}
-              </span>
-            </div>
-
-            {/* Step 3: Ready / Delivered */}
-            <div className="stepper_step">
-              <div
-                className={`stepper_circle ${
-                  effectiveStep >= 3
-                    ? "stepper_circle_done scale-110"
-                    : "stepper_circle_inactive"
-                }`}
-                suppressHydrationWarning
-              >
-                {effectiveStep >= 3 ? <Check className="w-5 h-5" /> : "3"}
-              </div>
-              <span
-                className={`stepper_label ${
-                  effectiveStep >= 3 ? "stepper_label_done" : "stepper_label_inactive"
-                }`}
-                suppressHydrationWarning
-              >
-                {t(displayDeliveryFee > 0 ? (effectiveStep >= 3 ? "Delivered" : "Delivering") : (effectiveStep >= 3 ? "Ready!" : "Ready"))}
-              </span>
-            </div>
+            {steps.map(({ step, label, doneLabel }) => {
+              const state = stepState(step);
+              const isDone = state === "done";
+              return (
+                <div key={step} className="stepper_step">
+                  <div
+                    className={`stepper_circle ${
+                      isDone
+                        ? step === 3
+                          ? "stepper_circle_done scale-110"
+                          : "stepper_circle_active"
+                        : state === "current"
+                          ? "stepper_circle_active stepper_circle_pulse animate-pulse"
+                          : "stepper_circle_inactive"
+                    }`}
+                    suppressHydrationWarning
+                  >
+                    {isDone ? <Check className="w-5 h-5" /> : step}
+                  </div>
+                  <span
+                    className={`stepper_label ${
+                      isDone && step === 3
+                        ? "stepper_label_done"
+                        : isDone || state === "current"
+                          ? "stepper_label_active"
+                          : "stepper_label_inactive"
+                    }`}
+                    suppressHydrationWarning
+                  >
+                    {t(isDone && doneLabel ? doneLabel : label)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -326,7 +302,7 @@ export function CheckoutdonepageView() {
 
             <div className="meta_row">
               <span className="label_muted">{t("Payment type:")}</span>
-              <span className="value_dark">{t(selectedOrder?.paymentType || (isMounted ? (JSON.parse(localStorage.getItem("checkout_delivery") || "{}").paymentType || "QR Scan") : "QR Scan"))}</span>
+              <span className="value_dark">{t(order?.paymentMethod === "BAKONG" ? "Bakong QR" : order?.paymentMethod === "CASH" ? "Cash" : "Not selected")}</span>
             </div>
 
             <div className="meta_row">
@@ -349,24 +325,29 @@ export function CheckoutdonepageView() {
 
           {/* Order Items List */}
           <div className="meta_row_group divide-y divide-gray-100/60">
-            {displayItems.map((item, idx) => {
-              const config = getItemCustomizationConfig(item.title);
+            {displayItems.map((item) => {
               const customDetails: string[] = [];
-              if (config.hasIce && item.iceLevel) customDetails.push(`Ice: ${item.iceLevel}`);
-              if (config.hasSugar && item.sugarLevel) customDetails.push(`Sugar: ${item.sugarLevel}`);
-              if (config.hasMilk && item.milkType) customDetails.push(`Milk: ${item.milkType}`);
+              if (item.iceLevel) customDetails.push(`Ice: ${ICE_LABELS[item.iceLevel]}`);
+              if (item.sugarLevel)
+                customDetails.push(`Sugar: ${SUGAR_LABELS[item.sugarLevel]}`);
+              if (item.milkType) customDetails.push(`Milk: ${MILK_LABELS[item.milkType]}`);
+
+              const sizeLabel = item.sizeOptionName;
 
               return (
-                <div key={item.id || idx} className="pt-2 first:pt-0 space-y-1">
+                <div key={item.id} className="pt-2 first:pt-0 space-y-1">
                   <div className="flex items-center justify-between gap-2 min-w-0">
                     <span
                       className="value_dark font-semibold text-xs sm:text-sm truncate min-w-0 flex-1"
-                      title={`${item.quantity}x ${item.title} ${item.size ? `(Size: ${item.size})` : ""}`}
+                      title={`${item.quantity}x ${item.productName}${
+                        sizeLabel ? ` (Size: ${sizeLabel})` : ""
+                      }`}
                     >
-                      {item.quantity}x {t(item.title)} {item.size ? `(${t("Size")}: ${item.size})` : ""}
+                      {item.quantity}x {t(item.productName)}{" "}
+                      {sizeLabel ? `(${t("Size")}: ${sizeLabel})` : ""}
                     </span>
                     <span className="value_brand font-bold text-xs sm:text-sm shrink-0 whitespace-nowrap pl-1" suppressHydrationWarning>
-                      {formatMoney(item.price * item.quantity)}
+                      {formatMoney(Number(item.subtotal))}
                     </span>
                   </div>
 
@@ -392,12 +373,12 @@ export function CheckoutdonepageView() {
 
           {/* Subtotal & Discount */}
           {(() => {
-            const fullSubtotal = displayItems.reduce((acc, item) => {
-              const prod = getProductByIdOrTitle(item.id, item.title);
-              const origPrice = (item as any).originalPrice ?? prod?.originalPrice;
-              const itemOrigPrice = (origPrice && origPrice > item.price) ? calculateSizePrice(origPrice, item.size) : item.price;
-              return acc + itemOrigPrice * item.quantity;
-            }, 0);
+            // The order records what was actually charged, so the pre-discount total is not
+            // recoverable from it. Showing the charged total keeps the figures honest.
+            const fullSubtotal = displayItems.reduce(
+              (acc, item) => acc + Number(item.subtotal),
+              0
+            );
 
             const totalDiscount = Math.max(0, fullSubtotal - calculatedSubtotal);
             const hasDiscount = totalDiscount > 0;
@@ -415,7 +396,7 @@ export function CheckoutdonepageView() {
                   <div className="meta_row">
                     <span className="label_muted">{t("Discount:")}</span>
                     <span className="value_brand font-bold text-[#A1255B]" suppressHydrationWarning>
-                      {selectedCurrency === "KHR" ? `-${Math.round(totalDiscount * 4000).toLocaleString()} ៛` : `-$ ${totalDiscount.toFixed(2)}`}
+                      -{formatMoney(totalDiscount)}
                     </span>
                   </div>
                 )}
@@ -447,6 +428,7 @@ export function CheckoutdonepageView() {
           <button
             type="button"
             onClick={handleCallStaff}
+            disabled={isCallingStaff || staffCalled}
             className="btn_desktop_staff"
           >
             <Bell className="w-5 h-5 mr-2 shrink-0" />
@@ -465,6 +447,7 @@ export function CheckoutdonepageView() {
           <button
             type="button"
             onClick={handleCallStaff}
+            disabled={isCallingStaff || staffCalled}
             className="btn_mobile_staff"
           >
             <ConciergeBell className="w-5 h-5 shrink-0" />

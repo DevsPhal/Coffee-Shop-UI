@@ -9,7 +9,8 @@ export interface PaymentMethodModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   grandTotal: number;
-  onConfirm: (paymentMethod: "QR Scan" | "Cash") => void;
+  /** May be async — the modal awaits it and shows a spinner for its real duration. */
+  onConfirm: (paymentMethod: "QR Scan" | "Cash") => void | Promise<void>;
 }
 
 export function PaymentMethodModal({
@@ -28,19 +29,21 @@ export function PaymentMethodModal({
     }
   }, [open]);
 
-  const handleConfirmClick = () => {
+  /**
+   * Placing the order is a real request now (server cart -> checkout -> payment), so the
+   * spinner tracks that call rather than a timer. This used to sit on a hardcoded 30-second
+   * setTimeout from the mock era, which left every cash customer watching "Processing..."
+   * long after the order had actually been created.
+   */
+  const handleConfirmClick = async () => {
     if (isSubmitting) return;
 
-    if (selectedMethod === "Cash") {
-      setIsSubmitting(true);
-      setTimeout(() => {
-        setIsSubmitting(false);
-        onConfirm("Cash");
-        onOpenChange(false);
-      }, 30000); // 30 seconds delay
-    } else {
-      onConfirm("QR Scan");
+    setIsSubmitting(true);
+    try {
+      await onConfirm(selectedMethod);
       onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

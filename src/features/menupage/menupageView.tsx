@@ -4,30 +4,24 @@ import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Card } from "@/components/cards/card";
-import {
-  PRODUCTS,
-  MAIN_CATEGORIES,
-  filterProductsByCategory,
-  getCategoryItemCount,
-  Product,
-} from "@/data/products";
+import { ALL_CATEGORIES } from "@/components/ui/CategoryDropdown";
+import { toStoreProduct } from "@/store/api/productAdapter";
+import { useCatalog, useCategories } from "@/store/api/useCatalog";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { Search, ChevronDown, ChevronRight, Filter } from "lucide-react";
 import "@/app/globals.scss";
+
+/** Client-side pseudo-category: everything currently discounted. */
+const FEATURED = "Featured";
 
 export function MenupageView() {
   const searchParams = useSearchParams();
   const queryCategory = searchParams.get("category");
   const { t } = useLanguage();
 
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("newest");
-  const [expandedMains, setExpandedMains] = useState<Record<string, boolean>>({
-    fresh_drink: true,
-    beverage: true,
-    snack: true,
-  });
 
   useEffect(() => {
     if (queryCategory) {
@@ -35,29 +29,26 @@ export function MenupageView() {
     }
   }, [queryCategory]);
 
-  // Auto-expand parent main category in sidebar whenever selectedCategory changes
-  useEffect(() => {
-    if (!selectedCategory) return;
-    MAIN_CATEGORIES.forEach((main) => {
-      const isMainMatch = selectedCategory.toLowerCase() === main.name.toLowerCase();
-      const isSubMatch = main.subCategories.some(
-        (s) => s.name.toLowerCase() === selectedCategory.toLowerCase()
+  const { categories } = useCategories();
+
+  // "Featured" is a client-side view over the whole catalogue (everything discounted), not a
+  // category the API knows about — so it must not be sent as a categoryId.
+  const isFeatured = selectedCategory === FEATURED;
+  const { products, isLoading, error } = useCatalog(
+    selectedCategory === ALL_CATEGORIES || isFeatured ? undefined : selectedCategory
+  );
+
+  const rawFilteredProducts = products
+    .filter((product) => (isFeatured ? product.discountActive : true))
+    .filter((product) => {
+      const term = searchQuery.trim().toLowerCase();
+      if (!term) return true;
+      return (
+        product.name.toLowerCase().includes(term) ||
+        product.categoryName.toLowerCase().includes(term)
       );
-      if (isMainMatch || isSubMatch) {
-        setExpandedMains((prev) => ({ ...prev, [main.id]: true }));
-      }
-    });
-  }, [selectedCategory]);
-
-  const toggleExpand = (mainId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpandedMains((prev) => ({
-      ...prev,
-      [mainId]: !prev[mainId],
-    }));
-  };
-
-  const rawFilteredProducts = filterProductsByCategory(selectedCategory, searchQuery);
+    })
+    .map(toStoreProduct);
 
   // Apply sorting
   const sortedProducts = [...rawFilteredProducts].sort((a, b) => {
@@ -68,8 +59,8 @@ export function MenupageView() {
   });
 
   const getPageTitle = () => {
-    if (selectedCategory === "All" || selectedCategory === "all") return t("All Products");
-    if (selectedCategory === "Featured") return t("Featured Products");
+    if (selectedCategory === ALL_CATEGORIES) return t("All Products");
+    if (selectedCategory === FEATURED) return t("Featured Products");
     return t(selectedCategory);
   };
 
@@ -170,9 +161,9 @@ export function MenupageView() {
                 <li>
                   <button
                     type="button"
-                    onClick={() => setSelectedCategory("Featured")}
+                    onClick={() => setSelectedCategory(FEATURED)}
                     className={`btn_menu transition-all cursor-pointer w-full flex justify-between py-2 px-2 border-none text-left ${
-                      selectedCategory === "Featured"
+                      selectedCategory === FEATURED
                         ? "bg-[#A1255B]  text-white"
                         : "hover:bg-gray-100 text-gray-700"
                     }`}
@@ -182,12 +173,12 @@ export function MenupageView() {
                     </div>
                     <span
                       className={`txt_no ${
-                        selectedCategory === "Featured"
+                        selectedCategory === FEATURED
                           ? "text-white"
                           : "text-gray-600"
                       }`}
                     >
-                      {getCategoryItemCount("Featured")}
+                      {products.filter((p) => p.discountActive).length}
                     </span>
                   </button>
                 </li>
@@ -196,9 +187,9 @@ export function MenupageView() {
                 <li>
                   <button
                     type="button"
-                    onClick={() => setSelectedCategory("All")}
+                    onClick={() => setSelectedCategory(ALL_CATEGORIES)}
                     className={`btn_menu py-2 px-2 flex justify-between align-center w-full transition-all cursor-pointer border-none text-left ${
-                      selectedCategory === "All" || selectedCategory === "all"
+                      selectedCategory === ALL_CATEGORIES
                         ? "bg-[#A1255B] text-white shadow-2xs font-bold"
                         : "hover:bg-gray-100 text-gray-700"
                     }`}
@@ -211,141 +202,45 @@ export function MenupageView() {
                         width={16}
                         height={16}
                         className={`w-4 h-4 object-contain shrink-0 ${
-                          selectedCategory === "All" || selectedCategory === "all" ? "brightness-0 invert" : ""
+                          selectedCategory === ALL_CATEGORIES ? "brightness-0 invert" : ""
                         }`}
                       />
                       <span className="truncate">{t("All Products")}</span>
                     </div>
                     <span
                       className={`txt_no ${
-                        selectedCategory === "All" || selectedCategory === "all"
+                        selectedCategory === ALL_CATEGORIES
                           ? "text-white"
                           : "text-gray-600"
                       }`}
                     >
-                      {getCategoryItemCount("All")}
+                      {categories.reduce((sum, c) => sum + c.count, 0)}
                     </span>
                   </button>
                 </li>
 
                 {/* Expandable Accordion Main Categories */}
-                {MAIN_CATEGORIES.map((main) => {
-                  const isMainSelected = selectedCategory.toLowerCase() === main.name.toLowerCase();
-                  const isExpanded = Boolean(expandedMains[main.id]);
-                  const mainCount = getCategoryItemCount(main.name);
-
+                {/* Categories, flat — the API has no parent/child relationship between them. */}
+                {categories.map((category) => {
+                  const isSelected = selectedCategory === category.id;
                   return (
-                    <li key={main.id} className="pt-1.5 border-t border-gray-100 first:border-none first:pt-0">
-                      {/* Main Category Row */}
-                      <div
-                        onClick={() => {
-                          setSelectedCategory(main.name);
-                          setExpandedMains((prev) => ({ ...prev, [main.id]: !prev[main.id] }));
-                        }}
-                        className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
-                          isMainSelected
-                            ? "bg-[#A1255B] text-white shadow-2xs"
-                            : "hover:bg-gray-100 text-gray-800"
+                    <li key={category.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCategory(category.id)}
+                        className={`btn_menu py-2 px-2 flex justify-between align-center w-full transition-all cursor-pointer border-none text-left ${
+                          isSelected
+                            ? "bg-[#A1255B] text-white shadow-2xs font-bold"
+                            : "hover:bg-gray-100 text-gray-700"
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0 truncate">
-                          {main.icon && (
-                            <Image
-                              src={main.icon}
-                              alt=""
-                              width={16}
-                              height={16}
-                              className={`w-4 h-4 object-contain shrink-0 ${
-                                isMainSelected ? "brightness-0 invert" : ""
-                              }`}
-                            />
-                          )}
-                          <span className="truncate">{t(main.name)}</span>
+                          <span className="truncate">{t(category.name)}</span>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={(e) => toggleExpand(main.id, e)}
-                            className={`p-1 rounded-full cursor-pointer border-none flex items-center justify-center ${
-                              isMainSelected ? "text-white" : "text-gray-400 hover:text-gray-700"
-                            }`}
-                          >
-                            <ChevronDown
-                              className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                                isExpanded ? "rotate-180" : ""
-                              }`}
-                            />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Accordion Subcategories List (Indented under Main Category) */}
-                      {isExpanded && (
-                        <ul className="space-y-1 mt-1 pl-3">
-                          {/* All Subcategory Item */}
-                          <li>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedCategory(main.name)}
-                              className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border-none text-left ${
-                                isMainSelected
-                                  ? "text-[#A1255B] font-bold"
-                                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0 truncate">
-                                {main.icon && (
-                                  <Image
-                                    src={main.icon}
-                                    alt=""
-                                    width={14}
-                                    height={14}
-                                    className="w-3.5 h-3.5 object-contain shrink-0 opacity-70"
-                                  />
-                                )}
-                                <span className="truncate">{t("All")} {t(main.name)}</span>
-                              </div>
-                              <span className="text-[10px] text-gray-400 shrink-0">({mainCount})</span>
-                            </button>
-                          </li>
-
-                          {/* Subcategory List Items */}
-                          {main.subCategories.map((sub) => {
-                            const isSubSelected = selectedCategory.toLowerCase() === sub.name.toLowerCase();
-                            const subCount = getCategoryItemCount(sub.name);
-
-                            return (
-                              <li key={sub.id}>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedCategory(sub.name)}
-                                  className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border-none text-left ${
-                                    isSubSelected
-                                      ? "bg-[#A1255B] text-white font-extrabold shadow-2xs"
-                                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-2 min-w-0 truncate">
-                                    {sub.icon && (
-                                      <Image
-                                        src={sub.icon}
-                                        alt=""
-                                        width={16}
-                                        height={16}
-                                        className={`w-4 h-4 object-contain shrink-0 ${
-                                          isSubSelected ? "brightness-0 invert" : ""
-                                        }`}
-                                      />
-                                    )}
-                                    <span className="truncate">{t(sub.name)}</span>
-                                  </div>
-                                  <span className={`text-[10px] shrink-0 ${isSubSelected ? "text-white/80 font-bold" : "text-gray-400"}`}>({subCount})</span>
-                                </button>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
+                        <span className={`txt_no ${isSelected ? "text-white" : "text-gray-600"}`}>
+                          {category.count}
+                        </span>
+                      </button>
                     </li>
                   );
                 })}
@@ -358,20 +253,8 @@ export function MenupageView() {
             
             {/* Product Card Grid (3 Columns on Desktop) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortedProducts.map((item) => (
-                <Card
-                  key={item.id}
-                  id={item.id}
-                  title={item.title}
-                  price={item.price}
-                  originalPrice={item.originalPrice}
-                  discountType={item.discountType}
-                  discountAmount={item.discountAmount}
-                  promoEndDate={item.promoEndDate}
-                  promoDaysLeft={item.promoDaysLeft}
-                  category={item.category}
-                  image={item.image}
-                />
+              {sortedProducts.map((product) => (
+                <Card key={product.id} product={product} />
               ))}
             </div>
 

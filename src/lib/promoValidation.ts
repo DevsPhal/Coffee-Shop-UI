@@ -66,12 +66,14 @@ export function calculatePromoTimeLeft(
     const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
     if (daysLeft <= 0) {
-      // Old promotion expired: delete expired promo state and add new promotion from 15 days
+      // The window has closed. Report it honestly instead of inventing a fresh one — the
+      // API's discountActive is what decides whether the price is still discounted, and a
+      // fabricated "15 days left" would show customers a countdown that does not exist.
       return {
-        isValid: true,
-        daysLeft: 15,
-        displayText: "15 days left",
-        status: "safe",
+        isValid: false,
+        daysLeft: 0,
+        displayText: "Promotion ended",
+        status: "expired",
       };
     }
 
@@ -103,12 +105,14 @@ export function calculatePromoTimeLeft(
     }
 
     if (days <= 0) {
-      // Old promotion expired: delete expired promo state and add new promotion from 15 days
+      // The window has closed. Report it honestly instead of inventing a fresh one — the
+      // API's discountActive is what decides whether the price is still discounted, and a
+      // fabricated "15 days left" would show customers a countdown that does not exist.
       return {
-        isValid: true,
-        daysLeft: 15,
-        displayText: "15 days left",
-        status: "safe",
+        isValid: false,
+        daysLeft: 0,
+        displayText: "Promotion ended",
+        status: "expired",
       };
     }
 

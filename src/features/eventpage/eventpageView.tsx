@@ -2,200 +2,70 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import { CalendarDays } from "lucide-react";
+import { Modal, ModalContent } from "@/components/ui/modal";
 import { useLanguage } from "@/components/ui/translatetokhmer";
+import { useListEventsQuery } from "@/store/api/catalogApi";
+import { apiErrorMessage } from "@/store/api/baseApi";
+import type { PublicEventResponse } from "@/store/api/types";
 import "@/app/globals.scss";
 
-interface EventItem {
-  id: string;
-  title: string;
-  description: string;
-  image: string;
-  colSpan?: string;
-  link?: string;
-}
-
-const socialLinks = [
-  { label: "", href: "#" },
-  { label: "", href: "https://www.facebook.com/profile.php?id=61573086337988", icon: "/icons/facebook.svg" },
-  { label: "", href: "#", icon: "/icons/tiktok.svg" },
-];
-
-// Extract Facebook link from socialLinks array
-const facebookSocialLink = socialLinks.find((item) => item.icon?.includes("facebook"))?.href || socialLinks[1]?.href || "#";
-
-const EVENT_ITEMS: EventItem[] = [
-  {
-    id: "5",
-    title: "590St MLBB Tournament",
-    description:
-      "Join our exciting 590St Mobile Legends: Bang Bang tournament and win exclusive prizes!",
-    image: "/images/event.png",
-    colSpan: "span_col_2",
-    link: facebookSocialLink,
-  },
-  {
-    id: "1",
-    title: "Khmer New Year Celebration",
-    description:
-      "Celebrate Sankranta Khmer New Year with traditional games, festive coffee specials, and joyful Khmer music!",
-    image: "/images/newyear.png",
-    colSpan: "span_col_1",
-    link: facebookSocialLink,
-  },
-  {
-    id: "2",
-    title: "Night Enjoying with Song of DJZ",
-    description:
-      "Enjoy relaxing music performances while sipping handcrafted coffee.",
-    image: "/images/music.png",
-    colSpan: "span_col_1",
-    link: facebookSocialLink,
-  },
-  {
-    id: "4",
-    title: "Chess Master",
-    description:
-      "Gather with friends for fun board game matches and special drink discounts.",
-    image: "/images/chess.jpg",
-    colSpan: "span_col_1",
-    link: facebookSocialLink,
-  },
-  {
-    id: "6",
-    title: "Party Together",
-    description:
-      "Indulge in freshly baked French croissants paired perfectly with cold brews.",
-    image: "/images/beer.jpg",
-    colSpan: "span_col_1",
-    link: facebookSocialLink,
-  },
-  {
-    id: "7",
-    title: "Weekend Study & Chill",
-    description:
-      "Relax, work, or hang out in a cozy atmosphere with free high-speed Wi-Fi.",
-    image: "/images/590st.jpg",
-    colSpan: "span_col_2",
-    link: facebookSocialLink,
-  },
-];
+const eventDate = (value: string) => new Date(`${value}+07:00`).toLocaleString("en-GB", {
+  timeZone: "Asia/Phnom_Penh", dateStyle: "medium", timeStyle: "short",
+});
 
 export function EventpageView() {
-  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const { t } = useLanguage();
+  const { data: events = [], isLoading, error, refetch } = useListEventsQuery(undefined, {
+    pollingInterval: 30000, refetchOnMountOrArgChange: true,
+  });
+  const selected = events.find((event) => event.id === selectedId);
+  const imageFor = (event: PublicEventResponse) => event.imageUrl || "/images/590st cafe.jpg";
 
   return (
     <div className="events_container">
       <div className="events_wrapper">
         <div className="header_section">
           <h1 className="header_title">{t("Events at 590st Cafe")}</h1>
-          <p className="header_description">
-            {t("Discover our vibrant community gatherings, esports tournaments, live coffee brewing sessions, and special celebrations at 590st Cafe.")}
-          </p>
+          <p className="header_description">{t("Discover our upcoming events and celebrations.")}</p>
         </div>
+        {isLoading && <p role="status">{t("Loading events...")}</p>}
+        {error && <div role="alert" className="rounded-xl border border-red-200 p-4 text-red-700">
+          <p>{apiErrorMessage(error as never, "Could not load events.")}</p>
+          <button type="button" onClick={() => { void refetch(); }} className="mt-2 underline">{t("Try again")}</button>
+        </div>}
+        {!isLoading && !error && events.length === 0 && <p className="py-10 text-center text-gray-500">
+          {t("No upcoming events yet. Check back soon!")}
+        </p>}
         <div className="bento_grid">
-          {EVENT_ITEMS.map((item) => {
-            const targetLink = item.link || facebookSocialLink;
-
-            const cardContent = (
-              <>
-                <Image
-                  src={item.image}
-                  alt={t(item.title)}
-                  fill
-                  unoptimized
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                  className="card_image"
-                />
-                <div className="card_overlay" />
-                <div className="card_content">
-                  <h3 className="card_title text-white font-bold text-lg" style={{ color: "#ffffff" }}>{t(item.title)}</h3>
-                  <p className="card_description">{t(item.description)}</p>
-                </div>
-              </>
-            );
-
-            if (targetLink && targetLink !== "#") {
-              return (
-                <a
-                  key={item.id}
-                  href={targetLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`event_card ${item.colSpan || "span_col_1"}`}
-                >
-                  {cardContent}
-                </a>
-              );
-            }
-
-            return (
-              <div
-                key={item.id}
-                onClick={() => setSelectedEvent(item)}
-                className={`event_card ${item.colSpan || "span_col_1"}`}
-              >
-                {cardContent}
+          {events.map((event, index) => (
+            <button type="button" key={event.id} onClick={() => setSelectedId(event.id)}
+              className={`event_card text-left ${index % 5 === 0 ? "span_col_2" : "span_col_1"}`}>
+              <Image src={imageFor(event)} alt={event.title} fill unoptimized
+                sizes="(max-width: 768px) 100vw, 50vw" className="card_image" />
+              <div className="card_overlay" />
+              <div className="card_content">
+                <h3 className="card_title text-lg font-bold text-white" style={{ color: "#fff" }}>{event.title}</h3>
+                <p className="card_description line-clamp-2">{event.description}</p>
+                <p className="mt-2 flex items-center gap-2 text-xs text-white"><CalendarDays className="h-4 w-4" />{eventDate(event.startAt)}</p>
               </div>
-            );
-          })}
+            </button>
+          ))}
         </div>
       </div>
-
-      {selectedEvent && (
-        <div
-          className="modal_backdrop"
-          onClick={() => setSelectedEvent(null)}
-        >
-          <div
-            className="modal_container"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={() => setSelectedEvent(null)}
-              className="modal_close-btn"
-            >
-              ✕
-            </button>
-
-            <div className="modal_image-wrapper">
-              <Image
-                src={selectedEvent.image}
-                alt={t(selectedEvent.title)}
-                fill
-                unoptimized
-                className="modal_image"
-              />
+      <Modal open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelectedId(null); }}>
+        <ModalContent className="max-w-lg overflow-hidden rounded-2xl p-0" aria-label={selected?.title}>
+          {selected && <>
+            <div className="relative h-56"><Image src={imageFor(selected)} alt={selected.title} fill unoptimized className="object-cover" /></div>
+            <div className="space-y-3 p-6">
+              <h2 className="text-xl font-bold">{selected.title}</h2>
+              <p className="text-sm text-gray-500">{eventDate(selected.startAt)} – {eventDate(selected.endAt)}</p>
+              <p className="whitespace-pre-wrap text-sm text-gray-700">{selected.description}</p>
             </div>
-
-            <div className="modal_body">
-              <h2 className="modal_title">{t(selectedEvent.title)}</h2>
-              <p className="modal_description">{t(selectedEvent.description)}</p>
-            </div>
-
-            <div className="modal_footer">
-              {(selectedEvent.link || facebookSocialLink) && (
-                <a
-                  href={selectedEvent.link || facebookSocialLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="modal_action_btn modal_action_facebook"
-                >
-                  {t("View on Facebook")}
-                </a>
-              )}
-              <button
-                type="button"
-                onClick={() => setSelectedEvent(null)}
-                className="modal_action_btn"
-              >
-                {t("Close")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

@@ -6,7 +6,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CategoryDropdown } from "@/components/ui";
-import { PRODUCTS, Product, getResolvedProductImage, filterProductsByCategory, getCategoryItemCount, getItemCustomizationConfig } from "@/data/products";
+import { ALL_CATEGORIES } from "@/components/ui/CategoryDropdown";
+import { resolveProductImage, toStoreProduct, type StoreProduct } from "@/store/api/productAdapter";
+import { useCatalog, useCategories } from "@/store/api/useCatalog";
+import type { SizeSelection } from "@/components/ui/SelectSizeModal";
 import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { ShoppingBag, ChevronRight, ShoppingCart, Plus, Check, Search, Clock } from "lucide-react";
@@ -44,10 +47,10 @@ const CATEGORY_ICONS: Record<string, string> = {
 };
 
 export interface PhoneCardProps {
-  product: Product;
+  product: StoreProduct;
   isSelected?: boolean;
   onSelect?: () => void;
-  onOpenInfo?: (product: Product) => void;
+  onOpenInfo?: (product: StoreProduct) => void;
 }
 
 export function PhoneCard({
@@ -61,53 +64,27 @@ export function PhoneCard({
   const [added, setAdded] = useState(false);
   const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
 
-  const imgSrc = getResolvedProductImage(product.id, product.image);
-  const customizationConfig = getItemCustomizationConfig(product.title, product.category);
+  const imgSrc = resolveProductImage(product.image);
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
-
-    // If item has size or drink customization options, open modal popup
-    if (
-      customizationConfig.hasSize ||
-      customizationConfig.hasIce ||
-      customizationConfig.hasSugar ||
-      customizationConfig.hasMilk
-    ) {
-      setIsSizeModalOpen(true);
-      return;
-    }
-
-    // Otherwise (e.g. Topping / Fried Egg), directly add to cart
-    addItem(
-      {
-        id: product.id,
-        title: product.title,
-        price: product.price,
-        image: imgSrc,
-      },
-      false
-    );
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1200);
+    setIsSizeModalOpen(true);
   };
 
-  const handleConfirmSizeModal = (
-    chosenSize: string,
-    chosenIce?: string,
-    chosenSugar?: string,
-    chosenMilk?: string
-  ) => {
+  const handleConfirmSizeModal = (selection: SizeSelection) => {
     addItem(
       {
-        id: product.id,
+        productId: product.id,
         title: product.title,
-        price: product.price,
-        size: chosenSize,
-        iceLevel: chosenIce,
-        sugarLevel: chosenSugar,
-        milkType: chosenMilk,
-        image: imgSrc,
+        image: product.image,
+        unitPrice: selection.unitPrice,
+        originalUnitPrice: product.originalPrice,
+        quantity: 1,
+        sizeOptionId: selection.sizeOptionId,
+        sizeName: selection.sizeName,
+        iceLevel: selection.iceLevel,
+        sugarLevel: selection.sugarLevel,
+        milkType: selection.milkType,
       },
       false
     );
@@ -122,13 +99,12 @@ export function PhoneCard({
     product.discountAmount
   );
 
-  const promoResult = calculatePromoTimeLeft(product.promoEndDate, product.promoDaysLeft);
-  const isPromotion =
-    (discountInfo.hasDiscount ||
-      (product.originalPrice !== undefined && product.originalPrice > product.price) ||
-      Boolean(product.promoDaysLeft) ||
-      Boolean(product.promoEndDate)) &&
-    promoResult.isValid;
+  // The discount window comes from the API, so there is no separate "days left" field.
+  const promoResult = calculatePromoTimeLeft(product.discountEndsAt, undefined);
+
+  // An open-ended discount (no end date) is still a discount — only the countdown needs one.
+  const isPromotion = product.discountActive;
+  const showCountdown = isPromotion && promoResult.isValid;
 
   const displayPromoTime = promoResult.displayText;
   const promoStatus = promoResult.status;
@@ -155,7 +131,7 @@ export function PhoneCard({
               {discountInfo.badgeText}
             </span>
           )}
-          {isPromotion && (
+          {showCountdown && (
             <div
               className={`promo_clock_badge promo_clock_badge_phone promo_clock_${promoStatus}`}
               title={`Promotion ends in ${displayPromoTime}`}
@@ -223,13 +199,7 @@ export function PhoneCard({
       <SelectSizeModal
         open={isSizeModalOpen}
         onOpenChange={setIsSizeModalOpen}
-        product={{
-          id: product.id,
-          title: product.title,
-          price: product.price,
-          category: product.category,
-          image: imgSrc,
-        }}
+        product={product}
         actionType="cart"
         onConfirm={handleConfirmSizeModal}
       />
@@ -242,30 +212,29 @@ export function MenupageView() {
   const queryCategory = searchParams.get("category");
   const { openCart, addItem, subtotal, totalCount } = useCart();
   const { t } = useLanguage();
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedId, setSelectedId] = useState<string>("1");
-  const [activeModalProduct, setActiveModalProduct] = useState<Product | null>(null);
+  const [activeModalProduct, setActiveModalProduct] = useState<StoreProduct | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  const { categories } = useCategories();
+  const { products } = useCatalog(
+    selectedCategory === ALL_CATEGORIES ? undefined : selectedCategory
+  );
+
+  // Real categories from the catalogue; "All" is the only client-side entry.
   const displayCategories = [
-    "All",
-    "Fresh Drink",
-    "Iced Coffee",
-    "Hot Coffee",
-    "Iced Tea",
-    "Hot Tea",
-    "Beverage",
-    "Beer",
-    "Soft Drink",
-    "Pure Water",
-    "Snack",
-    "Noddle",
-    "Topping",
+    {
+      id: ALL_CATEGORIES,
+      name: ALL_CATEGORIES,
+      count: categories.reduce((sum, c) => sum + c.count, 0),
+    },
+    ...categories,
   ];
 
   useEffect(() => {
@@ -288,7 +257,16 @@ export function MenupageView() {
     };
   }, [activeModalProduct]);
 
-  const filteredProducts = filterProductsByCategory(selectedCategory, searchQuery);
+  const filteredProducts = products
+    .filter((product) => {
+      const term = searchQuery.trim().toLowerCase();
+      if (!term) return true;
+      return (
+        product.name.toLowerCase().includes(term) ||
+        product.categoryName.toLowerCase().includes(term)
+      );
+    })
+    .map(toStoreProduct);
 
   return (
     <div className="menu-view-container relative w-full max-w-full overflow-x-hidden box-border">
@@ -308,15 +286,14 @@ export function MenupageView() {
         <div className="category_desktop_row flex-col sm:flex-row items-center justify-between gap-4 my-6 px-2">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {displayCategories.map((cat) => {
-              const isSelected = selectedCategory === cat;
-              const count = getCategoryItemCount(cat);
-              const iconSrc = CATEGORY_ICONS[cat.toLowerCase()];
+              const isSelected = selectedCategory === cat.id;
+              const iconSrc = CATEGORY_ICONS[cat.name.toLowerCase()];
 
               return (
                 <button
-                  key={cat}
+                  key={cat.id}
                   type="button"
-                  onClick={() => setSelectedCategory(cat)}
+                  onClick={() => setSelectedCategory(cat.id)}
                   className={`category_btn ${isSelected ? "active" : ""}`}
                 >
                   {iconSrc && (
@@ -328,10 +305,8 @@ export function MenupageView() {
                       className="category_btn_icon"
                     />
                   )}
-                  <span>{t(cat)}</span>
-                  <span className="category_badge">
-                    {count}
-                  </span>
+                  <span>{t(cat.name)}</span>
+                  <span className="category_badge">{cat.count}</span>
                 </button>
               );
             })}
@@ -379,7 +354,6 @@ export function MenupageView() {
             <CategoryDropdown
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
-              getCategoryCount={getCategoryItemCount}
             />
           </div>
 
@@ -449,13 +423,13 @@ export function MenupageView() {
         );
 
         const modalPromoResult = calculatePromoTimeLeft(
-          activeModalProduct.promoEndDate,
-          activeModalProduct.promoDaysLeft
+          activeModalProduct.discountEndsAt,
+          undefined
         );
 
         const isModalPromotion =
-          (modalDiscountInfo.hasDiscount || (activeModalProduct.originalPrice !== undefined && activeModalProduct.originalPrice > activeModalProduct.price)) &&
-          modalPromoResult.isValid;
+          modalDiscountInfo.hasDiscount || (activeModalProduct.originalPrice !== undefined && activeModalProduct.originalPrice > activeModalProduct.price);
+        const showModalCountdown = isModalPromotion && modalPromoResult.isValid;
 
         return createPortal(
           <div
@@ -476,7 +450,7 @@ export function MenupageView() {
 
               <div className="modal-img-container relative">
                 <Image
-                  src={getResolvedProductImage(activeModalProduct.id, activeModalProduct.image)}
+                  src={resolveProductImage(activeModalProduct.image)}
                   alt={activeModalProduct.title}
                   fill
                   unoptimized
@@ -487,7 +461,7 @@ export function MenupageView() {
                     {modalDiscountInfo.badgeText}
                   </span>
                 )}
-                {isModalPromotion && (
+                {showModalCountdown && (
                   <div
                     className={`promo_clock_badge promo_clock_badge_phone promo_clock_${modalPromoResult.status}`}
                     title={`Promotion ends in ${modalPromoResult.displayText}`}
@@ -521,9 +495,7 @@ export function MenupageView() {
 
               <div className="modal-action-wrapper space-y-2 pt-2">
                 <Link
-                  href={`/product?id=${activeModalProduct.id}&title=${encodeURIComponent(
-                    activeModalProduct.title
-                  )}&price=${activeModalProduct.price}${activeModalProduct.originalPrice ? `&originalPrice=${activeModalProduct.originalPrice}` : ""}${activeModalProduct.discountType ? `&discountType=${activeModalProduct.discountType}` : ""}${activeModalProduct.discountAmount !== undefined ? `&discountAmount=${activeModalProduct.discountAmount}` : ""}${activeModalProduct.promoEndDate ? `&promoEndDate=${encodeURIComponent(activeModalProduct.promoEndDate)}` : ""}${activeModalProduct.promoDaysLeft ? `&promoDaysLeft=${encodeURIComponent(activeModalProduct.promoDaysLeft)}` : ""}&category=${encodeURIComponent(activeModalProduct.category)}&image=${encodeURIComponent(getResolvedProductImage(activeModalProduct.id, activeModalProduct.image))}`}
+                  href={`/product?id=${activeModalProduct.id}`}
                   className="modal-view-btn"
                 >
                   {t("VIEW FULL DETAILS")}

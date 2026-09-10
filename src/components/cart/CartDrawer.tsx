@@ -4,8 +4,16 @@ import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
-import { getItemCustomizationConfig, getProductByIdOrTitle } from "@/data/products";
-import { calculateSizePrice } from "@/store/useCartStore";
+import {
+  ICE_CHOICES,
+  ICE_LABELS,
+  MILK_CHOICES,
+  MILK_LABELS,
+  SUGAR_CHOICES,
+  SUGAR_LABELS,
+} from "@/store/api/optionMapping";
+import { resolveProductImage } from "@/store/api/productAdapter";
+import { useCatalog } from "@/store/api/useCatalog";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { ChevronDown, Check } from "lucide-react";
 import "@/app/globals.scss";
@@ -183,6 +191,10 @@ export function CartDrawer() {
     subtotal,
   } = useCart();
 
+  // Shared with the rest of the storefront through RTK Query's cache — this does not fire a
+  // second request. It supplies the size options a cart line can be switched between.
+  const { products } = useCatalog();
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -269,101 +281,119 @@ export function CartDrawer() {
               </div>
             ) : (
               <div className="cart_drawer_items_list">
-                {items.map((item, idx) => (
-                  <div key={`${item.id}-${idx}`} className="cart_item">
-                    {/* Thumbnail */}
-                    <div className="cart_item_thumbnail">
-                      {item.image ? (
+                {items.map((item) => {
+                  // The catalogue is already cached by RTK Query, so this lookup costs no
+                  // extra request — and it is where the real size options and their price
+                  // deltas come from.
+                  const product = products.find((p) => p.id === item.productId);
+                  const sizeOptions = product?.sizeOptions ?? [];
+
+                  return (
+                    <div key={item.lineId} className="cart_item">
+                      {/* Thumbnail */}
+                      <div className="cart_item_thumbnail">
                         <Image
-                          src={item.image}
+                          src={resolveProductImage(item.image)}
                           alt={t(item.title)}
                           fill
+                          unoptimized
                           className="object-cover"
                         />
-                      ) : (
-                        <div className="cart_item_fallback-img" />
-                      )}
-                    </div>
-
-                    {/* Details */}
-                    <div className="cart_item_details">
-                      <h3 className="cart_item_title">{t(item.title)}</h3>
-
-                      {/* Customization Selectors */}
-                      {(() => {
-                        const config = getItemCustomizationConfig(item.title);
-                        return (
-                          <div className="flex flex-wrap items-center gap-1.5 my-1.5">
-                            {config.hasSize && (
-                              <div className="flex items-center gap-1">
-                                <span className="text-[11px] font-semibold text-gray-500">{t("Size:")}</span>
-                                <CustomDrawerSizeDropdown
-                                  value={(item.size as "S" | "M" | "L") || "M"}
-                                  options={config.sizeOptions}
-                                  onChange={(newSize) => updateSize(item.id, newSize)}
-                                />
-                              </div>
-                            )}
-
-                            {config.hasIce && (
-                              <CustomDrawerOptionDropdown
-                                labelPrefix={t("Ice")}
-                                value={item.iceLevel || "Normal"}
-                                options={["Normal", "Less", "No Ice"]}
-                                onChange={(val) => updateIceLevel(item.id, val)}
-                              />
-                            )}
-
-                            {config.hasSugar && (
-                              <CustomDrawerOptionDropdown
-                                labelPrefix={t("Sugar")}
-                                value={item.sugarLevel || "Normal"}
-                                options={["Normal", "Less"]}
-                                onChange={(val) => updateSugarLevel(item.id, val)}
-                              />
-                            )}
-
-                            {config.hasMilk && (
-                              <CustomDrawerOptionDropdown
-                                labelPrefix={t("Milk")}
-                                value={item.milkType || "Normal"}
-                                options={["Normal", "Less Milk", "No Milk"]}
-                                onChange={(val) => updateMilkType(item.id, val)}
-                              />
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      {/* Quantity Pill */}
-                      <div className="cart_quantity_pill">
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.id, -1)}
-                          className="cart_quantity_btn"
-                          aria-label="Decrease quantity"
-                        >
-                          –
-                        </button>
-                        <span className="cart_quantity_value">
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.id, 1)}
-                          className="cart_quantity_btn"
-                          aria-label="Increase quantity"
-                        >
-                          +
-                        </button>
                       </div>
 
-                      <p className="cart_item-price font-extrabold text-[#A1255B]" suppressHydrationWarning>
-                        ${item.price.toFixed(2)}
-                      </p>
+                      {/* Details */}
+                      <div className="cart_item_details">
+                        <h3 className="cart_item_title">{t(item.title)}</h3>
+
+                        <div className="flex flex-wrap items-center gap-1.5 my-1.5">
+                          {sizeOptions.length > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-[11px] font-semibold text-gray-500">
+                                {t("Size:")}
+                              </span>
+                              <CustomDrawerSizeDropdown
+                                value={item.sizeName ?? sizeOptions[0].name}
+                                options={sizeOptions.map((o) => o.name)}
+                                onChange={(name) => {
+                                  const option = sizeOptions.find((o) => o.name === name);
+                                  if (!option || !product) return;
+                                  updateSize(
+                                    item.lineId,
+                                    option.id,
+                                    option.name,
+                                    product.price + Number(option.priceDelta)
+                                  );
+                                }}
+                              />
+                            </div>
+                          )}
+
+                          <CustomDrawerOptionDropdown
+                            labelPrefix={t("Ice")}
+                            value={ICE_LABELS[item.iceLevel ?? "HUNDRED"]}
+                            options={ICE_CHOICES.map((c) => ICE_LABELS[c])}
+                            onChange={(label) => {
+                              const level = ICE_CHOICES.find((c) => ICE_LABELS[c] === label);
+                              if (level) updateIceLevel(item.lineId, level);
+                            }}
+                          />
+
+                          <CustomDrawerOptionDropdown
+                            labelPrefix={t("Sugar")}
+                            value={SUGAR_LABELS[item.sugarLevel ?? "HUNDRED"]}
+                            options={SUGAR_CHOICES.map((c) => SUGAR_LABELS[c])}
+                            onChange={(label) => {
+                              const level = SUGAR_CHOICES.find(
+                                (c) => SUGAR_LABELS[c] === label
+                              );
+                              if (level) updateSugarLevel(item.lineId, level);
+                            }}
+                          />
+
+                          <CustomDrawerOptionDropdown
+                            labelPrefix={t("Milk")}
+                            value={MILK_LABELS[item.milkType ?? "WHOLE_MILK"]}
+                            options={MILK_CHOICES.map((c) => MILK_LABELS[c])}
+                            onChange={(label) => {
+                              const kind = MILK_CHOICES.find(
+                                (c) => MILK_LABELS[c] === label
+                              );
+                              if (kind) updateMilkType(item.lineId, kind);
+                            }}
+                          />
+                        </div>
+
+                        {/* Quantity Pill */}
+                        <div className="cart_quantity_pill">
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.lineId, -1)}
+                            className="cart_quantity_btn"
+                            aria-label="Decrease quantity"
+                          >
+                            –
+                          </button>
+                          <span className="cart_quantity_value">{item.quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.lineId, 1)}
+                            className="cart_quantity_btn"
+                            aria-label="Increase quantity"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        <p
+                          className="cart_item-price font-extrabold text-[#A1255B]"
+                          suppressHydrationWarning
+                        >
+                          ${(item.unitPrice * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -371,11 +401,11 @@ export function CartDrawer() {
           {/* Footer */}
           <div className="cart_drawer_footer">
             {(() => {
+              // Pre-discount total, so the drawer can show what the customer saved. The
+              // line already carries its own original unit price from the API.
               const fullSubtotal = items.reduce((acc, item) => {
-                const prod = getProductByIdOrTitle(item.id, item.title);
-                const origPrice = item.originalPrice ?? prod?.originalPrice;
-                const itemOrigPrice = (origPrice && origPrice > item.price) ? calculateSizePrice(origPrice, item.size) : item.price;
-                return acc + itemOrigPrice * item.quantity;
+                const original = item.originalUnitPrice ?? item.unitPrice;
+                return acc + Math.max(original, item.unitPrice) * item.quantity;
               }, 0);
 
               const totalDiscount = Math.max(0, fullSubtotal - subtotal);

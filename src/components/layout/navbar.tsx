@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MAIN_CATEGORIES } from "@/data/products";
 import "@/app/globals.scss";
 
 import { useCart } from "@/context/CartContext";

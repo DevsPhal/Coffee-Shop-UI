@@ -9,21 +9,13 @@ import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { Clock } from "lucide-react";
 import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidation";
-import { getResolvedProductImage, getItemCustomizationConfig } from "@/data/products";
-import SelectSizeModal from "@/components/ui/SelectSizeModal";
+import { resolveProductImage, discountPercent, type StoreProduct } from "@/store/api/productAdapter";
+import SelectSizeModal, { type SizeSelection } from "@/components/ui/SelectSizeModal";
 import "@/app/globals.scss";
 
 export interface CardProps {
-  id?: string;
-  title: string;
-  price?: number;
-  originalPrice?: number;
-  discountType?: "percentage" | "fixed";
-  discountAmount?: number;
-  promoEndDate?: string | Date;
-  promoDaysLeft?: string;
-  category?: string;
-  image?: string | null;
+  /** The product straight from /api/customer/products, via toStoreProduct. */
+  product: StoreProduct;
   href?: string;
   variant?: "default" | "phone";
   isSelected?: boolean;
@@ -33,16 +25,7 @@ export interface CardProps {
 }
 
 export function Card({
-  id,
-  title,
-  price = 2.0,
-  originalPrice,
-  discountType,
-  discountAmount,
-  promoEndDate,
-  promoDaysLeft,
-  category,
-  image,
+  product,
   href,
   variant = "default",
   isSelected = false,
@@ -50,6 +33,9 @@ export function Card({
   onBuyNow,
   onOpenInfo,
 }: CardProps) {
+  const { id, title, price, originalPrice, discountType, discountAmount, category } = product;
+  const promoEndDate = product.discountEndsAt;
+  const promoDaysLeft = undefined as string | undefined;
   const router = useRouter();
   const { addItem } = useCart();
   const { t } = useLanguage();
@@ -57,57 +43,34 @@ export function Card({
   const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
   const [modalActionType, setModalActionType] = useState<"checkout" | "cart">("cart");
 
-  const imgSrc = getResolvedProductImage(id, image);
+  const imgSrc = resolveProductImage(product.image);
 
   // Format discount badge text (e.g. "-25% OFF" or "-$0.50 OFF")
   const discountInfo = formatDiscountBadge(price, originalPrice, discountType, discountAmount);
 
   // Zod Date Validation & Remaining Days calculation
   const promoResult = calculatePromoTimeLeft(promoEndDate, promoDaysLeft);
+
+  // A discount does not have to be time-boxed — an admin can set "Coca 10% off" with no end
+  // date at all, and that is the common case. So the badge and the struck-through price follow
+  // the discount itself; only the countdown needs a valid end date to show.
   const isPromotion =
-    (discountInfo.hasDiscount || (originalPrice !== undefined && originalPrice > price)) &&
-    promoResult.isValid;
+    discountInfo.hasDiscount || (originalPrice !== undefined && originalPrice > price);
+  const showCountdown = isPromotion && promoResult.isValid;
 
   const displayPromoTime = promoResult.displayText;
   const promoStatus = promoResult.status;
 
-  const targetHref =
-    href ||
-    `/product?id=${encodeURIComponent(id || title)}&title=${encodeURIComponent(
-      title
-    )}&price=${price}${originalPrice ? `&originalPrice=${originalPrice}` : ""}${discountType ? `&discountType=${discountType}` : ""}${discountAmount !== undefined ? `&discountAmount=${discountAmount}` : ""}${promoEndDate ? `&promoEndDate=${encodeURIComponent(String(promoEndDate))}` : ""}${promoDaysLeft ? `&promoDaysLeft=${encodeURIComponent(promoDaysLeft)}` : ""}${category ? `&category=${encodeURIComponent(category)}` : ""}${imgSrc ? `&image=${encodeURIComponent(imgSrc)}` : ""}`;
+  // The product page fetches by id, so there is no need to smuggle every field through the
+  // query string any more — and a stale link can no longer show stale prices.
+  const targetHref = href || `/product?id=${encodeURIComponent(id)}`;
 
+  // Both actions open the customization modal. The old shortcut for "products with no
+  // options" relied on a hardcoded table of which items were drinks; the API carries no such
+  // flag, and ice/sugar/milk are accepted for any product, so the modal always applies.
   const handleOpenAddModal = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    const customizationConfig = getItemCustomizationConfig(title, category);
-
-    // If item has no size/drink customization options (e.g. Topping / Fried Egg), directly add to cart
-    if (
-      !customizationConfig.hasSize &&
-      !customizationConfig.hasIce &&
-      !customizationConfig.hasSugar &&
-      !customizationConfig.hasMilk
-    ) {
-      if (onAddToCart) {
-        onAddToCart();
-      } else {
-        addItem(
-          {
-            id: id || title,
-            title,
-            price,
-            image: imgSrc,
-          },
-          false
-        );
-      }
-      setAdded(true);
-      setTimeout(() => setAdded(false), 1200);
-      return;
-    }
-
     setModalActionType("cart");
     setIsSizeModalOpen(true);
   };
@@ -115,81 +78,34 @@ export function Card({
   const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    const customizationConfig = getItemCustomizationConfig(title, category);
-
-    // If item has no size/drink customization options (e.g. Topping / Fried Egg), directly go to checkout
-    if (
-      !customizationConfig.hasSize &&
-      !customizationConfig.hasIce &&
-      !customizationConfig.hasSugar &&
-      !customizationConfig.hasMilk
-    ) {
-      if (onBuyNow) {
-        onBuyNow();
-      } else {
-        addItem(
-          {
-            id: id || title,
-            title,
-            price,
-            image: imgSrc,
-          },
-          false
-        );
-      }
-      router.push("/checkout");
-      return;
-    }
-
     setModalActionType("checkout");
     setIsSizeModalOpen(true);
   };
 
-  const handleConfirmSizeModal = (
-    chosenSize: string,
-    chosenIce?: string,
-    chosenSugar?: string,
-    chosenMilk?: string
-  ) => {
+  const handleConfirmSizeModal = (selection: SizeSelection) => {
+    addItem(
+      {
+        productId: id,
+        title,
+        image: product.image,
+        unitPrice: selection.unitPrice,
+        originalUnitPrice: originalPrice,
+        quantity: 1,
+        sizeOptionId: selection.sizeOptionId,
+        sizeName: selection.sizeName,
+        iceLevel: selection.iceLevel,
+        sugarLevel: selection.sugarLevel,
+        milkType: selection.milkType,
+      },
+      false
+    );
+
     if (modalActionType === "cart") {
-      if (onAddToCart) {
-        onAddToCart();
-      } else {
-        addItem(
-          {
-            id: id || title,
-            title,
-            price,
-            size: chosenSize,
-            iceLevel: chosenIce,
-            sugarLevel: chosenSugar,
-            milkType: chosenMilk,
-            image: imgSrc,
-          },
-          false
-        );
-      }
+      onAddToCart?.();
       setAdded(true);
       setTimeout(() => setAdded(false), 1200);
     } else {
-      if (onBuyNow) {
-        onBuyNow();
-      } else {
-        addItem(
-          {
-            id: id || title,
-            title,
-            price,
-            size: chosenSize,
-            iceLevel: chosenIce,
-            sugarLevel: chosenSugar,
-            milkType: chosenMilk,
-            image: imgSrc,
-          },
-          false
-        );
-      }
+      onBuyNow?.();
       router.push("/checkout");
     }
   };
@@ -221,7 +137,7 @@ export function Card({
                 {discountInfo.badgeText}
               </span>
             )}
-            {isPromotion && (
+            {showCountdown && (
               <div
                 className={`promo_clock_badge promo_clock_badge_phone promo_clock_${promoStatus}`}
                 title={`Promotion ends in ${displayPromoTime}`}
@@ -295,13 +211,7 @@ export function Card({
         <SelectSizeModal
           open={isSizeModalOpen}
           onOpenChange={setIsSizeModalOpen}
-          product={{
-            id: id || title,
-            title,
-            price,
-            category,
-            image: imgSrc,
-          }}
+          product={product}
           actionType={modalActionType}
           onConfirm={handleConfirmSizeModal}
         />
@@ -330,7 +240,7 @@ export function Card({
           )}
 
           {/* Clock Icon ONLY on Promotion - Top Right */}
-          {isPromotion && (
+          {showCountdown && (
             <div
               className={`promo_clock_badge promo_clock_${promoStatus}`}
               title={`Promotion ends in ${displayPromoTime}`}
@@ -383,13 +293,7 @@ export function Card({
       <SelectSizeModal
         open={isSizeModalOpen}
         onOpenChange={setIsSizeModalOpen}
-        product={{
-          id: id || title,
-          title,
-          price,
-          category,
-          image: imgSrc,
-        }}
+        product={product}
         actionType={modalActionType}
         onConfirm={handleConfirmSizeModal}
       />

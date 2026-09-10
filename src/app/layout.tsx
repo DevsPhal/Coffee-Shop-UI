@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CartProvider } from "@/context/CartContext";
+import { StoreProvider } from "@/store/StoreProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { LanguageProvider } from "@/components/ui/translatetokhmer";
 import ScrollObserver from "@/components/common/ScrollObserver";
@@ -20,16 +21,19 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased font-sans">
       <body className="min-h-full flex flex-col font-sans">
-        <AuthProvider>
-          <CartProvider>
-            <LanguageProvider>
-              <ScrollObserver />
-              <PointerCapturePolyfill />
-              {children}
-              <Toaster />
-            </LanguageProvider>
-          </CartProvider>
-        </AuthProvider>
+        {/* Outermost, so every screen and the other providers can reach the API cache. */}
+        <StoreProvider>
+          <AuthProvider>
+            <CartProvider>
+              <LanguageProvider>
+                <ScrollObserver />
+                <PointerCapturePolyfill />
+                {children}
+                <Toaster />
+              </LanguageProvider>
+            </CartProvider>
+          </AuthProvider>
+        </StoreProvider>
       </body>
     </html>
   );

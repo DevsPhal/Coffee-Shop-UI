@@ -1110,6 +1110,9 @@
 .stepper_flow_line { position: absolute; top: 50%; left: 0; height: 4px; background-color: #A1255B; transform: translateY(-50%); z-index: 0; border-radius: 9999px; transition: all 0.5s ease; }
 .stepper_flow_line_full { width: 100%; background-color: #10b981; }
 .stepper_flow_line_half { width: 50%; }
+/* Order placed but nobody has started it — the line sits on step 1 rather than running ahead
+   of what has actually happened. */
+.stepper_flow_line_start { width: 0%; }
 .stepper_step { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; }
 .stepper_circle { width: 2.5rem; height: 2.5rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.875rem; transition: all 0.3s ease; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
 .stepper_circle_active { background-color: #A1255B; color: #ffffff; }
@@ -1528,6 +1531,9 @@
 .order_status_completed { background-color: #ecfdf5; color: #047857; border-color: #a7f3d0; }
 .order_status_transit { background-color: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
 .order_status_pending { background-color: #fffbeb; color: #b45309; border-color: #fde68a; }
+/* Cancelled used to borrow the blue "transit" pill, which read as in-progress. Blue now means
+   paid/preparing — genuinely in flight — and a called-off order reads as red. */
+.order_status_cancelled { background-color: #fef2f2; color: #b91c1c; border-color: #fecaca; }
 .order_items_box { margin: 10px 0; background-color: #ffffff; padding: 12px 14px; border-radius: 0px; border: 1px solid #f1f5f9; font-size: 0.8125rem; display: flex; flex-direction: column; gap: 6px; }
 .order_item_row { display: flex; justify-content: space-between; color: #334155; }
 .order_item_price { font-weight: 700; color: #0f172a; }

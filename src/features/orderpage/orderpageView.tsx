@@ -5,8 +5,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
-import { getItemCustomizationConfig, getProductByIdOrTitle } from "@/data/products";
-import { calculateSizePrice } from "@/store/useCartStore";
+import {
+  ICE_CHOICES,
+  ICE_LABELS,
+  MILK_CHOICES,
+  MILK_LABELS,
+  SUGAR_CHOICES,
+  SUGAR_LABELS,
+} from "@/store/api/optionMapping";
+import { resolveProductImage } from "@/store/api/productAdapter";
+import { useCatalog } from "@/store/api/useCatalog";
 import { ChevronDown, Check } from "lucide-react";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
@@ -117,7 +125,7 @@ function CustomIceDropdown({
     };
   }, [isOpen]);
 
-  const options = ["Normal", "Less", "No Ice"];
+  const options = ICE_CHOICES.map((c) => ICE_LABELS[c]);
 
   return (
     <div ref={ref} className="relative inline-block text-left">
@@ -181,7 +189,7 @@ function CustomSugarDropdown({
     };
   }, [isOpen]);
 
-  const options = ["Normal", "Less"];
+  const options = SUGAR_CHOICES.map((c) => SUGAR_LABELS[c]);
 
   return (
     <div ref={ref} className="relative inline-block text-left">
@@ -245,7 +253,7 @@ function CustomMilkDropdown({
     };
   }, [isOpen]);
 
-  const options = ["Normal", "Less Milk", "No Milk"];
+  const options = MILK_CHOICES.map((c) => MILK_LABELS[c]);
 
   return (
     <div ref={ref} className="relative inline-block text-left">
@@ -298,6 +306,9 @@ export function OrderpageView() {
     subtotal,
   } = useCart();
 
+  // Cached by RTK Query — shares the catalogue request the rest of the app already made.
+  const { products } = useCatalog();
+
   const handleContinueShopping = (e: React.MouseEvent) => {
     e.preventDefault();
     if (typeof window !== "undefined" && window.innerWidth <= 768) {
@@ -336,107 +347,121 @@ export function OrderpageView() {
               <div className="order_page_table_header_total">{t("Total")}</div>
             </div>
             <div className="order_page_items_list">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="order_page_item_row"
-                >
-                  <div className="order_page_item_product">
-                    <div className="order_page_item_image_wrapper">
-                      {item.image ? (
+              {items.map((item) => {
+                // Sizes and their price deltas belong to the product, so look it up in the
+                // already-cached catalogue rather than storing them on the cart line.
+                const product = products.find((p) => p.id === item.productId);
+                const sizeOptions = product?.sizeOptions ?? [];
+
+                return (
+                  <div key={item.lineId} className="order_page_item_row">
+                    <div className="order_page_item_product">
+                      <div className="order_page_item_image_wrapper">
                         <Image
-                          src={item.image}
+                          src={resolveProductImage(item.image)}
                           alt={item.title}
                           fill
+                          unoptimized
                           className="object-cover"
                         />
-                      ) : null}
+                      </div>
+                      <div className="order_page_item_details">
+                        <h3 className="order_page_item_title">{t(item.title)}</h3>
+                        <div className="flex flex-col items-start gap-1 mt-1 w-full max-w-full">
+                          <CustomIceDropdown
+                            value={ICE_LABELS[item.iceLevel ?? "HUNDRED"]}
+                            onChange={(label) => {
+                              const level = ICE_CHOICES.find(
+                                (c) => ICE_LABELS[c] === label
+                              );
+                              if (level) updateIceLevel(item.lineId, level);
+                            }}
+                          />
+                          <CustomSugarDropdown
+                            value={SUGAR_LABELS[item.sugarLevel ?? "HUNDRED"]}
+                            onChange={(label) => {
+                              const level = SUGAR_CHOICES.find(
+                                (c) => SUGAR_LABELS[c] === label
+                              );
+                              if (level) updateSugarLevel(item.lineId, level);
+                            }}
+                          />
+                          <CustomMilkDropdown
+                            value={MILK_LABELS[item.milkType ?? "WHOLE_MILK"]}
+                            onChange={(label) => {
+                              const kind = MILK_CHOICES.find(
+                                (c) => MILK_LABELS[c] === label
+                              );
+                              if (kind) updateMilkType(item.lineId, kind);
+                            }}
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="order_page_item_details">
-                      <h3 className="order_page_item_title">
-                        {t(item.title)}
-                      </h3>
-                      {(() => {
-                        const config = getItemCustomizationConfig(item.title);
-                        if (!config.hasIce && !config.hasSugar && !config.hasMilk) return null;
-                        return (
-                          <div className="flex flex-col items-start gap-1 mt-1 w-full max-w-full">
-                            {config.hasIce && (
-                              <CustomIceDropdown
-                                value={item.iceLevel || "Normal"}
-                                onChange={(val) => updateIceLevel(item.id, val)}
-                              />
-                            )}
-                            {config.hasSugar && (
-                              <CustomSugarDropdown
-                                value={item.sugarLevel || "100%"}
-                                onChange={(val) => updateSugarLevel(item.id, val)}
-                              />
-                            )}
-                            {config.hasMilk && (
-                              <CustomMilkDropdown
-                                value={item.milkType || "Fresh"}
-                                onChange={(val) => updateMilkType(item.id, val)}
-                              />
-                            )}
-                          </div>
-                        );
-                      })()}
+                    <div
+                      className="order_page_item_price hidden sm:block font-bold text-gray-900"
+                      suppressHydrationWarning
+                    >
+                      ${item.unitPrice.toFixed(2)}
                     </div>
-                  </div>
-                  <div className="order_page_item_price hidden sm:block font-bold text-gray-900" suppressHydrationWarning>
-                    ${item.price.toFixed(2)}
-                  </div>
-                  <div className="order_page_item_quantity">
-                    <div className="order_page_quantity_pill">
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.id, -1)}
-                        className="order_page_quantity_btn"
-                        aria-label="Decrease quantity"
-                      >
-                        –
-                      </button>
-                      <span className="order_page_quantity_val">
-                        {item.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.id, 1)}
-                        className="order_page_quantity_btn"
-                        aria-label="Increase quantity"
-                      >
-                        +
-                      </button>
+                    <div className="order_page_item_quantity">
+                      <div className="order_page_quantity_pill">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.lineId, -1)}
+                          className="order_page_quantity_btn"
+                          aria-label="Decrease quantity"
+                        >
+                          –
+                        </button>
+                        <span className="order_page_quantity_val">{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.lineId, 1)}
+                          className="order_page_quantity_btn"
+                          aria-label="Increase quantity"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="order_page_item_size">
-                    {(() => {
-                      const config = getItemCustomizationConfig(item.title);
-                      if (!config.hasSize) return <span className="text-gray-400 text-xs font-semibold">—</span>;
-                      return (
+                    <div className="order_page_item_size">
+                      {sizeOptions.length === 0 ? (
+                        <span className="text-gray-400 text-xs font-semibold">—</span>
+                      ) : (
                         <CustomSizeDropdown
-                          value={(item.size as "S" | "M" | "L") || "M"}
-                          options={config.sizeOptions}
-                          onChange={(newSize) => updateSize(item.id, newSize)}
+                          value={item.sizeName ?? sizeOptions[0].name}
+                          options={sizeOptions.map((o) => o.name)}
+                          onChange={(name) => {
+                            const option = sizeOptions.find((o) => o.name === name);
+                            if (!option || !product) return;
+                            updateSize(
+                              item.lineId,
+                              option.id,
+                              option.name,
+                              product.price + Number(option.priceDelta)
+                            );
+                          }}
                         />
-                      );
-                    })()}
+                      )}
+                    </div>
+                    <div
+                      className="order_page_item_total font-extrabold text-[#A1255B]"
+                      suppressHydrationWarning
+                    >
+                      ${(item.unitPrice * item.quantity).toFixed(2)}
+                    </div>
                   </div>
-                  <div className="order_page_item_total font-extrabold text-[#A1255B]" suppressHydrationWarning>
-                    ${(item.price * item.quantity).toFixed(2)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
           <div className="order_page_summary_card">
             {(() => {
+              // Pre-discount total; each line carries its own original unit price.
               const fullSubtotal = items.reduce((acc, item) => {
-                const prod = getProductByIdOrTitle(item.id, item.title);
-                const origPrice = item.originalPrice ?? prod?.originalPrice;
-                const itemOrigPrice = (origPrice && origPrice > item.price) ? calculateSizePrice(origPrice, item.size) : item.price;
-                return acc + itemOrigPrice * item.quantity;
+                const original = item.originalUnitPrice ?? item.unitPrice;
+                return acc + Math.max(original, item.unitPrice) * item.quantity;
               }, 0);
 
               const totalDiscount = Math.max(0, fullSubtotal - subtotal);

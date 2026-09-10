@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { User, Eye, EyeOff, UserPlus, Phone, ChevronDown, Users, Check, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/context/AuthContext";
+import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 
 import { telegramSignUpSchema } from "@/lib/authSchema";
@@ -28,7 +28,6 @@ interface CreateWithTelegramProps {
 export function CreateWithTelegram({ onBackToLogin, onRegisterWithEmail }: CreateWithTelegramProps) {
   const { t } = useLanguage();
   const router = useRouter();
-  const { signup } = useAuth();
   const [username, setUsername] = useState("");
   const [gender, setGender] = useState("");
   const [phone, setPhone] = useState("");
@@ -104,24 +103,20 @@ export function CreateWithTelegram({ onBackToLogin, onRegisterWithEmail }: Creat
 
     setErrors({});
 
-    // Register user in AuthContext (generates telegram email fallback)
-    const generatedEmail = `${username.toLowerCase().replace(/\s+/g, "")}@telegram.user`;
-    const res = signup({
-      name: username,
-      email: generatedEmail,
-      phone: phone,
-      gender: gender,
-      password: password,
+    /*
+     * The API has no Telegram sign-up: it only links Telegram to an account that already
+     * exists (POST /api/users/me/telegram/link-code, which needs a signed-in user). The old
+     * flow faked it by inventing a "<name>@telegram.user" address, which would never receive
+     * the verification email the account needs.
+     *
+     * So this screen hands off to email registration; Telegram can be linked afterwards.
+     */
+    toast.add({
+      type: "warning",
+      description:
+        "Telegram sign-up is not available — please register with an email address. You can link Telegram to your account afterwards.",
     });
-
-    if (!res.success) {
-      setErrors({ username: res.message });
-      setActiveInput("username");
-      return;
-    }
-
-    // Navigate to user profile page
-    router.push("/userprofile");
+    onRegisterWithEmail?.();
   };
 
   return (
