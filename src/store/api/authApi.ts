@@ -8,6 +8,8 @@ import type {
   RegisterRequest,
   ResendOtpRequest,
   ResetPasswordRequest,
+  TelegramLinkCodeResponse,
+  TelegramWidgetAuthRequest,
   UpdateProfileRequest,
   UserResponse,
   VerifyLoginOtpRequest,
@@ -53,6 +55,23 @@ export const authApi = baseApi.injectEndpoints({
 
     resendOtp: builder.mutation<void, ResendOtpRequest>({
       query: (body) => ({ url: "/api/auth/resend-otp", method: "POST", body }),
+    }),
+
+    /**
+     * Sign-in via the Telegram Login Widget. Unlike email/password, this is a single step —
+     * the widget's `hash` already proves the customer owns that Telegram account, so the API
+     * returns tokens directly rather than an OTP challenge. Only works for a Telegram account
+     * already linked to a customer (see `getTelegramLinkCode` below); there is no Telegram
+     * sign-up, so an unlinked account gets a normal error here, not a new account.
+     */
+    loginTelegram: builder.mutation<AuthTokenResponse, TelegramWidgetAuthRequest>({
+      query: (body) => ({ url: "/api/auth/login/telegram", method: "POST", body }),
+      transformResponse: (response: ApiEnvelope<AuthTokenResponse>) => {
+        const tokens = unwrap(response);
+        setTokens(tokens);
+        return tokens;
+      },
+      invalidatesTags: ["Auth", "Cart", "Order"],
     }),
 
     forgotPassword: builder.mutation<void, { email: string }>({
@@ -109,6 +128,15 @@ export const authApi = baseApi.injectEndpoints({
       transformResponse: unwrap<UserResponse>,
       invalidatesTags: ["Auth"],
     }),
+
+    /**
+     * A mutation, not a query: each call issues a fresh short-lived code, so caching or
+     * refetching it the way a query would could hand out an already-expired one.
+     */
+    getTelegramLinkCode: builder.mutation<TelegramLinkCodeResponse, void>({
+      query: () => ({ url: "/api/users/me/telegram/link-code", method: "POST" }),
+      transformResponse: unwrap<TelegramLinkCodeResponse>,
+    }),
   }),
 });
 
@@ -118,6 +146,7 @@ export const {
   useLoginMutation,
   useVerifyLoginOtpMutation,
   useResendOtpMutation,
+  useLoginTelegramMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
   useLogoutMutation,
@@ -125,4 +154,5 @@ export const {
   useUpdateProfileMutation,
   useUploadAvatarMutation,
   useRemoveAvatarMutation,
+  useGetTelegramLinkCodeMutation,
 } = authApi;

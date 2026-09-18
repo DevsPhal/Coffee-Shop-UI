@@ -4,8 +4,9 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ExternalLink, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move, Trash2 } from "lucide-react";
+import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ExternalLink, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move, Trash2, Send } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { TelegramLinkModal } from "@/components/ui/TelegramLinkModal";
 import { useContactStore } from "@/store/useContactStore";
 import { isAuthenticated } from "@/lib/authStorage";
 import { apiErrorMessage } from "@/store/api/baseApi";
@@ -121,6 +122,7 @@ export function UserprofilepageView() {
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
 
   // Password Verification Modal States
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
@@ -532,6 +534,25 @@ export function UserprofilepageView() {
                       </span>
                     </div>
                   )}
+
+                  <div className="user_profile_detail_row">
+                    <span className="user_profile_detail_label">{t("Telegram")}</span>
+                    {user?.telegramLinked ? (
+                      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-600">
+                        <CheckCircle2 className="h-4 w-4" />
+                        {t("Connected")}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setIsTelegramModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700 transition-colors hover:bg-sky-100 cursor-pointer"
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                        {t("Link Telegram")}
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1095,6 +1116,8 @@ export function UserprofilepageView() {
           </form>
         </ModalContent>
       </Modal>
+
+      <TelegramLinkModal open={isTelegramModalOpen} onOpenChange={setIsTelegramModalOpen} />
     </div>
   );
 }

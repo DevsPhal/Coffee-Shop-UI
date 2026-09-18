@@ -1,13 +1,9 @@
 import { useMemo } from "react";
 
-import { useListProductsQuery } from "./catalogApi";
+import { useListCategoriesQuery, useListProductsQuery } from "./catalogApi";
 import type { CustomerProductResponse, UUID } from "./types";
 
 /**
- * The API exposes no customer-facing categories endpoint — `/api/admin/categories` is
- * admin-only — but every product carries `categoryId`/`categoryName`, so the storefront's
- * category list is derived from the catalogue itself. One request feeds both.
- *
  * The page size is deliberately large: this is a single café's menu, not a marketplace, and
  * the storefront filters and groups client-side.
  */
@@ -43,32 +39,43 @@ export function useCatalog(categoryId?: UUID) {
   };
 }
 
-/** Distinct categories across the whole catalogue, with how many products each holds. */
+/**
+ * Categories from GET /api/customer/categories, each with how many ACTIVE products it holds.
+ * The count still comes from the product list — the categories endpoint doesn't carry one —
+ * so a category with zero products today still shows up here, unlike the old approach that
+ * derived categories purely from whatever products happened to reference them.
+ */
 export function useCategories() {
-  const { data, isLoading, error } = useListProductsQuery({
+  const {
+    data: categoryList,
+    isLoading: isLoadingCategories,
+    error: categoriesError,
+  } = useListCategoriesQuery();
+  const { data: productPage, isLoading: isLoadingProducts } = useListProductsQuery({
     page: 1,
     size: CATALOG_PAGE_SIZE,
   });
 
   const categories = useMemo<CatalogCategory[]>(() => {
-    const byId = new Map<UUID, CatalogCategory>();
-    for (const product of data?.content ?? []) {
+    const counts = new Map<UUID, number>();
+    for (const product of productPage?.content ?? []) {
       if (product.status !== "ACTIVE") continue;
-      const existing = byId.get(product.categoryId);
-      if (existing) {
-        existing.count += 1;
-      } else {
-        byId.set(product.categoryId, {
-          id: product.categoryId,
-          name: product.categoryName,
-          count: 1,
-        });
-      }
+      counts.set(product.categoryId, (counts.get(product.categoryId) ?? 0) + 1);
     }
-    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [data]);
+    return (categoryList ?? [])
+      .map((category) => ({
+        id: category.id,
+        name: category.name,
+        count: counts.get(category.id) ?? 0,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [categoryList, productPage]);
 
-  return { categories, isLoading, error };
+  return {
+    categories,
+    isLoading: isLoadingCategories || isLoadingProducts,
+    error: categoriesError,
+  };
 }
 
 /** Price a customer actually pays, including an active discount and any size add-on. */

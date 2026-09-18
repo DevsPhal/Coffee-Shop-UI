@@ -25,6 +25,7 @@ export interface AuthUser {
   phone?: string;
   gender?: string;
   avatarUrl: string;
+  telegramLinked: boolean;
 }
 
 const DEFAULT_AVATAR =
@@ -38,6 +39,7 @@ function toAuthUser(user: UserResponse): AuthUser {
     phone: user.phoneNumber ?? undefined,
     gender: user.gender ?? undefined,
     avatarUrl: user.avatarUrl ?? DEFAULT_AVATAR,
+    telegramLinked: user.telegramLinked,
   };
 }
 

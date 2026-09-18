@@ -13,25 +13,38 @@ import {
 } from "@/components/ui";
 import Autoplay from "embla-carousel-autoplay";
 import { cn } from "@/lib/utils";
+import { useListBannersQuery } from "@/store/api/catalogApi";
 import "@/app/globals.scss";
 
-const SLIDES = [
+interface HeroSlide {
+  id: string;
+  image: string;
+  title: string;
+  description?: string;
+  href: string;
+}
+
+/**
+ * Shown only when the shop has no banners configured yet (or the request fails) — the homepage
+ * hero should never render empty. Real banners from /api/banners take priority when present.
+ */
+const FALLBACK_SLIDES: HeroSlide[] = [
   {
-    id: 1,
+    id: "fallback-1",
     image: "/images/poster1.jpg",
     title: "590st Cafe Refreshing Drinks",
     description: "Handcrafted iced coffees and sparkling fruit sodas brewed fresh daily",
     href: "/menu",
   },
   {
-    id: 2,
+    id: "fallback-2",
     image: "/images/poster2.jpg",
     title: "Signature Coffee Special",
     description: "Rich espresso layered with creamy foam and single-origin beans",
     href: "/menu",
   },
   {
-    id: 3,
+    id: "fallback-3",
     image: "/images/poster3.jpg",
     title: "Special Season Promotion",
     description: "Limited time seasonal treats and handcrafted specialty lattes",
@@ -43,6 +56,24 @@ export default function HeroCarousel() {
   const [api, setApi] = useState<CarouselApi>();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+
+  const { data: banners } = useListBannersQuery();
+
+  const activeBanners = (banners ?? []).filter((b) => b.status === "ACTIVE");
+  // A banner's own linkUrl is only used when it looks like a real destination — seed/test data
+  // can carry a placeholder string, and following that would send customers nowhere useful.
+  const bannerHref = (linkUrl: string | null) =>
+    linkUrl && (linkUrl.startsWith("/") || linkUrl.startsWith("http")) ? linkUrl : "/menu";
+
+  const slides: HeroSlide[] =
+    activeBanners.length > 0
+      ? activeBanners.map((banner) => ({
+          id: banner.id,
+          image: banner.imageUrl || "/images/590st cafe.jpg",
+          title: banner.title,
+          href: bannerHref(banner.linkUrl),
+        }))
+      : FALLBACK_SLIDES;
 
   useEffect(() => {
     const checkMobile = () => {
@@ -76,7 +107,7 @@ export default function HeroCarousel() {
     };
   }, [api, onSelect]);
 
-  const count = SLIDES.length;
+  const count = slides.length;
 
   const getSlideDistance = (index: number) => {
     if (count === 0) return 0;
@@ -99,7 +130,7 @@ export default function HeroCarousel() {
           className="hero_carousel"
         >
           <CarouselContent className="hero_carousel_content">
-            {SLIDES.map((slide, index) => {
+            {slides.map((slide, index) => {
               const distance = getSlideDistance(index);
 
               let scaleClass = "hero_scale_distant";

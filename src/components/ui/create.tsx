@@ -38,11 +38,10 @@ type FormErrors = {
 
 interface CreateProps {
   onBackToLogin: () => void;
-  onRegisterWithTelegram?: () => void;
   isAdmin?: boolean;
 }
 
-export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false }: CreateProps) {
+export function Create({ onBackToLogin, isAdmin = false }: CreateProps) {
   const { t } = useLanguage();
   const [register, { isLoading: isRegistering }] = useRegisterMutation();
   const [verifyRegistration, { isLoading: isVerifying }] = useVerifyRegistrationMutation();
@@ -448,18 +447,21 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
           )}
         </div>
 
-        {/* Register with Telegram Button under Password Field */}
-        {onRegisterWithTelegram && (
-          <div className="pt-1">
+        {/* There is no Telegram sign-up — an account has to exist before Telegram can be
+            linked to it (from the profile page) — so this points back to login rather than
+            offering a "Register with Telegram" button that could never create an account. */}
+        {!isAdmin && (
+          <p className="flex items-center justify-center gap-1.5 pt-1 text-center text-xs text-gray-500">
+            <Send className="h-3.5 w-3.5 shrink-0 text-sky-500" />
+            {t("Already linked Telegram to an account?")}{" "}
             <button
               type="button"
-              onClick={onRegisterWithTelegram}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-sky-200 bg-sky-50/80 hover:bg-sky-100 text-sky-700 text-xs sm:text-sm font-medium transition-all cursor-pointer select-none active:scale-98"
+              onClick={onBackToLogin}
+              className="cursor-pointer border-none bg-transparent font-bold text-[#A1255B] underline"
             >
-              <Send className="w-4 h-4 text-sky-600 shrink-0" />
-              <span>{t("Register with Telegram")}</span>
+              {t("Log in with Telegram")}
             </button>
-          </div>
+          </p>
         )}
 
         {submitError && (

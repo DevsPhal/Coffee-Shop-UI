@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Forgot } from "@/components/ui/forgot";
 import { Create } from "@/components/ui/create";
-import { CreateWithTelegram } from "@/components/ui/createwithtelegram";
+import { TelegramLoginWidget } from "@/components/ui/TelegramLoginWidget";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import {
   useLoginMutation,
@@ -30,7 +30,7 @@ import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 
 interface LoginPageViewProps {
-  initialViewMode?: "login" | "forgot" | "create" | "createwithtelegram";
+  initialViewMode?: "login" | "forgot" | "create";
 }
 
 /**
@@ -56,7 +56,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
-  const [viewMode, setViewMode] = useState<"login" | "forgot" | "create" | "createwithtelegram">(initialViewMode);
+  const [viewMode, setViewMode] = useState<"login" | "forgot" | "create">(initialViewMode);
   const [errors, setErrors] = useState<FormErrors>({});
   const validateField = (field: keyof FormErrors, value: string) => {
     const fieldSchema = userLoginSchema.shape[field];
@@ -243,15 +243,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
           ) : viewMode === "forgot" ? (
             <Forgot onBackToLogin={() => setViewMode("login")} />
           ) : viewMode === "create" ? (
-            <Create
-              onBackToLogin={() => setViewMode("login")}
-              onRegisterWithTelegram={() => setViewMode("createwithtelegram")}
-            />
-          ) : viewMode === "createwithtelegram" ? (
-            <CreateWithTelegram
-              onBackToLogin={() => setViewMode("login")}
-              onRegisterWithEmail={() => setViewMode("create")}
-            />
+            <Create onBackToLogin={() => setViewMode("login")} />
           ) : (
             <>
               <div className="login_avatar_circle">
@@ -368,6 +360,9 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                 >
                   {isLoggingIn ? t("Signing in...") : t("Login")}
                 </Button>
+
+                <TelegramLoginWidget onSuccess={() => router.push(nextPath())} />
+
                 <div className="text-center">
                   <span className="text-sm text-gray-600">
                     {t("Don't have an account?")}

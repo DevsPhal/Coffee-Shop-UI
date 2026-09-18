@@ -1,0 +1,19 @@
+services:
+  customer-web:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+      # No NEXT_PUBLIC_API_URL build arg — see the Dockerfile's build stage comment. The API
+      # target is API_PROXY_TARGET below, a runtime env var the Dockerfile already defaults,
+      # only needed here to point this container at something other than the live API.
+      # Compose reads ${...} here from the shell env or a file literally named ".env" next to
+      # this compose file — NOT from .env.local below, which only reaches the container's
+      # runtime via env_file, too late for a build arg. Whether that ".env" actually gets found
+      # depends on which directory `docker compose` is invoked from, which is fragile — so the
+      # fallback below matches the Dockerfile's own ARG default. Override either one to switch
+      # bots; there's no need to rely on ".env" discovery working.
+      args:
+        NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: ${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME:-FiveNinetyStCafeBot}
+    ports:
+      - "3000:3000"
+    env_file: .env.local

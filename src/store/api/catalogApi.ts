@@ -1,6 +1,7 @@
 import { baseApi, unwrap } from "./baseApi";
 import type {
   BannerResponse,
+  CustomerCategoryResponse,
   CustomerProductResponse,
   PageQuery,
   PageResponse,
@@ -14,12 +15,14 @@ interface ProductListQuery extends PageQuery {
 }
 
 /**
- * The public storefront catalogue. `/api/customer/products` GETs are open to anonymous
- * visitors (SecurityConfig permits them ahead of the customer-role rule), so the menu renders
- * before anyone signs in.
+ * The public storefront catalogue.
  *
- * There is no customer-facing categories endpoint, so the category list is derived from the
- * products themselves — see `useCategories` below.
+ * Per the live OpenAPI spec (GET /v3/api-docs), `/api/customer/products`,
+ * `/api/customer/products/{id}` and `/api/customer/categories` are all declared with
+ * `security: [bearerAuth]` — the API currently requires a signed-in customer for these, unlike
+ * `/api/banners` and `/api/events` which carry no security requirement and work anonymously.
+ * The storefront is meant to be publicly browsable, so this is a backend SecurityConfig gap
+ * (permitAll needs adding for these two GET routes) rather than something fixable here.
  */
 export const catalogApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -27,9 +30,19 @@ export const catalogApi = baseApi.injectEndpoints({
       query: () => "/api/events",
       transformResponse: unwrap<PublicEventResponse[]>,
     }),
+    /**
+     * `/api/shop/settings` does not exist in the live API (checked against /v3/api-docs — no
+     * match among its 131 paths). The nearest equivalent, the KHR exchange rate, is only
+     * exposed admin-side via GET /api/admin/bakong/exchange-rate. This call will 404/401 until
+     * that's resolved; see checkoutpageView.tsx's delivery-fee handling.
+     */
     getShopSettings: builder.query<ShopSettingsResponse, void>({
       query: () => "/api/shop/settings",
       transformResponse: unwrap<ShopSettingsResponse>,
+    }),
+    listCategories: builder.query<CustomerCategoryResponse[], void>({
+      query: () => "/api/customer/categories",
+      transformResponse: unwrap<CustomerCategoryResponse[]>,
     }),
     listProducts: builder.query<
       PageResponse<CustomerProductResponse>,
@@ -63,5 +76,11 @@ export const catalogApi = baseApi.injectEndpoints({
   }),
 });
 
-export const { useListProductsQuery, useGetProductQuery, useListBannersQuery, useListEventsQuery, useGetShopSettingsQuery } =
-  catalogApi;
+export const {
+  useListProductsQuery,
+  useGetProductQuery,
+  useListBannersQuery,
+  useListEventsQuery,
+  useListCategoriesQuery,
+  useGetShopSettingsQuery,
+} = catalogApi;

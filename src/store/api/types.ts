@@ -152,6 +152,32 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
+/**
+ * The Telegram Login Widget's callback payload, forwarded to POST /api/auth/login/telegram
+ * as-is. `hash` is the widget's HMAC over the other fields, which the backend verifies against
+ * the bot token — there is nothing for the frontend to validate here.
+ */
+export interface TelegramWidgetAuthRequest {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+  auth_date: number;
+  hash: string;
+}
+
+/**
+ * A short-lived code for linking Telegram to the signed-in account — separate from the login
+ * widget above. The customer opens `deepLink` (a t.me URL), which starts a chat with the bot
+ * pre-filled with `code`; the bot completes the link over Telegram's webhook, not this app.
+ */
+export interface TelegramLinkCodeResponse {
+  code: string;
+  expiresInSeconds: number;
+  deepLink: string;
+}
+
 // ---- user ----
 
 export interface UserResponse {
@@ -199,6 +225,16 @@ export interface CustomerProductResponse {
   discountActive: boolean;
   finalPrice: Numeric;
   sizeOptions: ProductSizeOptionResponse[];
+}
+
+export type CategoryGroup = "FRESH_DRINK" | "BEVERAGE" | "SNACK";
+
+/** What GET /api/customer/categories returns. */
+export interface CustomerCategoryResponse {
+  id: UUID;
+  name: string;
+  description: string | null;
+  categoryGroup: CategoryGroup;
 }
 
 export interface BannerResponse {
