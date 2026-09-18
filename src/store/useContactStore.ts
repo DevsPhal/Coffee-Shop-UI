@@ -8,12 +8,12 @@ export const contactMessageSchema = z.object({
     .string()
     .trim()
     .min(1, { message: "Please enter your full name." })
-    .min(2, { message: "Full Name must be at least 2 characters." }),
+    .min(2, { message: "Full Name must be at least 2 characters." }).max(120),
   email: z
     .string()
     .trim()
     .min(1, { message: "Please enter your email address." })
-    .email({ message: "Please enter a valid email address." }),
+    .email({ message: "Please enter a valid email address." }).max(254),
   phone: z
     .string()
     .trim()
@@ -21,12 +21,12 @@ export const contactMessageSchema = z.object({
     .refine((val) => !val || /^[0-9+\s-]{8,15}$/.test(val), {
       message: "Phone / Telegram must be valid (8-15 digits).",
     }),
-  topic: z.string().trim().min(1, { message: "Please select a topic." }),
+  topic: z.string().trim().min(1, { message: "Please select a topic." }).max(100),
   message: z
     .string()
     .trim()
     .min(1, { message: "Please enter your message." })
-    .min(5, { message: "Message must be at least 5 characters long." }),
+    .min(5, { message: "Message must be at least 5 characters long." }).max(5000),
   userId: z.string().optional(),
 });
 
@@ -89,6 +89,9 @@ export const useContactStore = create<ContactStoreState>()(
 
       prefillUser: (user) => {
         if (!user) return;
+        const current = get().formData;
+        if ((current.fullName || !user.name) && (current.email || !user.email)
+          && (current.phone || !user.phone) && current.userId === user.userId) return;
         set((state) => ({
           formData: {
             ...state.formData,
@@ -122,6 +125,7 @@ export const useContactStore = create<ContactStoreState>()(
       },
 
       submitMessage: async (currentUser) => {
+        if (get().isSubmitting) return { success: false, message: "Your message is being sent." };
         const { formData } = get();
 
         const dataToValidate = {
@@ -162,27 +166,31 @@ export const useContactStore = create<ContactStoreState>()(
         const validData = validationResult.data;
         set({ isSubmitting: true, errors: {} });
 
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        const newRecord: ContactMessageRecord = {
-          ...validData,
-          id: `msg_${Date.now()}`,
-          createdAt: new Date().toISOString(),
-          status: "Received",
-        };
-
-        set((state) => ({
-          isSubmitting: false,
-          isSubmitted: true,
-          messagesHistory: [newRecord, ...state.messagesHistory],
-        }));
-
-        toast.add({
-          type: "success",
-          description: "Your message has been sent successfully!",
-        });
-
-        return { success: true };
+        try {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/contact-messages`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fullName: validData.fullName, email: validData.email,
+              phone: validData.phone, topic: validData.topic, message: validData.message }),
+            signal: AbortSignal.timeout(15000),
+          });
+          const result = await response.json();
+          if (!response.ok || !result.data?.id) {
+            throw new Error(result.message || "Could not send your message. Please try again.");
+          }
+          const newRecord: ContactMessageRecord = {
+            ...validData, id: result.data.id, createdAt: result.data.createdAt, status: "Received",
+          };
+          set((state) => ({ isSubmitted: true, messagesHistory: [newRecord, ...state.messagesHistory] }));
+          toast.add({ type: "success", description: "Your message has been received by the shop." });
+          return { success: true };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Could not send your message. Please try again.";
+          toast.add({ type: "error", description: message });
+          return { success: false, message };
+        } finally {
+          set({ isSubmitting: false });
+        }
       },
 
       clearHistory: () => {

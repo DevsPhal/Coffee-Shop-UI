@@ -1,17 +1,42 @@
 import { z } from "zod";
 
+/**
+ * Field rules that mirror the API's `ValidationPatterns` exactly.
+ *
+ * They live here so the form rejects bad input inline instead of letting the request through
+ * to come back as a generic server error. Keep them in step with the Java constants:
+ *   CAMBODIA_PHONE_REGEX  ^0\d{2}\s?\d{3}\s?\d{3,4}$
+ *   STRONG_PASSWORD_REGEX ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$
+ */
+export const cambodianPhone = z
+  .string()
+  .trim()
+  .min(1, { message: "Please enter your phone number." })
+  .regex(/^0\d{2}\s?\d{3}\s?\d{3,4}$/, {
+    message: "Please enter your phone number",
+  });
+
+export const strongPassword = z
+  .string()
+  .min(1, { message: "Please enter a password." })
+  .min(8, { message: "Password must be at least 8 characters." })
+  .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/, {
+    message:
+      "Include an uppercase letter, a lowercase letter, a digit and a symbol — e.g. Qwert!12@",
+  });
+
 // Zod Schema for User Login Form Validation
 export const userLoginSchema = z.object({
-  username: z
+  email: z
     .string()
     .trim()
-    .min(1, { message: "Please enter your username." })
-    .min(3, { message: "Username must be at least 3 characters." }),
-  password: z
-    .string()
-    .trim()
-    .min(1, { message: "Please enter your password." })
-    .min(3, { message: "Password must be at least 3 characters." }),
+    .min(1, { message: "Please enter your email address." })
+    .email({ message: "Enter the email address you used to register." })
+    .toLowerCase(),
+  // Validate existing credentials without changing the password or applying signup rules.
+  password: z.string().refine((value) => value.trim().length > 0, {
+    message: "Please enter your password.",
+  }),
 });
 
 export type UserLoginFormValues = z.infer<typeof userLoginSchema>;
@@ -27,11 +52,7 @@ export const adminLoginSchema = z.object({
     .trim()
     .min(1, { message: "Please enter your username." })
     .min(3, { message: "Username must be at least 3 characters." }),
-  password: z
-    .string()
-    .trim()
-    .min(1, { message: "Please enter your password." })
-    .min(3, { message: "Password must be at least 3 characters." }),
+  password: strongPassword,
 });
 
 export type AdminLoginFormValues = z.infer<typeof adminLoginSchema>;
@@ -41,8 +62,8 @@ export const signUpSchema = z.object({
   username: z
     .string()
     .trim()
-    .min(1, { message: "Please enter your username." })
-    .min(3, { message: "Username must be at least 3 characters." }),
+    .min(1, { message: "Please enter your full name." })
+    .min(3, { message: "Full name must be at least 3 characters." }),
   gender: z
     .string()
     .trim()
@@ -52,16 +73,8 @@ export const signUpSchema = z.object({
     .trim()
     .min(1, { message: "Please enter your email." })
     .email({ message: "Please enter a valid email address." }),
-  phone: z
-    .string()
-    .trim()
-    .min(1, { message: "Please enter your phone number." })
-    .regex(/^[0-9+\s-]{8,15}$/, { message: "Phone number must be valid (8-15 digits)." }),
-  password: z
-    .string()
-    .trim()
-    .min(1, { message: "Please enter a password." })
-    .min(3, { message: "Password must be at least 3 characters." }),
+  phone: cambodianPhone,
+  password: strongPassword,
 });
 
 export type SignUpFormValues = z.infer<typeof signUpSchema>;
@@ -77,16 +90,8 @@ export const telegramSignUpSchema = z.object({
     .string()
     .trim()
     .optional(),
-  phone: z
-    .string()
-    .trim()
-    .min(1, { message: "Please enter your phone number." })
-    .regex(/^[0-9+\s-]{8,15}$/, { message: "Phone number must be valid (8-15 digits)." }),
-  password: z
-    .string()
-    .trim()
-    .min(1, { message: "Please enter a password." })
-    .min(3, { message: "Password must be at least 3 characters." }),
+  phone: cambodianPhone,
+  password: strongPassword,
 });
 
 export type TelegramSignUpFormValues = z.infer<typeof telegramSignUpSchema>;
@@ -111,16 +116,8 @@ export const adminSignUpSchema = z.object({
     .trim()
     .min(1, { message: "Please enter your email." })
     .email({ message: "Please enter a valid email address." }),
-  phone: z
-    .string()
-    .trim()
-    .min(1, { message: "Please enter your phone number." })
-    .regex(/^[0-9+\s-]{8,15}$/, { message: "Phone number must be valid (8-15 digits)." }),
-  password: z
-    .string()
-    .trim()
-    .min(1, { message: "Please enter a password." })
-    .min(3, { message: "Password must be at least 3 characters." }),
+  phone: cambodianPhone,
+  password: strongPassword,
 });
 
 export type AdminSignUpFormValues = z.infer<typeof adminSignUpSchema>;
@@ -148,11 +145,7 @@ export const shippingInformationSchema = z.object({
     .trim()
     .optional()
     .refine((val) => !val || /\S+@\S+\.\S+/.test(val), { message: "Please enter a valid Email address." }),
-  phone: z
-    .string()
-    .trim()
-    .optional()
-    .refine((val) => !val || /^[0-9+\s-]{8,15}$/.test(val), { message: "Phone Number must be valid (8-15 digits)." }),
+  phone: cambodianPhone,
   capital: z.string().trim().min(1, { message: "Please select your Capital." }),
   district: z.string().trim().min(1, { message: "Please select your District." }),
   zipCode: z.string().trim().min(1, { message: "Please enter Zip Code." }),

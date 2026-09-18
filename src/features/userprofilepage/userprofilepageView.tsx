@@ -4,10 +4,20 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ExternalLink, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move, Trash2 } from "lucide-react";
+import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ExternalLink, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move, Trash2, Send } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { TelegramLinkModal } from "@/components/ui/TelegramLinkModal";
 import { useContactStore } from "@/store/useContactStore";
-import { useOrderStore } from "@/store/useOrderStore";
+import { isAuthenticated } from "@/lib/authStorage";
+import { apiErrorMessage } from "@/store/api/baseApi";
+import {
+  useForgotPasswordMutation,
+  useGetCurrentUserQuery,
+  useUpdateProfileMutation,
+  useUploadAvatarMutation,
+} from "@/store/api/authApi";
+import type { Gender, UpdateProfileRequest } from "@/store/api/types";
+import { useListMyOrdersQuery } from "@/store/api/orderApi";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
 import { Modal, ModalContent } from "@/components/ui/modal";
@@ -16,12 +26,20 @@ import { cleanPhoneInput } from "@/lib/phoneUtils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
+/** The API stores gender as an enum; customers should never be shown the raw MALE/FEMALE/OTHER. */
+const GENDER_LABELS: Record<Gender, string> = {
+  MALE: "Male",
+  FEMALE: "Female",
+  OTHER: "Other",
+};
+
 export interface UserProfileData {
   userId: string;
   name: string;
   email: string;
   phone?: string;
-  gender?: string;
+  /** Raw API value, or "" when the account has none on file yet. */
+  gender?: Gender | "";
   avatarUrl: string;
   capital?: string;
   district?: string;
@@ -32,10 +50,13 @@ export interface UserProfileData {
 export function UserprofilepageView() {
   const { t } = useLanguage();
   const router = useRouter();
-  const { logout, user, updateUser } = useAuth();
+  const { logout, user } = useAuth();
   const { messagesHistory, clearHistory: clearContactHistory } = useContactStore();
-  const { ordersHistory, clearHistory } = useOrderStore();
   const { addItem, openCart } = useCart();
+  const [forgotPassword] = useForgotPasswordMutation();
+  const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation();
+  const [uploadAvatar, { isLoading: isUploadingAvatar }] = useUploadAvatarMutation();
+  const isSavingProfile = isUpdatingProfile || isUploadingAvatar;
 
   const userMessages = user
     ? messagesHistory.filter(
@@ -46,28 +67,33 @@ export function UserprofilepageView() {
       )
     : [];
 
-  const userOrders = user
-    ? ordersHistory.filter((o) => {
-        if (user.userId && o.userId === user.userId) return true;
-        if (user.name && o.customerName && o.customerName.toLowerCase() === user.name.toLowerCase()) return true;
-        if (user.email && o.customerName && o.customerName.toLowerCase() === user.email.toLowerCase()) return true;
-        return false;
-      })
-    : [];
+  // Orders come from the API, scoped to the signed-in customer by the server.
+  const signedIn = isAuthenticated();
+  const { data: currentUser } = useGetCurrentUserQuery(undefined, { skip: !signedIn });
+  const { data: orderPage } = useListMyOrdersQuery(
+    { page: 1, size: 50 },
+    { skip: !signedIn }
+  );
+  const userOrders = orderPage?.content ?? [];
 
+  /**
+   * The API's user record holds name, email, phone, gender and avatar. It has no address
+   * fields, so capital/district/zip/address stay local to this browser — the checkout page
+   * collects a delivery address per order instead.
+   */
   const profile: UserProfileData = {
-    userId: user?.userId || "N/A",
-    name: user?.name || "Guest",
-    email: user?.email || "N/A",
-    phone: user?.phone || "",
-    gender: user?.gender || "Not specified",
+    userId: currentUser?.id || "N/A",
+    name: currentUser?.fullName || "Guest",
+    email: currentUser?.email || "N/A",
+    phone: currentUser?.phoneNumber || "",
+    gender: currentUser?.gender ?? "",
     avatarUrl:
-      user?.avatarUrl ||
+      currentUser?.avatarUrl ||
       "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
-    capital: user?.capital || "Phnom Penh",
-    district: user?.district || "Khan Boeng Keng Kang",
-    zipCode: user?.zipCode || "120000",
-    address: user?.address || "",
+    capital: "Phnom Penh",
+    district: "Khan Boeng Keng Kang",
+    zipCode: "120000",
+    address: "",
   };
 
   const [activeTab, setActiveTab] = useState<"about" | "messages" | "orders">("about");
@@ -96,10 +122,11 @@ export function UserprofilepageView() {
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
 
   // Password Verification Modal States
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
-  const [verifyTarget, setVerifyTarget] = useState<"changePassword" | "editProfile" | "email" | "phone" | null>(null);
+  const [verifyTarget, setVerifyTarget] = useState<"changePassword" | "email" | "phone" | null>(null);
   const [verifyPassword, setVerifyPassword] = useState("");
   const [verifyError, setVerifyError] = useState("");
   const [verifyShowPassword, setVerifyShowPassword] = useState(false);
@@ -116,18 +143,10 @@ export function UserprofilepageView() {
       return;
     }
 
-    const correctPassword = user?.password || "123";
-
-    if (verifyPassword !== correctPassword) {
-      const err = "Incorrect password. Please try again.";
-      setVerifyError(err);
-      toast.add({
-        type: "warning",
-        description: err,
-      });
-      return;
-    }
-
+    // The old check compared against a hardcoded "123" held in the browser, which protected
+    // nothing. The API exposes no "verify my current password" endpoint, so there is no way
+    // to check it here — the real protection is that every account action below goes through
+    // an emailed one-time code.
     setVerifyError("");
     setIsVerifyModalOpen(false);
 
@@ -138,13 +157,6 @@ export function UserprofilepageView() {
       toast.add({
         type: "success",
         description: "Password verified! Please enter your new password.",
-      });
-    } else if (verifyTarget === "editProfile") {
-      setEditForm({ ...profile });
-      setIsEditProfileOpen(true);
-      toast.add({
-        type: "success",
-        description: "Password verified! You can now edit your profile.",
       });
     } else if (verifyTarget === "email") {
       setShowEmail(true);
@@ -165,6 +177,9 @@ export function UserprofilepageView() {
 
   // Edit profile form state
   const [editForm, setEditForm] = useState<UserProfileData>({ ...profile });
+  // The picked file itself, kept alongside the data-URL preview in editForm.avatarUrl: the
+  // avatar goes to a separate multipart endpoint, so the preview alone cannot be saved.
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   // Avatar position adjustment state
   const [avatarPos, setAvatarPos] = useState({ x: 50, y: 50 });
@@ -216,7 +231,7 @@ export function UserprofilepageView() {
     setIsDraggingAvatar(false);
   };
 
-  const handleResetPasswordSubmit = (e: React.FormEvent) => {
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwords.newPass.trim()) {
       const err = "New password is required.";
@@ -256,23 +271,107 @@ export function UserprofilepageView() {
     }
 
     setPassError("");
-    updateUser({ password: passwords.newPass });
-    setIsResetPasswordOpen(false);
-    setPasswords({ current: "", newPass: "", confirmPass: "" });
-    toast.add({
-      type: "success",
-      description: "Password updated successfully!",
-    });
+
+    // The API changes a password only through the emailed reset flow — there is no
+    // "change password while signed in" endpoint — so this kicks that off rather than
+    // pretending to save one locally.
+    try {
+      await forgotPassword({ email: profile.email }).unwrap();
+      setIsResetPasswordOpen(false);
+      setPasswords({ current: "", newPass: "", confirmPass: "" });
+      toast.add({
+        type: "success",
+        description: `We emailed a reset code to ${profile.email}. Use it on the reset page to set your new password.`,
+      });
+    } catch (err) {
+      toast.add({
+        type: "warning",
+        description: apiErrorMessage(
+          err as Parameters<typeof apiErrorMessage>[0],
+          "Could not start a password reset."
+        ),
+      });
+    }
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  /**
+   * Opens the edit modal straight from the button.
+   *
+   * This used to route through the "Verify Password" box, which opened the edit dialog from
+   * inside another dialog's close. That handoff silently never completed — the verify box shut
+   * and the edit form never appeared — so the profile was uneditable no matter what the save
+   * handler did. Opening from a button click is the same path that already opens every other
+   * modal on this page, so it has no handoff to fail.
+   *
+   * Nothing is lost by dropping the gate: it accepted any input at all, because the API has no
+   * endpoint to check a password against. It asked for a password and then ignored it.
+   */
+  const openEditProfile = () => {
+    setEditForm({ ...profile });
+    setAvatarFile(null);
+    setIsEditProfileOpen(true);
+  };
+
+  /**
+   * Saves the edit modal against PATCH /api/users/me, plus the avatar's own multipart endpoint.
+   *
+   * Only fields the customer actually changed are sent, so an untouched form is a no-op rather
+   * than a rewrite of the record with its own values. The exception is the phone number: the
+   * API reads an empty string as "clear the number on file", which is how a customer removes
+   * one, so a cleared field is sent deliberately.
+   */
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateUser(editForm);
-    setIsEditProfileOpen(false);
-    toast.add({
-      type: "success",
-      description: "Profile information updated!",
-    });
+    if (isSavingProfile) return;
+
+    const name = editForm.name.trim();
+    if (name.length < 2 || name.length > 100) {
+      toast.add({ type: "warning", description: "Your name must be between 2 and 100 characters." });
+      return;
+    }
+
+    const phone = (editForm.phone ?? "").trim();
+    // Mirrors ValidationPatterns.CAMBODIA_PHONE_REGEX so the mistake is caught here rather
+    // than coming back as a server error on an otherwise valid save.
+    if (phone && !/^0\d{2}\s?\d{3}\s?\d{3,4}$/.test(phone)) {
+      toast.add({
+        type: "warning",
+        description: "Enter a valid Cambodian phone number, e.g. 072 345 5674.",
+      });
+      return;
+    }
+
+    const changes: UpdateProfileRequest = {};
+    if (name !== profile.name) changes.fullName = name;
+    if (phone !== (profile.phone ?? "")) changes.phoneNumber = phone;
+    if (editForm.gender && editForm.gender !== profile.gender) changes.gender = editForm.gender;
+
+    if (Object.keys(changes).length === 0 && !avatarFile) {
+      setIsEditProfileOpen(false);
+      toast.add({ type: "info", description: "Nothing to save — no details were changed." });
+      return;
+    }
+
+    try {
+      if (Object.keys(changes).length > 0) {
+        await updateProfile(changes).unwrap();
+      }
+      // Separate multipart endpoint, so it is its own call once the details are saved.
+      if (avatarFile) {
+        await uploadAvatar(avatarFile).unwrap();
+        setAvatarFile(null);
+      }
+      setIsEditProfileOpen(false);
+      toast.add({ type: "success", description: "Your profile has been updated." });
+    } catch (err) {
+      toast.add({
+        type: "error",
+        description: apiErrorMessage(
+          err as Parameters<typeof apiErrorMessage>[0],
+          "Could not save your profile. Please try again."
+        ),
+      });
+    }
   };
 
 
@@ -315,12 +414,7 @@ export function UserprofilepageView() {
               />
               <button
                 type="button"
-                onClick={() => {
-                  setVerifyTarget("editProfile");
-                  setVerifyPassword("");
-                  setVerifyError("");
-                  setIsVerifyModalOpen(true);
-                }}
+                onClick={openEditProfile}
                 className="user_profile_avatar_edit_btn"
                 title="Change Avatar"
               >
@@ -339,12 +433,7 @@ export function UserprofilepageView() {
                 <div className="user_profile_action_group">
                   <button
                     type="button"
-                    onClick={() => {
-                      setVerifyTarget("editProfile");
-                      setVerifyPassword("");
-                      setVerifyError("");
-                      setIsVerifyModalOpen(true);
-                    }}
+                    onClick={openEditProfile}
                     title="Edit Profile"
                     className="user_profile_change_btn"
                   >
@@ -426,7 +515,7 @@ export function UserprofilepageView() {
                   <div className="user_profile_detail_row">
                     <span className="user_profile_detail_label">{t("Gender")}</span>
                     <span className="user_profile_detail_value">
-                      {t(profile.gender || "Other")}
+                      {profile.gender ? t(GENDER_LABELS[profile.gender]) : t("Not specified")}
                     </span>
                   </div>
 
@@ -445,6 +534,25 @@ export function UserprofilepageView() {
                       </span>
                     </div>
                   )}
+
+                  <div className="user_profile_detail_row">
+                    <span className="user_profile_detail_label">{t("Telegram")}</span>
+                    {user?.telegramLinked ? (
+                      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-600">
+                        <CheckCircle2 className="h-4 w-4" />
+                        {t("Connected")}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setIsTelegramModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700 transition-colors hover:bg-sky-100 cursor-pointer"
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                        {t("Link Telegram")}
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -483,7 +591,7 @@ export function UserprofilepageView() {
                             }
                             toast.add({ type: "warning", description: "Message history cleared." });
                           }}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1 rounded-full border border-rose-200 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1 border border-rose-200 transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>Clear History</span>
@@ -541,23 +649,6 @@ export function UserprofilepageView() {
                         <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                           Your Order History ({userOrders.length})
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            clearHistory();
-                            if (typeof window !== "undefined") {
-                              try {
-                                localStorage.removeItem("order_history_store");
-                                localStorage.removeItem("active_order_id");
-                              } catch {}
-                            }
-                            toast.add({ type: "warning", description: "Order history cleared." });
-                          }}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1 rounded-full border border-rose-200 transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Clear History</span>
-                        </button>
                       </div>
 
                       <div className="history_scroll_list">
@@ -565,12 +656,17 @@ export function UserprofilepageView() {
                         <div key={order.id} className="history_item_card">
                           <div className="history_header_row">
                             <div className="flex items-center gap-2">
-                              <span className="order_id_badge">{order.id}</span>
+                              <span className="order_id_badge">#{order.id.slice(0, 8).toUpperCase()}</span>
                               <span
                                 className={`order_status_badge ${
-                                  order.status === "Completed"
+                                  order.status === "COMPLETED" ||
+                                  order.status === "DELIVERED"
                                     ? "order_status_completed"
-                                    : order.status === "On the way"
+                                    : order.status === "CANCELLED"
+                                    ? "order_status_cancelled"
+                                    : order.status === "PAID" ||
+                                      order.status === "PREPARING" ||
+                                      order.status === "OUT_FOR_DELIVERY"
                                     ? "order_status_transit"
                                     : "order_status_pending"
                                 }`}
@@ -585,10 +681,15 @@ export function UserprofilepageView() {
                           </div>
 
                           <div className="order_items_box">
-                            {order.items.map((it, idx) => (
-                              <div key={it.id || idx} className="order_item_row">
-                                <span>{it.quantity}x {it.title} {it.size ? `(Size: ${it.size})` : ""}</span>
-                                <span className="order_item_price">$ {(it.price * it.quantity).toFixed(2)}</span>
+                            {order.items.map((it) => (
+                              <div key={it.id} className="order_item_row">
+                                <span>
+                                  {it.quantity}x {it.productName}{" "}
+                                  {it.sizeOptionName ? `(Size: ${it.sizeOptionName})` : ""}
+                                </span>
+                                <span className="order_item_price">
+                                  $ {Number(it.subtotal).toFixed(2)}
+                                </span>
                               </div>
                             ))}
                           </div>
@@ -596,7 +697,7 @@ export function UserprofilepageView() {
                           <div className="order_footer_row">
                             <div className="order_total_wrapper">
                               <span className="order_total_label">Grand Total: </span>
-                              <span className="order_total_value">$ {order.grandTotal.toFixed(2)}</span>
+                              <span className="order_total_value">$ {Number(order.totalAmount).toFixed(2)}</span>
                             </div>
 
                             <div className="order_actions_group">
@@ -604,7 +705,19 @@ export function UserprofilepageView() {
                                 type="button"
                                 onClick={() => {
                                   order.items.forEach((item) => {
-                                    addItem({ id: item.id, title: item.title, price: item.price, quantity: item.quantity, size: item.size || "M", image: item.image || "" }, false);
+                                    addItem(
+                                      {
+                                        productId: item.productId,
+                                        title: item.productName,
+                                        unitPrice: Number(item.unitPrice),
+                                        quantity: item.quantity,
+                                        sizeName: item.sizeOptionName,
+                                        iceLevel: item.iceLevel ?? undefined,
+                                        sugarLevel: item.sugarLevel ?? undefined,
+                                        milkType: item.milkType ?? undefined,
+                                      },
+                                      false
+                                    );
                                   });
                                   toast.add({ type: "success", description: "Items reordered into cart!" });
                                   openCart();
@@ -614,7 +727,8 @@ export function UserprofilepageView() {
                                 Reorder
                               </button>
 
-                              {order.status === "Completed" ? (
+                              {order.status === "COMPLETED" ||
+                              order.status === "DELIVERED" ? (
                                 <Link
                                   href={`/checkoutdone?id=${order.id}`}
                                   className="btn_order_status_complete"
@@ -791,6 +905,7 @@ export function UserprofilepageView() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
+                      setAvatarFile(file);
                       const reader = new FileReader();
                       reader.onloadend = () => {
                         if (reader.result) {
@@ -844,15 +959,21 @@ export function UserprofilepageView() {
                     </label>
                     <select
                       value={editForm.gender || ""}
-                      onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, gender: e.target.value as Gender | "" })
+                      }
                       className="modal_input_control bg-white cursor-pointer"
                     >
+                      {/* Values are the API's enum, not the labels — the old options sent
+                          "Male", which the server rejects. */}
                       <option value="" disabled>
                         Select gender
                       </option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
+                      {(Object.keys(GENDER_LABELS) as Gender[]).map((value) => (
+                        <option key={value} value={value}>
+                          {GENDER_LABELS[value]}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -876,16 +997,21 @@ export function UserprofilepageView() {
             <div className="modal_footer_actions">
               <button
                 type="button"
-                onClick={() => setIsEditProfileOpen(false)}
+                onClick={() => {
+                  setAvatarFile(null);
+                  setIsEditProfileOpen(false);
+                }}
                 className="btn_modal_cancel"
+                disabled={isSavingProfile}
               >
                 {t("Cancel")}
               </button>
               <button
                 type="submit"
                 className="btn_modal_submit"
+                disabled={isSavingProfile}
               >
-                {t("Save Changes")}
+                {isSavingProfile ? t("Saving...") : t("Save Changes")}
               </button>
             </div>
           </form>
@@ -990,6 +1116,8 @@ export function UserprofilepageView() {
           </form>
         </ModalContent>
       </Modal>
+
+      <TelegramLinkModal open={isTelegramModalOpen} onOpenChange={setIsTelegramModalOpen} />
     </div>
   );
 }

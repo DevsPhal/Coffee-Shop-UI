@@ -5,45 +5,49 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, Clock, MapPin, ChevronRight, RefreshCw, CheckCircle2, Truck, Package, ArrowRight, User } from "lucide-react";
-import { useOrderStore, OrderRecord } from "@/store/useOrderStore";
-import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
+import { isAuthenticated } from "@/lib/authStorage";
+import { useListMyOrdersQuery } from "@/store/api/orderApi";
+import type { OrderResponse, OrderStatus } from "@/store/api/types";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
 export function OrderhistorypageView() {
   const { t } = useLanguage();
   const router = useRouter();
-  const { user } = useAuth();
-  const { ordersHistory } = useOrderStore();
   const { addItem, openCart } = useCart();
 
   const [filterStatus, setFilterStatus] = useState<string>("All");
 
-  const userOrders = user
-    ? ordersHistory.filter((o) => {
-        if (user.userId && o.userId === user.userId) return true;
-        if (user.name && o.customerName && o.customerName.toLowerCase() === user.name.toLowerCase()) return true;
-        if (user.email && o.customerName && o.customerName.toLowerCase() === user.email.toLowerCase()) return true;
-        return false;
-      })
-    : [];
+  // The API scopes /api/customer/orders to the signed-in customer, so no client-side
+  // filtering by user is needed — and there is nothing to show for a guest.
+  const signedIn = isAuthenticated();
+  const { data, isLoading, error } = useListMyOrdersQuery(
+    {
+      page: 1,
+      size: 50,
+      ...(filterStatus === "All" ? {} : { status: filterStatus as OrderStatus }),
+    },
+    { skip: !signedIn }
+  );
 
-  const filteredOrders = userOrders.filter((o) => {
-    if (filterStatus === "All") return true;
-    return o.status === filterStatus;
-  });
+  const filteredOrders = data?.content ?? [];
 
-  const handleReorder = (order: OrderRecord) => {
+  // Re-adds the order's lines to the local cart. Prices come from the order as it was
+  // charged; the cart re-prices against the live catalogue at checkout.
+  const handleReorder = (order: OrderResponse) => {
     order.items.forEach((item) => {
       addItem(
         {
-          id: item.id,
-          title: item.title,
-          price: item.price,
+          productId: item.productId,
+          title: item.productName,
+          unitPrice: Number(item.unitPrice),
           quantity: item.quantity,
-          image: item.image || "",
+          sizeName: item.sizeOptionName,
+          iceLevel: item.iceLevel ?? undefined,
+          sugarLevel: item.sugarLevel ?? undefined,
+          milkType: item.milkType ?? undefined,
         },
         false
       );
@@ -57,17 +61,38 @@ export function OrderhistorypageView() {
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
-      case "Order Confirmed":
-      case "Preparing":
+      case "PENDING":
         return "bg-amber-100 text-amber-800 border-amber-200";
-      case "On the way":
+      // Paid for and on its way: the drink is owed but not handed over yet.
+      case "PAID":
+      case "PREPARING":
         return "bg-blue-100 text-blue-800 border-blue-200";
-      case "Completed":
+      // Out of the shop with a courier — moving, but not arrived.
+      case "OUT_FOR_DELIVERY":
+        return "bg-cyan-100 text-cyan-800 border-cyan-200";
+      // DELIVERED is the delivery counterpart of COMPLETED: the customer has it either way.
+      case "COMPLETED":
+      case "DELIVERED":
         return "bg-emerald-100 text-emerald-800 border-emerald-200";
+      case "CANCELLED":
+        return "bg-red-100 text-red-800 border-red-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
+
+  // PENDING is shown as "Unpaid" — from the customer's side the interesting thing about that
+  // order is that they still owe for it, not that the API calls it pending.
+  const STATUS_FILTERS: { value: string; label: string }[] = [
+    { value: "All", label: "All" },
+    { value: "PENDING", label: "Unpaid" },
+    { value: "PAID", label: "Paid" },
+    { value: "PREPARING", label: "Preparing" },
+    { value: "OUT_FOR_DELIVERY", label: "Out for delivery" },
+    { value: "COMPLETED", label: "Completed" },
+    { value: "DELIVERED", label: "Delivered" },
+    { value: "CANCELLED", label: "Cancelled" },
+  ];
 
   return (
     <div className="contact_page_container font-sans min-h-screen">
@@ -90,18 +115,18 @@ export function OrderhistorypageView() {
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
-        {["All", "Preparing", "On the way", "Completed"].map((st) => (
+        {STATUS_FILTERS.map(({ value, label }) => (
           <button
-            key={st}
+            key={value}
             type="button"
-            onClick={() => setFilterStatus(st)}
+            onClick={() => setFilterStatus(value)}
             className={`px-4 py-2 text-xs font-bold rounded-full border transition-all shrink-0 cursor-pointer ${
-              filterStatus === st
+              filterStatus === value
                 ? "bg-[#A1255B] text-white border-[#A1255B] shadow-sm"
                 : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
             }`}
           >
-            {st}
+            {label}
           </button>
         ))}
       </div>
@@ -159,14 +184,29 @@ export function OrderhistorypageView() {
                   <User className="w-3.5 h-3.5 text-[#A1255B]" />
                   <span>Customer: </span>
                   <strong className="text-gray-900 font-bold" suppressHydrationWarning>
-                    {order.customerName}
+                    {order.customerName ?? "You"}
                   </strong>
                 </div>
                 <div className="flex items-center gap-1.5 text-gray-600">
                   <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Est. Time: </span>
+                  <span>Payment: </span>
                   <strong className="text-gray-900 font-bold">
-                    {order.estimatedTime}
+                    {order.paymentMethod ?? "Not paid yet"}
+                  </strong>
+                </div>
+                <div className="flex items-start gap-1.5 text-gray-600 sm:col-span-2">
+                  {order.fulfillmentMethod === "DELIVERY" ? (
+                    <Truck className="w-3.5 h-3.5 text-[#A1255B] shrink-0 mt-0.5" />
+                  ) : (
+                    <Package className="w-3.5 h-3.5 text-[#A1255B] shrink-0 mt-0.5" />
+                  )}
+                  <span className="shrink-0">
+                    {order.fulfillmentMethod === "DELIVERY" ? "Deliver to: " : "Pickup: "}
+                  </span>
+                  <strong className="text-gray-900 font-bold">
+                    {order.fulfillmentMethod === "DELIVERY"
+                      ? order.deliveryAddress || "Address not recorded"
+                      : "At the store"}
                   </strong>
                 </div>
               </div>
@@ -183,11 +223,11 @@ export function OrderhistorypageView() {
                         {item.quantity}x
                       </span>
                       <span className="text-gray-800 font-medium">
-                        {item.title}
+                        {item.productName}
                       </span>
                     </div>
                     <span className="font-bold text-gray-900">
-                      $ {(item.price * item.quantity).toFixed(2)}
+                      $ {Number(item.subtotal).toFixed(2)}
                     </span>
                   </div>
                 ))}
@@ -196,11 +236,16 @@ export function OrderhistorypageView() {
               {/* Order Footer: Grand Total + Action Buttons */}
               <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-3 flex-wrap">
                 <div className="text-left">
+                  {Number(order.deliveryFee ?? 0) > 0 && (
+                    <div className="text-xs text-gray-500 font-medium">
+                      Delivery fee: $ {Number(order.deliveryFee).toFixed(2)}
+                    </div>
+                  )}
                   <span className="text-xs text-gray-500 font-medium">
                     Grand Total:{" "}
                   </span>
                   <span className="value_grand_total text-base">
-                    $ {order.grandTotal.toFixed(2)}
+                    $ {Number(order.totalAmount).toFixed(2)}
                   </span>
                 </div>
 
@@ -214,7 +259,7 @@ export function OrderhistorypageView() {
                     <span>Reorder</span>
                   </button>
 
-                  {order.status === "Completed" ? (
+                  {order.status === "COMPLETED" || order.status === "DELIVERED" ? (
                     <Link
                       href={`/checkoutdone?id=${order.id}`}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors whitespace-nowrap shrink-0"

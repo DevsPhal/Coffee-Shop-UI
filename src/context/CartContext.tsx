@@ -1,18 +1,23 @@
 "use client";
 
 import React from "react";
-import { useCartStore, CartItem } from "@/store/useCartStore";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCartStore, type AddItemInput, type CartItem } from "@/store/useCartStore";
 
-export type { CartItem };
+export type { CartItem, AddItemInput };
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Thin accessor over the local cart store.
+ *
+ * Adding to the cart no longer requires being signed in: the catalogue is public, so a guest
+ * can fill a basket and is only asked to log in at checkout, where the API needs a customer
+ * account to create the order.
+ */
 export function useCart() {
   const store = useCartStore();
-  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
 
   return {
     items: store.items,
@@ -20,20 +25,8 @@ export function useCart() {
     openCart: store.openCart,
     closeCart: store.closeCart,
     toggleCart: store.toggleCart,
-    addItem: (
-      newItem: {
-        id: string;
-        title: string;
-        price: number;
-        image?: string;
-        quantity?: number;
-        size?: string;
-        iceLevel?: string;
-        sugarLevel?: string;
-        milkType?: string;
-      },
-      openDrawer?: boolean
-    ) => store.addItem(newItem, openDrawer, isLoggedIn),
+    addItem: (item: AddItemInput, openDrawer?: boolean) =>
+      store.addItem(item, openDrawer),
     updateQuantity: store.updateQuantity,
     updateSize: store.updateSize,
     updateIceLevel: store.updateIceLevel,

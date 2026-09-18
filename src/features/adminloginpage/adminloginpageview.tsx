@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Forgot } from "@/components/ui/forgot";
 import { Create } from "@/components/ui/create";
-import { useAuth } from "@/context/AuthContext";
 import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 import { adminLoginSchema } from "@/lib/authSchema";
@@ -27,7 +26,6 @@ interface AdminloginpageViewProps {
 
 export function AdminloginpageView({ initialViewMode = "login" }: AdminloginpageViewProps = {}) {
   const router = useRouter();
-  const { login } = useAuth();
   const [role, setRole] = useState("Barista");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -84,13 +82,14 @@ export function AdminloginpageView({ initialViewMode = "login" }: Adminloginpage
     }
 
     setErrors({});
-    const res = login({ identifier: username.trim(), password: password.trim(), keepLoggedIn });
-    if (!res.success) {
-      setErrors({ username: res.message || "Account not found. Please check your credentials." });
-      setActiveInput("username");
-      return;
-    }
-    router.push("/");
+    /*
+     * Staff do not sign in through the storefront. The admin dashboard is a separate app
+     * (default http://localhost:3001) with its own OTP login against the same API, and the
+     * API refuses storefront-scoped tokens for admin endpoints anyway — so send people there
+     * rather than keep a form that cannot authenticate anyone.
+     */
+    const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || "http://localhost:3001";
+    window.location.href = `${adminUrl}/auth/login`;
   };
 
   return (

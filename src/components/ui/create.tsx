@@ -1,17 +1,32 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { User, Mail, Eye, EyeOff, UserPlus, Phone, ChevronDown, Users, Check, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/context/AuthContext";
+import { toast } from "@/components/ui/toast";
+import { apiErrorMessage } from "@/store/api/baseApi";
+import {
+  useRegisterMutation,
+  useResendOtpMutation,
+  useVerifyRegistrationMutation,
+} from "@/store/api/authApi";
+import type { Gender } from "@/store/api/types";
+
 import "@/app/globals.scss";
 
 import { signUpSchema } from "@/lib/authSchema";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { cleanPhoneInput } from "@/lib/phoneUtils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
+
+/** Value is the API's enum; label is what the customer reads. */
+const GENDER_CHOICES: { value: Gender; label: string }[] = [
+  { value: "MALE", label: "Male" },
+  { value: "FEMALE", label: "Female" },
+  { value: "OTHER", label: "Other" },
+];
+
 
 type FormErrors = {
   username?: string;  
@@ -23,14 +38,17 @@ type FormErrors = {
 
 interface CreateProps {
   onBackToLogin: () => void;
-  onRegisterWithTelegram?: () => void;
   isAdmin?: boolean;
 }
 
-export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false }: CreateProps) {
+export function Create({ onBackToLogin, isAdmin = false }: CreateProps) {
   const { t } = useLanguage();
-  const router = useRouter();
-  const { signup } = useAuth();
+  const [register, { isLoading: isRegistering }] = useRegisterMutation();
+  const [verifyRegistration, { isLoading: isVerifying }] = useVerifyRegistrationMutation();
+  const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
+  const [submitError, setSubmitError] = useState("");
+  const [awaitingOtp, setAwaitingOtp] = useState(false);
+  const [otp, setOtp] = useState("");
   const [username, setUsername] = useState("");
   const [gender, setGender] = useState("");
   const [email, setEmail] = useState("");
@@ -81,8 +99,9 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError("");
 
     // Validate with Zod
     const formData = { username, gender, email, phone, password };
@@ -109,24 +128,119 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
 
     setErrors({});
 
-    // Register user in AuthContext & save profile data
-    const res = signup({
-      name: username,
-      email: email,
-      phone: phone,
-      gender: gender,
-      password: password,
-    });
-
-    if (!res.success) {
-      setErrors({ username: res.message });
-      setActiveInput("username");
-      return;
+    // POST /api/auth/register creates the account as PENDING_VERIFICATION and emails a
+    // 6-digit code; the account only becomes usable once that code is verified below.
+    try {
+      await register({
+        fullName: username.trim(),
+        email: email.trim(),
+        password,
+        phoneNumber: phone.trim() || undefined,
+        gender: (gender || undefined) as Gender | undefined,
+      }).unwrap();
+      setAwaitingOtp(true);
+      toast.add({
+        type: "success",
+        description: "We emailed you a 6-digit verification code.",
+      });
+    } catch (err) {
+      const message = apiErrorMessage(
+        err as Parameters<typeof apiErrorMessage>[0],
+        "Could not create your account."
+      );
+      setSubmitError(message);
+      toast.add({ type: "warning", description: message });
     }
-
-    // Navigate to user profile page
-    router.push("/userprofile");
   };
+
+  const handleVerifyRegistration = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await verifyRegistration({ email: email.trim(), otp: otp.trim() }).unwrap();
+      toast.add({
+        type: "success",
+        description: "Account verified. You can sign in now.",
+      });
+      onBackToLogin();
+    } catch (err) {
+      toast.add({
+        type: "warning",
+        description: apiErrorMessage(
+          err as Parameters<typeof apiErrorMessage>[0],
+          "That code was not accepted."
+        ),
+      });
+    }
+  };
+
+  /*
+   * Second step of sign-up. /api/auth/register leaves the account PENDING_VERIFICATION and
+   * emails a 6-digit code; without this screen the customer gets a "code sent" toast, stays
+   * on the filled-in form, and can never activate the account they just created.
+   */
+  if (awaitingOtp) {
+    return (
+      <div className="w-full space-y-4">
+        <div className="flex justify-center">
+          <div className="login_avatar_circle">
+            <UserPlus className="w-10 h-10 stroke-[1.5]" />
+          </div>
+        </div>
+        <h1 className="login_title">{t("Verify your email")}</h1>
+        <p className="login_subtitle">
+          {t("We sent a 6-digit verification code to")} <strong>{email}</strong>
+        </p>
+
+        <form onSubmit={handleVerifyRegistration} className="w-full space-y-4">
+          <input
+            className="h-12 w-full rounded-md border border-gray-300 text-center text-2xl tracking-[0.5em] outline-none focus:border-[#A1255B]"
+            placeholder="000000"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            required
+          />
+          <Button
+            type="submit"
+            disabled={isVerifying || otp.length !== 6}
+            className="login_submit_button w-full"
+          >
+            {isVerifying ? t("Verifying...") : t("Verify account")}
+          </Button>
+          <button
+            type="button"
+            disabled={isResending || isVerifying}
+            onClick={async () => {
+              try {
+                await resendOtp({ purpose: "REGISTER", email: email.trim() }).unwrap();
+                setOtp("");
+                toast.add({ type: "success", description: "A new verification code has been requested. Check your email." });
+              } catch (err) {
+                toast.add({
+                  type: "warning",
+                  description: apiErrorMessage(
+                    err as Parameters<typeof apiErrorMessage>[0],
+                    "Could not resend the code. Please try again."
+                  ),
+                });
+              }
+            }}
+            className="w-full text-sm text-gray-600 underline bg-transparent border-none cursor-pointer disabled:opacity-60"
+          >
+            {isResending ? t("Sending...") : t("Resend code")}
+          </button>
+          <button
+            type="button"
+            onClick={onBackToLogin}
+            className="w-full text-sm text-gray-600 underline bg-transparent border-none cursor-pointer"
+          >
+            {t("Back to login")}
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full space-y-4">
@@ -144,10 +258,10 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
 
       <form onSubmit={handleSubmit} className="w-full space-y-3" noValidate>
 
-        {/* Username Field */}
+        {/* Customer display name; email is used for login. */}
         <div>
           <label className="login_input_label">
-            {t("Username")}
+            {t("Full Name")}
           </label>
           <div className="relative flex items-center">
             <span className="absolute left-3 text-gray-400 pointer-events-none">
@@ -165,7 +279,7 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
                 setUsername(val);
                 validateField("username", val);
               }}
-              placeholder="enter your username"
+              placeholder="enter your full name"
               className="login_input_field"
             />
           </div>
@@ -182,13 +296,15 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
           <button
             type="button"
             onClick={() => setIsGenderOpen(!isGenderOpen)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-full border border-[#94a3b8] bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-[#475569] transition-all cursor-pointer select-none text-left"
+            className="w-full flex items-center justify-between px-3.5 py-2.5 border border-[#94a3b8] bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-[#475569] transition-all cursor-pointer select-none text-left"
             aria-expanded={isGenderOpen}
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <Users className="w-4 h-4 text-gray-400 shrink-0" />
               <span className={gender ? "text-gray-900 font-semibold" : "text-gray-400"}>
-                {t(gender) || "select your gender"}
+                {gender
+                  ? t(GENDER_CHOICES.find((g) => g.value === gender)?.label ?? gender)
+                  : "select your gender"}
               </span>
             </div>
             <ChevronDown
@@ -201,16 +317,19 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
           {/* Clean Custom Floating Dropdown Menu */}
           {isGenderOpen && (
             <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-full bg-white border border-gray-100 rounded-2xl shadow-lg p-1.5 space-y-0.5 animate-in fade-in duration-150">
-              {["Male", "Female", "Other"].map((option) => {
-                const isSelected = gender === option;
+              {GENDER_CHOICES.map(({ value, label }) => {
+                const isSelected = gender === value;
                 return (
                   <button
-                    key={option}
+                    key={value}
                     type="button"
                     onClick={() => {
-                      setGender(option);
+                      // Store the API's enum value, not the label: sending "Male" fails
+                      // Jackson's enum binding and the whole request is rejected as a
+                      // malformed body, before any field validation runs.
+                      setGender(value);
                       setIsGenderOpen(false);
-                      validateField("gender", option);
+                      validateField("gender", value);
                     }}
                     className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer border-none text-left select-none ${
                       isSelected
@@ -218,7 +337,7 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
                         : "hover:bg-gray-100 text-gray-800"
                     }`}
                   >
-                    <span>{t(option)}</span>
+                    <span>{t(label)}</span>
                     {isSelected && <Check className="w-4 h-4 text-white shrink-0 ml-1" />}
                   </button>
                 );
@@ -281,7 +400,7 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
                 setPhone(val);
                 validateField("phone", val);
               }}
-              placeholder="enter your phone number"
+              placeholder="072 345 5674"
               className="login_input_field"
             />
           </div>
@@ -328,25 +447,34 @@ export function Create({ onBackToLogin, onRegisterWithTelegram, isAdmin = false 
           )}
         </div>
 
-        {/* Register with Telegram Button under Password Field */}
-        {onRegisterWithTelegram && (
-          <div className="pt-1">
+        {/* There is no Telegram sign-up — an account has to exist before Telegram can be
+            linked to it (from the profile page) — so this points back to login rather than
+            offering a "Register with Telegram" button that could never create an account. */}
+        {!isAdmin && (
+          <p className="flex items-center justify-center gap-1.5 pt-1 text-center text-xs text-gray-500">
+            <Send className="h-3.5 w-3.5 shrink-0 text-sky-500" />
+            {t("Already linked Telegram to an account?")}{" "}
             <button
               type="button"
-              onClick={onRegisterWithTelegram}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full border border-sky-200 bg-sky-50/80 hover:bg-sky-100 text-sky-700 text-xs sm:text-sm font-bold transition-all cursor-pointer select-none active:scale-98"
+              onClick={onBackToLogin}
+              className="cursor-pointer border-none bg-transparent font-bold text-[#A1255B] underline"
             >
-              <Send className="w-4 h-4 text-sky-600 shrink-0" />
-              <span>{t("Register with Telegram")}</span>
+              {t("Log in with Telegram")}
             </button>
-          </div>
+          </p>
         )}
 
+        {submitError && (
+          <p role="alert" className="text-sm text-red-700">
+            {submitError}
+          </p>
+        )}
         <Button
           type="submit"
+          disabled={isRegistering}
           className="login_submit_button mt-2"
         >
-          {t("Sign Up")}
+          {isRegistering ? t("Creating account...") : t("Sign Up")}
         </Button>
 
         <div className="text-center pt-1">

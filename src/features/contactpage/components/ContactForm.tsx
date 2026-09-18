@@ -20,7 +20,7 @@ const SUBJECT_OPTIONS = [
 ];
 
 export function ContactForm() {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const {
     formData,
@@ -51,13 +51,7 @@ export function ContactForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (user && updateUser) {
-      updateUser({
-        name: formData.fullName ? formData.fullName : user.name,
-        email: formData.email ? formData.email : user.email,
-        phone: formData.phone ? formData.phone : user.phone,
-      });
-    }
+    // Keep the contact details on this message, independently of the customer's profile.
     await submitMessage(user);
   };
 
@@ -70,7 +64,7 @@ export function ContactForm() {
         <div>
           <h3 className="contact_form_success_title">{t("Message Sent!")}</h3>
           <p className="contact_form_success_desc">
-            {t("Thank you,")} <strong suppressHydrationWarning>{formData.fullName}</strong>. {t("We've received your message regarding")} <span suppressHydrationWarning>"{t(formData.topic)}"</span> {t("and will respond to")} <u suppressHydrationWarning>{formData.email}</u> {t("shortly.")}
+            {t("Thank you,")} <strong suppressHydrationWarning>{formData.fullName}</strong>. {t("We've received your message regarding")} <span suppressHydrationWarning>&quot;{t(formData.topic)}&quot;</span> {t("and will respond to")} <u suppressHydrationWarning>{formData.email}</u> {t("shortly.")}
           </p>
         </div>
         <div className="contact_form_submit_wrapper">

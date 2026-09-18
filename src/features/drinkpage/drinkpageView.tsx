@@ -4,15 +4,31 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { Card } from "@/components/cards/card";
 import { CategoryDropdown } from "@/components/ui";
-import { PRODUCTS, filterProductsByCategory, getCategoryItemCount } from "@/data/products";
+import { ALL_CATEGORIES } from "@/components/ui/CategoryDropdown";
+import { toStoreProduct } from "@/store/api/productAdapter";
+import { useCatalog } from "@/store/api/useCatalog";
 import { Search } from "lucide-react";
 import "@/app/globals.scss";
 
 export function DrinkpageView() {
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const filteredProducts = filterProductsByCategory(selectedCategory, searchQuery);
+  const { products, isLoading, error } = useCatalog(
+    selectedCategory === ALL_CATEGORIES ? undefined : selectedCategory
+  );
+
+  // The API filters by category server-side; the free-text search narrows that page here.
+  const filteredProducts = products
+    .filter((product) => {
+      const term = searchQuery.trim().toLowerCase();
+      if (!term) return true;
+      return (
+        product.name.toLowerCase().includes(term) ||
+        product.categoryName.toLowerCase().includes(term)
+      );
+    })
+    .map(toStoreProduct);
 
   return (
     <div className="menu_page_wrapper font-sans">
@@ -34,7 +50,6 @@ export function DrinkpageView() {
             <CategoryDropdown
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
-              getCategoryCount={getCategoryItemCount}
             />
           </div>
 
@@ -73,14 +88,8 @@ export function DrinkpageView() {
 
         {/* Menu Cards Grid */}
         <div className="menu_page_grid">
-          {filteredProducts.map((item) => (
-            <Card
-              key={item.id}
-              id={item.id}
-              title={item.title}
-              price={item.price}
-              image={item.image}
-            />
+          {filteredProducts.map((product) => (
+            <Card key={product.id} product={product} />
           ))}
         </div>
 

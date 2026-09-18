@@ -1,100 +1,132 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import { z } from "zod";
+
 import { toast } from "@/components/ui/toast";
-import { getItemCustomizationConfig, getProductByIdOrTitle } from "@/data/products";
+import type { IceLevel, MilkType, SugarLevel, UUID } from "@/store/api/types";
 
-export function calculateSizePrice(basePrice: number, size?: string): number {
-  if (!size) return basePrice;
-  const s = size.trim().toUpperCase();
-  if (s === "CAN") {
-    return 0.75;
-  }
-  if (s === "BOTTLE") {
-    return 1.25;
-  }
-  if (s === "CARTON") {
-    return 28.00;
-  }
-  if (s === "DOUBLE") {
-    return Math.round(basePrice * 2 * 100) / 100; // x2 price double
-  }
-  if (s === "1500ML") {
-    return 0.65;
-  }
-  if (s === "1000ML") {
-    return 0.35;
-  }
-  if (s === "L") {
-    return Math.round(basePrice * 1.20 * 100) / 100; // +20% for Large size
-  }
-  return basePrice; // M, S, 1, etc.
-}
+/**
+ * The guest cart.
+ *
+ * It stays local so a visitor can shop before signing in — the API's cart requires a customer
+ * account. At checkout the lines are pushed to `/api/customer/cart` and turned into an order
+ * (see `useCheckout`), so every field here is shaped to be sent as-is: product and size are
+ * UUIDs, and the customization levels are the API's enum values, not display labels.
+ *
+ * Lines are keyed by `lineId`, a "|"-joined composite. The delimiter matters: UUIDs contain
+ * hyphens, so the previous "-"-joined key could not be split back apart.
+ */
 
-// Zod Schema for Cart Item validation
+const LINE_DELIMITER = "|";
+
 export const cartItemSchema = z.object({
-  id: z.string().trim().min(1, { message: "Cart item ID is required." }),
-  productId: z.string().optional(),
+  /** Composite key identifying this exact configuration of a product. */
+  lineId: z.string().min(1),
+  productId: z.string().uuid({ message: "Product id must be a UUID from the API." }),
   title: z.string().trim().min(1, { message: "Item title is required." }),
-  price: z.number().nonnegative({ message: "Price cannot be negative." }),
-  originalPrice: z.number().nonnegative().optional(),
-  basePrice: z.number().nonnegative().optional(),
+  image: z.string().nullable().optional(),
+  /** finalPrice + the chosen size's priceDelta, as the API will charge it. */
+  unitPrice: z.number().nonnegative({ message: "Price cannot be negative." }),
+  /** Pre-discount unit price, present only while a discount is running. */
+  originalUnitPrice: z.number().nonnegative().optional(),
   quantity: z.number().int().positive({ message: "Quantity must be at least 1." }),
-  size: z.string().optional().default("M"),
-  iceLevel: z.string().optional().default("Normal"),
-  sugarLevel: z.string().optional().default("Normal"),
-  milkType: z.string().optional().default("Normal"),
-  image: z.string().optional(),
+  sizeOptionId: z.string().uuid().nullable().optional(),
+  sizeName: z.string().nullable().optional(),
+  sugarLevel: z
+    .enum(["ZERO", "TWENTY_FIVE", "FIFTY", "SEVENTY_FIVE", "HUNDRED"])
+    .optional(),
+  iceLevel: z
+    .enum(["ZERO", "TWENTY_FIVE", "FIFTY", "SEVENTY_FIVE", "HUNDRED"])
+    .optional(),
+  milkType: z
+    .enum([
+      "NONE",
+      "WHOLE_MILK",
+      "SKIM_MILK",
+      "OAT_MILK",
+      "ALMOND_MILK",
+      "SOY_MILK",
+      "CONDENSED_MILK",
+    ])
+    .optional(),
 });
 
 export type CartItem = z.infer<typeof cartItemSchema>;
 
-// Zod Schema for Adding an Item to Cart
-export const addItemInputSchema = z.object({
-  id: z.string().trim().min(1, { message: "Invalid product ID." }),
-  title: z.string().trim().min(1, { message: "Product title is required." }),
-  price: z.number().nonnegative({ message: "Price must be a valid positive number." }),
-  originalPrice: z.number().nonnegative().optional(),
-  quantity: z.number().int().positive({ message: "Quantity must be at least 1." }).optional().default(1),
-  size: z.string().optional(),
-  iceLevel: z.string().optional().default("Normal"),
-  sugarLevel: z.string().optional().default("Normal"),
-  milkType: z.string().optional().default("Normal"),
-  image: z.string().optional(),
-});
+export const addItemInputSchema = cartItemSchema
+  .omit({ lineId: true })
+  .extend({ quantity: z.number().int().positive().optional().default(1) });
 
 export type AddItemInput = z.input<typeof addItemInputSchema>;
 
-// Zod Schema for updating item quantity
-export const updateQuantitySchema = z.object({
-  id: z.string().trim().min(1, { message: "Item ID is required for quantity update." }),
-  change: z.number().int({ message: "Quantity change must be an integer." }),
-});
+/** Two lines merge only when the product *and* every chosen option match. */
+export function buildLineId(item: {
+  productId: UUID;
+  sizeOptionId?: UUID | null;
+  sugarLevel?: SugarLevel;
+  iceLevel?: IceLevel;
+  milkType?: MilkType;
+}): string {
+  return [
+    item.productId,
+    item.sizeOptionId ?? "",
+    item.sugarLevel ?? "",
+    item.iceLevel ?? "",
+    item.milkType ?? "",
+  ].join(LINE_DELIMITER);
+}
 
 interface CartStoreState {
   items: CartItem[];
   isOpen: boolean;
 
-  // Actions
   openCart: () => void;
   closeCart: () => void;
   toggleCart: () => void;
+
   addItem: (
     item: AddItemInput,
-    openDrawer?: boolean,
-    isLoggedIn?: boolean
+    openDrawer?: boolean
   ) => { success: boolean; message?: string };
-  updateQuantity: (id: string, change: number) => { success: boolean; message?: string };
-  updateSize: (id: string, size: string) => void;
-  updateIceLevel: (id: string, iceLevel: string) => void;
-  updateSugarLevel: (id: string, sugarLevel: string) => void;
-  updateMilkType: (id: string, milkType: string) => void;
-  removeItem: (id: string) => void;
+  updateQuantity: (lineId: string, change: number) => { success: boolean; message?: string };
+  updateSize: (
+    lineId: string,
+    sizeOptionId: UUID | null,
+    sizeName: string | null,
+    unitPrice: number
+  ) => void;
+  updateIceLevel: (lineId: string, iceLevel: IceLevel) => void;
+  updateSugarLevel: (lineId: string, sugarLevel: SugarLevel) => void;
+  updateMilkType: (lineId: string, milkType: MilkType) => void;
+  removeItem: (lineId: string) => void;
   clearCart: () => void;
 
-  // Computed values / Selectors
   getSubtotal: () => number;
   getTotalCount: () => number;
+}
+
+/** Re-key a line after one of its options changed, merging into a twin if one now exists. */
+function rekey(items: CartItem[], lineId: string, patch: Partial<CartItem>): CartItem[] {
+  const index = items.findIndex((item) => item.lineId === lineId);
+  if (index === -1) return items;
+
+  const updated: CartItem = { ...items[index], ...patch };
+  updated.lineId = buildLineId(updated);
+
+  const rest = items.filter((_, i) => i !== index);
+  const twin = rest.findIndex((item) => item.lineId === updated.lineId);
+  if (twin > -1) {
+    const merged = [...rest];
+    merged[twin] = {
+      ...merged[twin],
+      quantity: merged[twin].quantity + updated.quantity,
+    };
+    return merged;
+  }
+
+  const next = [...items];
+  next[index] = updated;
+  return next;
 }
 
 export const useCartStore = create<CartStoreState>()(
@@ -107,437 +139,85 @@ export const useCartStore = create<CartStoreState>()(
       closeCart: () => set({ isOpen: false }),
       toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
 
-      addItem: (newItem, openDrawer = false, isLoggedIn = true) => {
-        if (!isLoggedIn) {
-          const msg = "Please log in to your account first.";
-          toast.add({
-            type: "warning",
-            description: msg,
-          });
-          if (typeof window !== "undefined") {
-            window.location.href = "/login";
-          }
-          return { success: false, message: msg };
+      addItem: (newItem, openDrawer = false) => {
+        const parsed = addItemInputSchema.safeParse(newItem);
+        if (!parsed.success) {
+          const message = parsed.error.issues[0]?.message || "Invalid cart item.";
+          toast.add({ type: "warning", description: message });
+          return { success: false, message };
         }
 
-        const validationResult = addItemInputSchema.safeParse(newItem);
-        if (!validationResult.success) {
-          const errorMsg = validationResult.error.issues[0]?.message || "Invalid cart item data.";
-          toast.add({
-            type: "warning",
-            description: errorMsg,
-          });
-          return { success: false, message: errorMsg };
-        }
-
-        const validData = validationResult.data;
-        const qtyToAdd = validData.quantity;
-        const config = getItemCustomizationConfig(validData.title);
-        let resolvedSize = validData.size;
-        if (config.hasSize) {
-          if (!resolvedSize || !config.sizeOptions.includes(resolvedSize)) {
-            resolvedSize = config.sizeOptions[0] || "M";
-          }
-        } else {
-          resolvedSize = "";
-        }
-
-        const matchedProd = getProductByIdOrTitle(validData.id, validData.title);
-        const productId = matchedProd?.id || validData.id;
-        const resolvedOrigPrice = validData.originalPrice ?? matchedProd?.originalPrice;
-        const basePrice = validData.price;
-        const adjustedPrice = calculateSizePrice(basePrice, resolvedSize);
-        const iceLevel = validData.iceLevel || "Normal";
-        const sugarLevel = validData.sugarLevel || "Normal";
-        const milkType = validData.milkType || "Normal";
-
-        const compositeId = `${productId}-${resolvedSize || "default"}-${iceLevel}-${sugarLevel}-${milkType}`;
+        const data = parsed.data;
+        const lineId = buildLineId(data);
 
         set((state) => {
-          const existingIndex = state.items.findIndex((i) => {
-            const itemProdId = i.productId || i.id.split("-")[0];
-            return (
-              itemProdId === productId &&
-              (i.size || "") === (resolvedSize || "") &&
-              (i.iceLevel || "Normal") === iceLevel &&
-              (i.sugarLevel || "Normal") === sugarLevel &&
-              (i.milkType || "Normal") === milkType
-            );
-          });
-
-          if (existingIndex > -1) {
-            const updated = [...state.items];
-            const currentItem = updated[existingIndex];
-            const currentBase = currentItem.basePrice ?? basePrice;
-            const updatedPrice = calculateSizePrice(currentBase, resolvedSize);
-
-            updated[existingIndex] = {
-              ...currentItem,
-              id: compositeId,
-              productId: productId,
-              quantity: currentItem.quantity + qtyToAdd,
-              size: resolvedSize,
-              basePrice: currentBase,
-              price: updatedPrice,
-              originalPrice: resolvedOrigPrice ?? currentItem.originalPrice,
+          const existing = state.items.findIndex((item) => item.lineId === lineId);
+          if (existing > -1) {
+            const items = [...state.items];
+            items[existing] = {
+              ...items[existing],
+              quantity: items[existing].quantity + data.quantity,
             };
-            return { items: updated, ...(openDrawer ? { isOpen: true } : {}) };
+            return { items, isOpen: openDrawer || state.isOpen };
           }
-
           return {
-            items: [
-              ...state.items,
-              {
-                id: compositeId,
-                productId: productId,
-                title: validData.title,
-                basePrice: basePrice,
-                price: adjustedPrice,
-                originalPrice: resolvedOrigPrice,
-                quantity: qtyToAdd,
-                size: resolvedSize,
-                iceLevel: iceLevel,
-                sugarLevel: sugarLevel,
-                milkType: milkType,
-                image: validData.image,
-              },
-            ],
-            ...(openDrawer ? { isOpen: true } : {}),
+            items: [...state.items, { ...data, lineId }],
+            isOpen: openDrawer || state.isOpen,
           };
         });
 
         return { success: true };
       },
 
-      updateQuantity: (id: string, change: number) => {
-        const validationResult = updateQuantitySchema.safeParse({ id, change });
-        if (!validationResult.success) {
-          const errorMsg = validationResult.error.issues[0]?.message || "Invalid quantity update input.";
-          toast.add({
-            type: "warning",
-            description: errorMsg,
-          });
-          return { success: false, message: errorMsg };
+      updateQuantity: (lineId, change) => {
+        const item = get().items.find((i) => i.lineId === lineId);
+        if (!item) return { success: false, message: "Item not found." };
+
+        const next = item.quantity + change;
+        if (next <= 0) {
+          set((state) => ({ items: state.items.filter((i) => i.lineId !== lineId) }));
+          return { success: true };
         }
 
-        const { id: validId, change: validChange } = validationResult.data;
-
         set((state) => ({
-          items: state.items
-            .map((item) => {
-              if (item.id === validId) {
-                const newQty = item.quantity + validChange;
-                return newQty > 0 ? { ...item, quantity: newQty } : null;
-              }
-              return item;
-            })
-            .filter((item): item is CartItem => item !== null),
+          items: state.items.map((i) =>
+            i.lineId === lineId ? { ...i, quantity: next } : i
+          ),
         }));
-
         return { success: true };
       },
 
-      updateSize: (id: string, size: string) => {
-        set((state) => {
-          const targetIndex = state.items.findIndex((item) => item.id === id);
-          if (targetIndex === -1) return state;
-
-          const currentItem = state.items[targetIndex];
-          if ((currentItem.size || "") === (size || "")) return state;
-
-          const currentBase = currentItem.basePrice ?? currentItem.price;
-          const newPrice = calculateSizePrice(currentBase, size);
-          const prodId = currentItem.productId || currentItem.id.split("-")[0];
-          const newCompositeId = `${prodId}-${size || "default"}-${currentItem.iceLevel || "Normal"}-${currentItem.sugarLevel || "Normal"}-${currentItem.milkType || "Normal"}`;
-
-          if (currentItem.quantity > 1) {
-            const updated = [...state.items];
-            updated[targetIndex] = {
-              ...currentItem,
-              quantity: currentItem.quantity - 1,
-            };
-
-            const existingOtherIndex = updated.findIndex((item) => item.id === newCompositeId);
-            if (existingOtherIndex > -1) {
-              updated[existingOtherIndex] = {
-                ...updated[existingOtherIndex],
-                quantity: updated[existingOtherIndex].quantity + 1,
-              };
-            } else {
-              updated.push({
-                ...currentItem,
-                id: newCompositeId,
-                productId: prodId,
-                size,
-                basePrice: currentBase,
-                price: newPrice,
-                quantity: 1,
-              });
-            }
-            return { items: updated };
-          }
-
-          const existingOtherIndex = state.items.findIndex((item, idx) => idx !== targetIndex && item.id === newCompositeId);
-          if (existingOtherIndex > -1) {
-            const updated = [...state.items];
-            updated[existingOtherIndex] = {
-              ...updated[existingOtherIndex],
-              quantity: updated[existingOtherIndex].quantity + 1,
-            };
-            updated.splice(targetIndex, 1);
-            return { items: updated };
-          }
-
-          const updated = [...state.items];
-          updated[targetIndex] = {
-            ...currentItem,
-            id: newCompositeId,
-            productId: prodId,
-            size,
-            basePrice: currentBase,
-            price: newPrice,
-          };
-          return { items: updated };
-        });
-      },
-
-      updateIceLevel: (id: string, iceLevel: string) => {
-        set((state) => {
-          const targetIndex = state.items.findIndex((item) => item.id === id);
-          if (targetIndex === -1) return state;
-
-          const currentItem = state.items[targetIndex];
-          if ((currentItem.iceLevel || "Normal") === (iceLevel || "Normal")) return state;
-
-          const prodId = currentItem.productId || currentItem.id.split("-")[0];
-          const newCompositeId = `${prodId}-${currentItem.size || "default"}-${iceLevel || "Normal"}-${currentItem.sugarLevel || "Normal"}-${currentItem.milkType || "Normal"}`;
-
-          if (currentItem.quantity > 1) {
-            const updated = [...state.items];
-            updated[targetIndex] = {
-              ...currentItem,
-              quantity: currentItem.quantity - 1,
-            };
-
-            const existingOtherIndex = updated.findIndex((item) => item.id === newCompositeId);
-            if (existingOtherIndex > -1) {
-              updated[existingOtherIndex] = {
-                ...updated[existingOtherIndex],
-                quantity: updated[existingOtherIndex].quantity + 1,
-              };
-            } else {
-              updated.push({
-                ...currentItem,
-                id: newCompositeId,
-                productId: prodId,
-                iceLevel,
-                quantity: 1,
-              });
-            }
-            return { items: updated };
-          }
-
-          const existingOtherIndex = state.items.findIndex((item, idx) => idx !== targetIndex && item.id === newCompositeId);
-          if (existingOtherIndex > -1) {
-            const updated = [...state.items];
-            updated[existingOtherIndex] = {
-              ...updated[existingOtherIndex],
-              quantity: updated[existingOtherIndex].quantity + 1,
-            };
-            updated.splice(targetIndex, 1);
-            return { items: updated };
-          }
-
-          const updated = [...state.items];
-          updated[targetIndex] = {
-            ...currentItem,
-            id: newCompositeId,
-            productId: prodId,
-            iceLevel,
-          };
-          return { items: updated };
-        });
-      },
-
-      updateSugarLevel: (id: string, sugarLevel: string) => {
-        set((state) => {
-          const targetIndex = state.items.findIndex((item) => item.id === id);
-          if (targetIndex === -1) return state;
-
-          const currentItem = state.items[targetIndex];
-          if ((currentItem.sugarLevel || "Normal") === (sugarLevel || "Normal")) return state;
-
-          const prodId = currentItem.productId || currentItem.id.split("-")[0];
-          const newCompositeId = `${prodId}-${currentItem.size || "default"}-${currentItem.iceLevel || "Normal"}-${sugarLevel || "Normal"}-${currentItem.milkType || "Normal"}`;
-
-          if (currentItem.quantity > 1) {
-            const updated = [...state.items];
-            updated[targetIndex] = {
-              ...currentItem,
-              quantity: currentItem.quantity - 1,
-            };
-
-            const existingOtherIndex = updated.findIndex((item) => item.id === newCompositeId);
-            if (existingOtherIndex > -1) {
-              updated[existingOtherIndex] = {
-                ...updated[existingOtherIndex],
-                quantity: updated[existingOtherIndex].quantity + 1,
-              };
-            } else {
-              updated.push({
-                ...currentItem,
-                id: newCompositeId,
-                productId: prodId,
-                sugarLevel,
-                quantity: 1,
-              });
-            }
-            return { items: updated };
-          }
-
-          const existingOtherIndex = state.items.findIndex((item, idx) => idx !== targetIndex && item.id === newCompositeId);
-          if (existingOtherIndex > -1) {
-            const updated = [...state.items];
-            updated[existingOtherIndex] = {
-              ...updated[existingOtherIndex],
-              quantity: updated[existingOtherIndex].quantity + 1,
-            };
-            updated.splice(targetIndex, 1);
-            return { items: updated };
-          }
-
-          const updated = [...state.items];
-          updated[targetIndex] = {
-            ...currentItem,
-            id: newCompositeId,
-            productId: prodId,
-            sugarLevel,
-          };
-          return { items: updated };
-        });
-      },
-
-      updateMilkType: (id: string, milkType: string) => {
-        set((state) => {
-          const targetIndex = state.items.findIndex((item) => item.id === id);
-          if (targetIndex === -1) return state;
-
-          const currentItem = state.items[targetIndex];
-          if ((currentItem.milkType || "Normal") === (milkType || "Normal")) return state;
-
-          const prodId = currentItem.productId || currentItem.id.split("-")[0];
-          const newCompositeId = `${prodId}-${currentItem.size || "default"}-${currentItem.iceLevel || "Normal"}-${currentItem.sugarLevel || "Normal"}-${milkType || "Normal"}`;
-
-          if (currentItem.quantity > 1) {
-            const updated = [...state.items];
-            updated[targetIndex] = {
-              ...currentItem,
-              quantity: currentItem.quantity - 1,
-            };
-
-            const existingOtherIndex = updated.findIndex((item) => item.id === newCompositeId);
-            if (existingOtherIndex > -1) {
-              updated[existingOtherIndex] = {
-                ...updated[existingOtherIndex],
-                quantity: updated[existingOtherIndex].quantity + 1,
-              };
-            } else {
-              updated.push({
-                ...currentItem,
-                id: newCompositeId,
-                productId: prodId,
-                milkType,
-                quantity: 1,
-              });
-            }
-            return { items: updated };
-          }
-
-          const existingOtherIndex = state.items.findIndex((item, idx) => idx !== targetIndex && item.id === newCompositeId);
-          if (existingOtherIndex > -1) {
-            const updated = [...state.items];
-            updated[existingOtherIndex] = {
-              ...updated[existingOtherIndex],
-              quantity: updated[existingOtherIndex].quantity + 1,
-            };
-            updated.splice(targetIndex, 1);
-            return { items: updated };
-          }
-
-          const updated = [...state.items];
-          updated[targetIndex] = {
-            ...currentItem,
-            id: newCompositeId,
-            productId: prodId,
-            milkType,
-          };
-          return { items: updated };
-        });
-      },
-
-      removeItem: (id: string) => {
+      updateSize: (lineId, sizeOptionId, sizeName, unitPrice) =>
         set((state) => ({
-          items: state.items.filter((item) => item.id !== id),
-        }));
-      },
+          items: rekey(state.items, lineId, { sizeOptionId, sizeName, unitPrice }),
+        })),
 
-      clearCart: () => {
-        set({ items: [] });
-      },
+      updateIceLevel: (lineId, iceLevel) =>
+        set((state) => ({ items: rekey(state.items, lineId, { iceLevel }) })),
 
-      getSubtotal: () => {
-        return get().items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      },
+      updateSugarLevel: (lineId, sugarLevel) =>
+        set((state) => ({ items: rekey(state.items, lineId, { sugarLevel }) })),
 
-      getTotalCount: () => {
-        return get().items.reduce((sum, item) => sum + item.quantity, 0);
-      },
+      updateMilkType: (lineId, milkType) =>
+        set((state) => ({ items: rekey(state.items, lineId, { milkType }) })),
+
+      removeItem: (lineId) =>
+        set((state) => ({ items: state.items.filter((i) => i.lineId !== lineId) })),
+
+      clearCart: () => set({ items: [] }),
+
+      getSubtotal: () =>
+        get().items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+
+      getTotalCount: () => get().items.reduce((sum, item) => sum + item.quantity, 0),
     }),
     {
-      name: "coffee_shop_cart",
-      storage: createJSONStorage(() => (typeof window !== "undefined" ? localStorage : {
-        getItem: () => null,
-        setItem: () => {},
-        removeItem: () => {},
-      })),
+      name: "cart-storage",
+      // Bumped because the line shape changed from mock ids to API UUIDs: an old persisted
+      // cart cannot be checked out, so it is dropped rather than half-migrated.
+      version: 2,
+      migrate: () => ({ items: [], isOpen: false }),
       partialize: (state) => ({ items: state.items }),
-      onRehydrateStorage: () => (state) => {
-        if (state && Array.isArray(state.items)) {
-          state.items = state.items
-            .filter((item) => cartItemSchema.safeParse(item).success)
-            .map((item) => {
-              const config = getItemCustomizationConfig(item.title);
-              let size = item.size;
-              if (config.hasSize && (!size || !config.sizeOptions.includes(size))) {
-                size = config.sizeOptions[0] || "1";
-              }
-
-              let sugarLevel = item.sugarLevel || "Normal";
-              if (sugarLevel.includes("Less") || sugarLevel.includes("50%") || sugarLevel.includes("25%") || sugarLevel.includes("0%")) {
-                sugarLevel = "Less";
-              } else {
-                sugarLevel = "Normal";
-              }
-
-              let iceLevel = item.iceLevel || "Normal";
-              if (iceLevel.includes("Normal")) iceLevel = "Normal";
-              else if (iceLevel.includes("Less")) iceLevel = "Less";
-              else if (iceLevel.includes("No")) iceLevel = "No Ice";
-              else iceLevel = "Normal";
-
-              let milkType = item.milkType || "Normal";
-              if (milkType.includes("Less")) milkType = "Less Milk";
-              else if (milkType.includes("No")) milkType = "No Milk";
-              else milkType = "Normal";
-
-              const prod = getProductByIdOrTitle(item.productId || item.id, item.title);
-              const prodId = item.productId || prod?.id || item.id.split("-")[0];
-              const compositeId = `${prodId}-${size || "default"}-${iceLevel}-${sugarLevel}-${milkType}`;
-
-              return { ...item, id: compositeId, productId: prodId, size, sugarLevel, iceLevel, milkType };
-            });
-        }
-      },
     }
   )
 );

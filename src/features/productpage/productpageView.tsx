@@ -9,8 +9,17 @@ import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { toast } from "@/components/ui/toast";
-import { getProductByIdOrTitle, PRODUCTS, getResolvedProductImage, getItemCustomizationConfig } from "@/data/products";
-import { calculateSizePrice } from "@/store/useCartStore";
+import { useGetProductQuery } from "@/store/api/catalogApi";
+import { resolveProductImage, toStoreProduct } from "@/store/api/productAdapter";
+import {
+  ICE_CHOICES,
+  ICE_LABELS,
+  MILK_CHOICES,
+  MILK_LABELS,
+  SUGAR_CHOICES,
+  SUGAR_LABELS,
+} from "@/store/api/optionMapping";
+import type { IceLevel, MilkType, SugarLevel } from "@/store/api/types";
 import { Clock, ChevronDown, Check } from "lucide-react";
 import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidation";
 import "@/app/globals.scss";
@@ -94,33 +103,21 @@ function CustomProductPageOptionDropdown({
 }
 
 export interface ProductpageViewProps {
+  /** Product UUID. Falls back to the `id` query param when not passed directly. */
   id?: string;
-  title?: string;
-  price?: number;
-  originalPrice?: number;
-  discountType?: "percentage" | "fixed";
-  discountAmount?: number;
-  promoEndDate?: string | Date;
-  promoDaysLeft?: string;
-  description?: string;
-  category?: string;
-  image?: string | null;
   onAddToCart?: () => void;
   onBuyNow?: () => void;
 }
 
+/**
+ * Product detail, fetched by id from `/api/customer/products/{id}`.
+ *
+ * Everything shown — price, discount, description, size options — comes from that response
+ * rather than from query-string parameters, so a shared or bookmarked link always reflects
+ * the product's current state instead of whatever it cost when the link was made.
+ */
 export function ProductpageView({
   id: propId,
-  title: propTitle,
-  price: propPrice,
-  originalPrice: propOriginalPrice,
-  discountType: propDiscountType,
-  discountAmount: propDiscountAmount,
-  promoEndDate: propPromoEndDate,
-  promoDaysLeft: propPromoDaysLeft,
-  description: propDescription,
-  category: propCategory,
-  image: propImage,
   onAddToCart,
   onBuyNow,
 }: ProductpageViewProps) {
@@ -143,131 +140,124 @@ export function ProductpageView({
   }, []);
 
   const menuBaseUrl = isMobile ? "/menuphone" : "/menu";
-  const queryId = searchParams.get("id") || undefined;
-  const queryTitle = searchParams.get("title") || undefined;
-  const queryPrice = searchParams.get("price")
-    ? parseFloat(searchParams.get("price")!)
-    : undefined;
-  const queryOriginalPrice = searchParams.get("originalPrice")
-    ? parseFloat(searchParams.get("originalPrice")!)
-    : undefined;
-  const queryDiscountType = (searchParams.get("discountType") as "percentage" | "fixed") || undefined;
-  const queryDiscountAmount = searchParams.get("discountAmount")
-    ? parseFloat(searchParams.get("discountAmount")!)
-    : undefined;
-  const queryPromoEndDate = searchParams.get("promoEndDate") || undefined;
-  const queryPromoDaysLeft = searchParams.get("promoDaysLeft") || undefined;
-  const queryImage = searchParams.get("image") || undefined;
-  const queryDescription = searchParams.get("description") || undefined;
-  const queryCategory = searchParams.get("category") || undefined;
+  const productId = propId || searchParams.get("id") || "";
 
-  const effectiveId = propId || queryId;
-  const effectiveTitle = propTitle || queryTitle;
-  const matchedProduct =
-    getProductByIdOrTitle(effectiveId, effectiveTitle) || PRODUCTS[0];
+  const {
+    data: apiProduct,
+    isLoading: isLoadingProduct,
+    error: productError,
+  } = useGetProductQuery(productId, { skip: !productId });
 
-  const displayId = effectiveId || matchedProduct.id;
-  const displayTitle = propTitle || queryTitle || matchedProduct.title;
-  const displayPrice = propPrice ?? queryPrice ?? matchedProduct.price;
-  const displayOriginalPrice =
-    propOriginalPrice ?? queryOriginalPrice ?? matchedProduct.originalPrice;
+  const product = apiProduct ? toStoreProduct(apiProduct) : null;
 
-  const displayDiscountType = propDiscountType || queryDiscountType || matchedProduct.discountType;
-  const displayDiscountAmount = propDiscountAmount ?? queryDiscountAmount ?? matchedProduct.discountAmount;
+  const displayId = product?.id ?? productId;
+  const displayTitle = product?.title ?? "";
+  const displayOriginalPrice = product?.originalPrice;
+  const displayDiscountType = product?.discountType;
+  const displayDiscountAmount = product?.discountAmount;
+  const displayPromoEndDate = product?.discountEndsAt;
+  const displayDescription = product?.description ?? "";
+  const displayCategory = product?.category ?? "";
+  const displayImage = resolveProductImage(product?.image);
 
-  const displayPromoEndDate = propPromoEndDate || queryPromoEndDate || matchedProduct.promoEndDate;
-  const displayPromoDaysLeft = propPromoDaysLeft || queryPromoDaysLeft || matchedProduct.promoDaysLeft;
+  const sizeOptions = product?.sizeOptions ?? [];
+
+  const [selectedSizeId, setSelectedSizeId] = React.useState<string | null>(null);
+  const [selectedIce, setSelectedIce] = React.useState<IceLevel>("HUNDRED");
+  const [selectedSugar, setSelectedSugar] = React.useState<SugarLevel>("HUNDRED");
+  const [selectedMilk, setSelectedMilk] = React.useState<MilkType>("WHOLE_MILK");
+
+  // Default to the first size once the product arrives.
+  React.useEffect(() => {
+    if (sizeOptions.length > 0 && !sizeOptions.some((o) => o.id === selectedSizeId)) {
+      setSelectedSizeId(sizeOptions[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id, sizeOptions.length]);
+
+  const selectedSize = sizeOptions.find((o) => o.id === selectedSizeId) ?? null;
+  const basePrice = product?.price ?? 0;
+  const displayPrice = basePrice + Number(selectedSize?.priceDelta ?? 0);
 
   const discountInfo = formatDiscountBadge(
-    displayPrice,
+    basePrice,
     displayOriginalPrice,
     displayDiscountType,
     displayDiscountAmount
   );
 
-  const promoResult = calculatePromoTimeLeft(displayPromoEndDate, displayPromoDaysLeft);
-  const isPromotion =
-    (discountInfo.hasDiscount || (displayOriginalPrice !== undefined && displayOriginalPrice > displayPrice)) &&
-    promoResult.isValid;
+  const promoResult = calculatePromoTimeLeft(displayPromoEndDate, undefined);
 
-  const displayDescription =
-    propDescription || queryDescription || matchedProduct.description;
-  const displayCategory =
-    propCategory || queryCategory || matchedProduct.category || "Coffee";
-  const displayImage = getResolvedProductImage(
-    displayId,
-    propImage !== undefined ? propImage : queryImage || matchedProduct.image
-  );
+  // An open-ended discount (no end date) is still a discount — only the countdown needs one.
+  const isPromotion = Boolean(product?.discountActive);
+  const showCountdown = isPromotion && promoResult.isValid;
 
-  const customizationConfig = getItemCustomizationConfig(displayTitle, displayCategory);
-  const defaultInitialSize = customizationConfig.hasSize ? (customizationConfig.sizeOptions[0] || "M") : "M";
-
-  const [selectedSize, setSelectedSize] = React.useState<string>(defaultInitialSize);
-  const [selectedIce, setSelectedIce] = React.useState<string>("Normal");
-  const [selectedSugar, setSelectedSugar] = React.useState<string>("Normal");
-  const [selectedMilk, setSelectedMilk] = React.useState<string>("Normal");
-
-  React.useEffect(() => {
-    if (customizationConfig.hasSize && customizationConfig.sizeOptions.length > 0) {
-      if (!customizationConfig.sizeOptions.includes(selectedSize)) {
-        setSelectedSize(customizationConfig.sizeOptions[0]);
-      }
-    }
-  }, [displayTitle, displayCategory]);
+  // Adding to the basket no longer needs an account — the catalogue is public and the cart is
+  // local until checkout, which is where the API requires a signed-in customer.
+  const addCurrentSelection = () => {
+    if (!product) return false;
+    addItem({
+      productId: product.id,
+      title: product.title,
+      image: product.image,
+      unitPrice: displayPrice,
+      originalUnitPrice: displayOriginalPrice,
+      quantity: 1,
+      sizeOptionId: selectedSize?.id ?? null,
+      sizeName: selectedSize?.name ?? null,
+      iceLevel: selectedIce,
+      sugarLevel: selectedSugar,
+      milkType: selectedMilk,
+    });
+    return true;
+  };
 
   const handleAddToCart = () => {
-    if (!isLoggedIn) {
-      toast.add({
-        type: "warning",
-        description: "Please log in to your account first.",
-      });
-      router.push("/login");
-      return;
-    }
     if (onAddToCart) {
       onAddToCart();
-    } else {
-      addItem({
-        id: displayId,
-        title: displayTitle,
-        price: displayPrice,
-        size: selectedSize,
-        iceLevel: customizationConfig.hasIce ? selectedIce : undefined,
-        sugarLevel: customizationConfig.hasSugar ? selectedSugar : undefined,
-        milkType: customizationConfig.hasMilk ? selectedMilk : undefined,
-        image: displayImage || undefined,
-      });
+      return;
     }
+    if (!addCurrentSelection()) return;
+    toast.add({ type: "success", description: `${displayTitle} added to your cart.` });
   };
 
   const handleBuyNowClick = () => {
-    if (!isLoggedIn) {
-      toast.add({
-        type: "warning",
-        description: "Please log in to your account first.",
-      });
-      router.push("/login");
-      return;
-    }
     if (onBuyNow) {
       onBuyNow();
-    } else {
-      addItem(
-        {
-          id: displayId,
-          title: displayTitle,
-          price: displayPrice,
-          size: selectedSize,
-          iceLevel: customizationConfig.hasIce ? selectedIce : undefined,
-          sugarLevel: customizationConfig.hasSugar ? selectedSugar : undefined,
-          milkType: customizationConfig.hasMilk ? selectedMilk : undefined,
-          image: displayImage || undefined,
-        },
-        false
-      );
+    } else if (!addCurrentSelection()) {
+      return;
     }
     router.push("/checkout");
   };
+
+  if (isLoadingProduct) {
+    return (
+      <div className="product_detail_container font-sans">
+        <div className="py-24 text-center text-sm text-gray-500">
+          {t("Loading product…")}
+        </div>
+      </div>
+    );
+  }
+
+  // A missing id or a 404 both land here — a link to a product that has since been removed
+  // should say so rather than silently rendering the first item in the menu.
+  if (!product) {
+    return (
+      <div className="product_detail_container font-sans">
+        <div className="py-24 text-center">
+          <p className="text-sm text-gray-600">
+            {productError
+              ? t("We could not load this product.")
+              : t("This product is no longer available.")}
+          </p>
+          <Link href={menuBaseUrl} className="mt-4 inline-block underline text-[#A1255B]">
+            {t("Back to the menu")}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="product_detail_container font-sans" suppressHydrationWarning>
@@ -310,7 +300,7 @@ export function ProductpageView({
               {discountInfo.badgeText}
             </span>
           )}
-          {isPromotion && (
+          {showCountdown && (
             <div
               className={`promo_clock_badge promo_clock_detail_badge promo_clock_${promoResult.status}`}
               title={`Promotion ends in ${promoResult.displayText}`}
@@ -340,9 +330,7 @@ export function ProductpageView({
                   ${displayOriginalPrice.toFixed(2)}
                 </span>
               )}
-              <span className="current_price">
-                ${calculateSizePrice(displayPrice, selectedSize).toFixed(2)}
-              </span>
+              <span className="current_price">${displayPrice.toFixed(2)}</span>
             </div>
           </div>
 
@@ -351,54 +339,29 @@ export function ProductpageView({
 
           {/* Customization Options Stack */}
           <div className="my-4 space-y-3">
-            {/* Size Selector */}
-            {customizationConfig.hasSize && (
+            {/* Size Selector — the product's own options, each with its real price add-on. */}
+            {sizeOptions.length > 0 && (
               <div>
                 <span className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                  {t(
-                    customizationConfig.sizeOptions.includes("Can")
-                      ? "Packaging Option:"
-                      : customizationConfig.sizeOptions.includes("1")
-                      ? "Portion Size:"
-                      : customizationConfig.sizeOptions[0]?.includes("ml")
-                      ? "Bottle Size:"
-                      : "Drink Size:"
-                  )}
+                  {t("Size:")}
                 </span>
-                <div className="flex items-center gap-2">
-                  {customizationConfig.sizeOptions.map((sz) => {
-                    const isSel = selectedSize === sz;
-                    const labelText =
-                      sz === "Can"
-                        ? "Can ($0.75)"
-                        : sz === "Bottle"
-                        ? "Bottle ($1.25)"
-                        : sz === "Carton"
-                        ? "Carton ($28.00)"
-                        : sz === "S"
-                        ? "S (Small)"
-                        : sz === "M"
-                        ? "M (Medium)"
-                        : sz === "L"
-                        ? "L (Large)"
-                        : sz === "1"
-                        ? "Single (1)"
-                        : sz === "Double"
-                        ? "Double"
-                        : sz;
+                <div className="flex items-center gap-2 flex-wrap">
+                  {sizeOptions.map((option) => {
+                    const isSel = selectedSizeId === option.id;
+                    const optionPrice = basePrice + Number(option.priceDelta);
 
                     return (
                       <button
-                        key={sz}
+                        key={option.id}
                         type="button"
-                        onClick={() => setSelectedSize(sz)}
+                        onClick={() => setSelectedSizeId(option.id)}
                         className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border ${
                           isSel
                             ? "bg-[#A1255B] border-[#A1255B] text-white shadow-2xs scale-105"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200"
                         }`}
                       >
-                        {t(labelText)}
+                        {option.name} (${optionPrice.toFixed(2)})
                       </button>
                     );
                   })}
@@ -406,35 +369,35 @@ export function ProductpageView({
               </div>
             )}
 
-            {/* Ice Level Dropdown */}
-            {customizationConfig.hasIce && (
-              <CustomProductPageOptionDropdown
-                label="Ice Level:"
-                value={selectedIce}
-                options={["Normal", "Less", "No Ice"]}
-                onChange={setSelectedIce}
-              />
-            )}
+            <CustomProductPageOptionDropdown
+              label="Ice Level:"
+              value={ICE_LABELS[selectedIce]}
+              options={ICE_CHOICES.map((c) => ICE_LABELS[c])}
+              onChange={(label) => {
+                const level = ICE_CHOICES.find((c) => ICE_LABELS[c] === label);
+                if (level) setSelectedIce(level);
+              }}
+            />
 
-            {/* Sugar Level Dropdown */}
-            {customizationConfig.hasSugar && (
-              <CustomProductPageOptionDropdown
-                label="Sugar Level:"
-                value={selectedSugar}
-                options={["Normal", "Less"]}
-                onChange={setSelectedSugar}
-              />
-            )}
+            <CustomProductPageOptionDropdown
+              label="Sugar Level:"
+              value={SUGAR_LABELS[selectedSugar]}
+              options={SUGAR_CHOICES.map((c) => SUGAR_LABELS[c])}
+              onChange={(label) => {
+                const level = SUGAR_CHOICES.find((c) => SUGAR_LABELS[c] === label);
+                if (level) setSelectedSugar(level);
+              }}
+            />
 
-            {/* Milk Type Dropdown */}
-            {customizationConfig.hasMilk && (
-              <CustomProductPageOptionDropdown
-                label="Milk Type:"
-                value={selectedMilk}
-                options={["Normal", "Less Milk", "No Milk"]}
-                onChange={setSelectedMilk}
-              />
-            )}
+            <CustomProductPageOptionDropdown
+              label="Milk Type:"
+              value={MILK_LABELS[selectedMilk]}
+              options={MILK_CHOICES.map((c) => MILK_LABELS[c])}
+              onChange={(label) => {
+                const kind = MILK_CHOICES.find((c) => MILK_LABELS[c] === label);
+                if (kind) setSelectedMilk(kind);
+              }}
+            />
           </div>
 
           {/* Action Buttons Row */}

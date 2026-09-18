@@ -4,21 +4,25 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { User, Eye, EyeOff, Check, Heart } from "lucide-react";
-import { z } from "zod";
+import { User, Mail, Eye, EyeOff, Check, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Forgot } from "@/components/ui/forgot";
 import { Create } from "@/components/ui/create";
-import { CreateWithTelegram } from "@/components/ui/createwithtelegram";
-import { useAuth } from "@/context/AuthContext";
+import { TelegramLoginWidget } from "@/components/ui/TelegramLoginWidget";
+import { apiErrorMessage } from "@/store/api/baseApi";
+import {
+  useLoginMutation,
+  useResendOtpMutation,
+  useVerifyLoginOtpMutation,
+} from "@/store/api/authApi";
 import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 
 import { userLoginSchema } from "@/lib/authSchema";
 
 type FormErrors = {
-  username?: string;
+  email?: string;
   password?: string;
 };
 
@@ -26,20 +30,34 @@ import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 
 interface LoginPageViewProps {
-  initialViewMode?: "login" | "forgot" | "create" | "createwithtelegram";
+  initialViewMode?: "login" | "forgot" | "create";
+}
+
+/**
+ * Where to land after signing in. Guards append ?next= when they bounce someone here; only
+ * same-origin paths are honoured so a crafted link cannot redirect off-site.
+ */
+function nextPath(): string {
+  if (typeof window === "undefined") return "/";
+  const next = new URLSearchParams(window.location.search).get("next");
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return "/";
+  return next;
 }
 
 export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps = {}) {
   const { t } = useLanguage();
   const router = useRouter();
-  const { login } = useAuth();
-  const [username, setUsername] = useState("");
+  const [login, { isLoading: isLoggingIn }] = useLoginMutation();
+  const [verifyOtp, { isLoading: isVerifying }] = useVerifyLoginOtpMutation();
+  const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
+  const [loginTicket, setLoginTicket] = useState<string | null>(null);
+  const [otp, setOtp] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
-  const [viewMode, setViewMode] = useState<"login" | "forgot" | "create" | "createwithtelegram">(initialViewMode);
+  const [viewMode, setViewMode] = useState<"login" | "forgot" | "create">(initialViewMode);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [activeInput, setActiveInput] = useState<keyof FormErrors | null>(null);
   const validateField = (field: keyof FormErrors, value: string) => {
     const fieldSchema = userLoginSchema.shape[field];
     const result = fieldSchema.safeParse(value);
@@ -57,37 +75,68 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Full form validation using Zod Schema
-    const validationResult = userLoginSchema.safeParse({ username, password });
+    const validationResult = userLoginSchema.safeParse({ email, password });
 
     if (!validationResult.success) {
       const fieldErrors = validationResult.error.flatten().fieldErrors;
       const newErrors: FormErrors = {
-        username: fieldErrors.username?.[0],
+        email: fieldErrors.email?.[0],
         password: fieldErrors.password?.[0],
       };
       setErrors(newErrors);
-      if (newErrors.username) setActiveInput("username");
-      else if (newErrors.password) setActiveInput("password");
-
       toast.add({
         type: "warning",
-        description: newErrors.username || newErrors.password || "Please fix validation errors.",
+        description: newErrors.email || newErrors.password || "Please fix validation errors.",
       });
       return;
     }
 
     setErrors({});
-    const res = login({ identifier: username.trim(), password: password.trim(), keepLoggedIn });
-    if (!res.success) {
-      setErrors({ username: res.message || "Account not found. Please sign up first." });
-      setActiveInput("username");
-      return;
+    setEmail(validationResult.data.email);
+
+    // The API authenticates by email and answers with either tokens (rare) or an OTP
+    // challenge the customer completes below.
+    try {
+      const result = await login(validationResult.data).unwrap();
+
+      if (result.otpRequired && result.loginTicket) {
+        setLoginTicket(result.loginTicket);
+        toast.add({
+          type: "success",
+          description: "We emailed you a 6-digit verification code.",
+        });
+      } else {
+        router.push(nextPath());
+      }
+    } catch (err) {
+      const message = apiErrorMessage(
+        err as Parameters<typeof apiErrorMessage>[0],
+        "Login failed. Check your email and password."
+      );
+      setErrors({ email: message });
+      toast.add({ type: "warning", description: message });
     }
-    router.push("/");
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginTicket) return;
+    try {
+      await verifyOtp({ loginTicket, otp: otp.trim() }).unwrap();
+      router.push(nextPath());
+    } catch (err) {
+      toast.add({
+        type: "warning",
+        description: apiErrorMessage(
+          err as Parameters<typeof apiErrorMessage>[0],
+          "That code was not accepted."
+        ),
+      });
+    }
   };
 
   return (
@@ -130,18 +179,71 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
             </div>
           </div>
 
-          {viewMode === "forgot" ? (
+          {loginTicket ? (
+            /* Step two of login: the 6-digit code the API emails to the verified address. */
+            <form onSubmit={handleVerifyOtp} className="w-full">
+              <div className="login_avatar_circle">
+                <Check className="w-10 h-10 stroke-[1.5]" />
+              </div>
+              <h1 className="login_title">{t("Enter your code")}</h1>
+              <p className="login_subtitle">
+                {t("We sent a 6-digit verification code to")}{" "}
+                <strong>{email}</strong>
+              </p>
+
+              <input
+                className="mt-6 h-12 w-full rounded-md border border-gray-300 text-center text-2xl tracking-[0.5em] outline-none focus:border-[#A1255B]"
+                placeholder="000000"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+              />
+
+              <Button
+                type="submit"
+                disabled={isVerifying || otp.length !== 6}
+                className="mt-6 w-full"
+              >
+                {isVerifying ? t("Verifying...") : t("Verify and sign in")}
+              </Button>
+
+              <div className="mt-4 flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await resendOtp({ purpose: "LOGIN", loginTicket }).unwrap();
+                      toast.add({ type: "success", description: "Code re-sent." });
+                    } catch {
+                      toast.add({
+                        type: "warning",
+                        description: "Could not resend the code.",
+                      });
+                    }
+                  }}
+                  disabled={isResending}
+                  className="text-gray-600 underline disabled:opacity-60"
+                >
+                  {isResending ? t("Sending...") : t("Resend code")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginTicket(null);
+                    setOtp("");
+                  }}
+                  className="text-gray-600 underline"
+                >
+                  {t("Use a different account")}
+                </button>
+              </div>
+            </form>
+          ) : viewMode === "forgot" ? (
             <Forgot onBackToLogin={() => setViewMode("login")} />
           ) : viewMode === "create" ? (
-            <Create
-              onBackToLogin={() => setViewMode("login")}
-              onRegisterWithTelegram={() => setViewMode("createwithtelegram")}
-            />
-          ) : viewMode === "createwithtelegram" ? (
-            <CreateWithTelegram
-              onBackToLogin={() => setViewMode("login")}
-              onRegisterWithEmail={() => setViewMode("create")}
-            />
+            <Create onBackToLogin={() => setViewMode("login")} />
           ) : (
             <>
               <div className="login_avatar_circle">
@@ -151,47 +253,53 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                 {t("Login to your account")}
               </h1>
               <p className="login_subtitle">
-                {t("Enter your credential to login")}
+                {t("Enter your registered email address and password.")}
               </p>
               <form onSubmit={handleSubmit} className="w-full space-y-4" noValidate>
                 <div>
-                  <label className="login_input_label">
-                    {t("Username")}
+                  <label htmlFor="login-email" className="login_input_label">
+                    {t("Email Address")}
                   </label>
                   <div className="relative flex items-center">
                     <span className="absolute left-3 text-gray-400 pointer-events-none">
-                      <User className="w-4 h-4" />
+                      <Mail className="w-4 h-4" />
                     </span>
                     <Input
-                      type="text"
-                      value={username}
+                      id="login-email"
+                      name="email"
+                      type="email"
+                      autoComplete="username"
+                      disabled={isLoggingIn}
+                      value={email}
                       onFocus={() => {
-                        setActiveInput("username");
-                        if (username.trim()) validateField("username", username);
+                        if (email.trim()) validateField("email", email);
                       }}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setUsername(val);
-                        validateField("username", val);
+                        setEmail(val);
+                        validateField("email", val);
                       }}
-                      placeholder="enter your username"
+                      placeholder="enter your email address"
                       className="login_input_field"
                     />
                   </div>
-                  {errors.username && (
-                    <TooltipAlert message={errors.username} />
+                  {errors.email && (
+                    <TooltipAlert message={errors.email} />
                   )}
                 </div>
                 <div>
-                  <label className="login_input_label">
+                  <label htmlFor="login-password" className="login_input_label">
                     {t("Password")}
                   </label>
                   <div className="relative flex items-center">
                     <Input
+                      id="login-password"
+                      name="password"
                       type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      disabled={isLoggingIn}
                       value={password}
                       onFocus={() => {
-                        setActiveInput("password");
                         if (password.trim()) validateField("password", password);
                       }}
                       onChange={(e) => {
@@ -204,6 +312,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                     />
                     <button
                       type="button"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                     >
@@ -246,10 +355,14 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
 
                 <Button
                   type="submit"
+                  disabled={isLoggingIn}
                   className="login_submit_button"
                 >
-                  {t("Login")}
+                  {isLoggingIn ? t("Signing in...") : t("Login")}
                 </Button>
+
+                <TelegramLoginWidget onSuccess={() => router.push(nextPath())} />
+
                 <div className="text-center">
                   <span className="text-sm text-gray-600">
                     {t("Don't have an account?")}

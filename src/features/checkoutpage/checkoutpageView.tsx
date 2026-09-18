@@ -5,17 +5,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
-import { useAuth } from "@/context/AuthContext";
+import { useMounted } from "@/hooks/useMounted";
 import { toast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { shippingInformationSchema } from "@/lib/authSchema";
 import { cleanPhoneInput } from "@/lib/phoneUtils";
-import { AlertCircle, ChevronDown, Check } from "lucide-react";
-import { getItemCustomizationConfig, getProductByIdOrTitle } from "@/data/products";
-import { calculateSizePrice } from "@/store/useCartStore";
-import PaymentMethodModal from "@/components/ui/PaymentMethodModal";
+import { AlertCircle, ChevronDown, Check, MapPin, Navigation, Compass, Search, Loader2 } from "lucide-react";
+import { isAuthenticated } from "@/lib/authStorage";
+import { useGetCurrentUserQuery } from "@/store/api/authApi";
+import { useGetShopSettingsQuery } from "@/store/api/catalogApi";
+import { ICE_LABELS, MILK_LABELS, SUGAR_LABELS } from "@/store/api/optionMapping";
+import { resolveProductImage } from "@/store/api/productAdapter";
+import { useCheckout } from "@/store/api/useCheckout";
+import { PaymentMethodModal } from "@/components/ui/PaymentMethodModal";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
@@ -108,18 +112,30 @@ function CustomDistrictSelect({
 export function CheckoutpageView() {
   const router = useRouter();
   const { items, subtotal } = useCart();
-  const { user, updateUser } = useAuth();
+  const { data: currentUser } = useGetCurrentUserQuery(undefined, {
+    skip: !isAuthenticated(),
+  });
+  const {
+    placeOrder,
+    isPlacing,
+    error: checkoutError,
+    errorRef: checkoutErrorRef,
+  } = useCheckout();
+  const { data: shopSettings, error: settingsError } = useGetShopSettingsQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
 
   const { t } = useLanguage();
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const isMounted = useMounted();
+  const [enteredName, setFullName] = useState<string | null>(null);
+  const [enteredEmail, setEmail] = useState<string | null>(null);
+  const [enteredPhone, setPhone] = useState<string | null>(null);
+  const fullName = enteredName ?? currentUser?.fullName ?? "";
+  const email = enteredEmail ?? currentUser?.email ?? "";
+  const phone = enteredPhone ?? cleanPhoneInput(currentUser?.phoneNumber ?? "");
+  // Anything the customer wants the barista to know. Optional, and free text — it reaches the
+  // person actually making the drink, on the queue board.
+  const [baristaNote, setBaristaNote] = useState("");
   const [capital, setCapital] = useState("Phnom Penh");
   const [district, setDistrict] = useState("Khan Boeng Keng Kang");
   const [zipCode, setZipCode] = useState("120000");
@@ -127,6 +143,16 @@ export function CheckoutpageView() {
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "grab">("pickup");
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  
+  // Location Picker State
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number }>({
+    lat: 11.5621, // Phnom Penh default lat
+    lng: 104.9160, // Phnom Penh default lng
+  });
+  const [tempAddress, setTempAddress] = useState("");
+  const [isLocating, setIsLocating] = useState(false);
+  const [searchLocationQuery, setSearchLocationQuery] = useState("");
 
   const [errors, setErrors] = useState<{
     fullName?: string;
@@ -138,20 +164,99 @@ export function CheckoutpageView() {
     address?: string;
   }>({});
 
-  // Automatically pre-fill shipping fields from logged-in user profile
-  useEffect(() => {
-    if (user) {
-      if (user.name) setFullName((prev) => (prev ? prev : user.name));
-      if (user.email) setEmail((prev) => (prev ? prev : user.email));
-      if (user.phone) setPhone((prev) => (prev ? prev : cleanPhoneInput(user.phone)));
-      if (user.capital) setCapital((prev) => (prev ? prev : user.capital));
-      if (user.district) setDistrict((prev) => (prev ? prev : user.district));
-      if (user.zipCode) setZipCode((prev) => (prev ? prev : user.zipCode));
-      if (user.address) setAddress((prev) => (prev ? prev : user.address));
+  // Location Picker Helper Functions
+  const handleOpenMapModal = () => {
+    setIsMapModalOpen(true);
+    setTempAddress(address || `${district}, ${capital}`);
+    if (navigator.geolocation && !address) {
+      handleDetectCurrentLocation();
     }
-  }, [user]);
+  };
 
-  const deliveryFee = deliveryMethod === "grab" ? 0.50 : 0.0;
+  const handleDetectCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.add({
+        type: "warning",
+        description: "Geolocation is not supported by your browser.",
+      });
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setMapCoords({ lat: latitude, lng: longitude });
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+          );
+          const data = await res.json();
+          if (data && data.display_name) {
+            const formatted = data.display_name.split(",").slice(0, 4).join(", ");
+            setTempAddress(formatted);
+          } else {
+            setTempAddress(`Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)} (Phnom Penh)`);
+          }
+        } catch {
+          setTempAddress(`Street 590, Toul Kork, Phnom Penh (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (error) => {
+        setIsLocating(false);
+        toast.add({
+          type: "warning",
+          description: "Could not retrieve exact location. Defaulting to Phnom Penh region.",
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleSearchLocation = async () => {
+    if (!searchLocationQuery.trim()) return;
+    setIsLocating(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          searchLocationQuery + ", Cambodia"
+        )}`
+      );
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const first = data[0];
+        const newLat = parseFloat(first.lat);
+        const newLng = parseFloat(first.lon);
+        setMapCoords({ lat: newLat, lng: newLng });
+        setTempAddress(first.display_name.split(",").slice(0, 4).join(", "));
+      } else {
+        toast.add({
+          type: "warning",
+          description: "Location not found. Please try another query.",
+        });
+      }
+    } catch {
+      toast.add({
+        type: "error",
+        description: "Error searching location.",
+      });
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
+  const handleConfirmLocation = () => {
+    const finalAddr = tempAddress.trim() || `${district}, ${capital}`;
+    setAddress(finalAddr);
+    validateSingleField("address", finalAddr);
+    setIsMapModalOpen(false);
+    toast.add({
+      type: "success",
+      description: "Delivery address updated from map!",
+    });
+  };
+  const deliveryFee = deliveryMethod === "grab" ? Number(shopSettings?.deliveryFee ?? 0) : 0;
   const grandTotal = subtotal + deliveryFee;
 
   const validateSingleField = (
@@ -186,6 +291,11 @@ export function CheckoutpageView() {
 
   const handlePlaceOrderNow = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (isPlacing) return;
+    if (deliveryMethod === "grab" && (!shopSettings || settingsError)) {
+      toast.add({ type: "error", description: "Could not load the delivery fee. Please reload and try again." });
+      return;
+    }
     if (items.length === 0) {
       toast.add({
         type: "warning",
@@ -211,7 +321,7 @@ export function CheckoutpageView() {
     });
 
     if (!validationResult.success) {
-      const fieldErrors = validationResult.error.flatten().fieldErrors;
+      const fieldErrors = validationResult.error.flatten().fieldErrors as Record<string, string[] | undefined>;
       const newErrors = {
         fullName: fieldErrors.fullName?.[0],
         email: fieldErrors.email?.[0],
@@ -249,52 +359,78 @@ export function CheckoutpageView() {
     setIsPaymentModalOpen(true);
   };
 
-  const handleConfirmPaymentMethod = (chosenMethod: "QR Scan" | "Cash") => {
-    // Update & sync shipping information to user profile if user is logged in
-    if (user && updateUser) {
-      updateUser({
-        name: (fullName || "").trim() || user.name,
-        email: (email || "").trim() || user.email,
-        phone: (phone || "").trim() || user.phone,
-        ...(deliveryMethod === "grab"
-          ? {
-              capital: (capital || "").trim() || user.capital,
-              district: (district || "").trim() || user.district,
-              zipCode: (zipCode || "").trim() || user.zipCode,
-              address: (address || "").trim() || user.address,
-            }
-          : {}),
+  /**
+   * Places the order for real.
+   *
+   * The cart is local until this point, so the flow is: require a signed-in customer (the API
+   * has no guest checkout), push the lines to the server cart and check out, then choose how
+   * to pay. Cash-on-pickup completes here; Bakong hands off to /payment, which generates the
+   * QR against the order id.
+   *
+   * The fulfillment method, contact details and (for delivery) the address are sent with the
+   * order; the API stores them and applies its own delivery fee. The localStorage copy only
+   * carries the presentation extras the order has no field for, such as the ETA estimate.
+   */
+  const handleConfirmPaymentMethod = async (chosenMethod: "QR Scan" | "Cash") => {
+    if (!isAuthenticated()) {
+      toast.add({
+        type: "warning",
+        description: "Please sign in to place your order.",
       });
+      router.push(`/login?next=${encodeURIComponent("/checkout")}`);
+      return;
     }
 
     const deliveryLocation =
       deliveryMethod === "grab"
-        ? [address, district, capital].filter(Boolean).join(", ") || "House 30A, St 590, Toul Kork"
-        : "G01";
+        ? [address, district, capital].filter(Boolean).join(", ") || "Delivery address"
+        : "Pickup at store";
 
-    const estimatedTime =
-      deliveryMethod === "grab"
-        ? "10 - 15 mins"
-        : "5 mins";
+    const estimatedTime = deliveryMethod === "grab" ? "10 - 15 mins" : "5 mins";
+
+    const order = await placeOrder({
+      note: baristaNote.trim(),
+      paymentMethod: chosenMethod === "Cash" ? "CASH" : "BAKONG",
+      delivery: {
+        method: deliveryMethod === "grab" ? "DELIVERY" : "PICKUP",
+        contactName: fullName.trim(),
+        contactPhone: phone.trim(),
+        ...(deliveryMethod === "grab" ? { address: deliveryLocation } : {}),
+      },
+    });
+    if (!order) {
+      toast.add({
+        type: "error",
+        description:
+          checkoutErrorRef.current ??
+          checkoutError ??
+          "Could not place your order. Please try again.",
+      });
+      return;
+    }
 
     try {
       localStorage.setItem(
         "checkout_delivery",
         JSON.stringify({
+          orderId: order.id,
           method: deliveryMethod,
           fee: deliveryFee,
-          customerName: (fullName || "").trim() || user?.name || "Guest",
+          customerName:
+            (fullName || "").trim() || currentUser?.fullName || "Customer",
           location: deliveryLocation,
           estimatedTime,
           paymentType: chosenMethod,
         })
       );
-    } catch {}
+    } catch {
+      // Storage unavailable — the confirmation screen falls back to the order itself.
+    }
 
     if (chosenMethod === "Cash") {
-      router.push("/checkoutdone");
+      router.push(`/checkoutdone?orderId=${order.id}`);
     } else {
-      router.push("/payment");
+      router.push(`/payment?orderId=${order.id}`);
     }
   };
 
@@ -383,6 +519,7 @@ export function CheckoutpageView() {
                   <div>
                     <label className="checkout_field_label">{t("Phone Number")}</label>
                     <div className="checkout_phone_input_wrapper">
+                      {/* recently added phone prefix */} 
                       <div className="checkout_phone_prefix">
                         <Image
                           src="/images/cambodia.svg"
@@ -391,7 +528,7 @@ export function CheckoutpageView() {
                           height={14}
                           className="checkout_phone_flag"
                         />
-                        <span className="checkout_phone_code">+855</span>
+                        <span className="checkout_phone_code">KH</span>
                       </div>
                       <input
                         type="tel"
@@ -401,7 +538,7 @@ export function CheckoutpageView() {
                           setPhone(val);
                           validateSingleField("phone", val);
                         }}
-                        placeholder="enter your phone number"
+                        placeholder="097 444 5566"
                         className="checkout_phone_field"
                       />
                     </div>
@@ -422,7 +559,7 @@ export function CheckoutpageView() {
                             height={14}
                             className="checkout_phone_flag"
                           />
-                          <span className="checkout_phone_code">+855</span>
+                          <span className="checkout_phone_code">KH</span>
                         </div>
                         <input
                           type="tel"
@@ -432,7 +569,7 @@ export function CheckoutpageView() {
                             setPhone(val);
                             validateSingleField("phone", val);
                           }}
-                          placeholder="enter your phone number"
+                          placeholder="097 444 5566"
                           className="checkout_phone_field"
                         />
                       </div>
@@ -481,17 +618,26 @@ export function CheckoutpageView() {
                   </div>
 
                   <div>
-                    <label className="checkout_field_label">{t("Delivery Address")}</label>
-                    <Input
-                      type="text"
-                      value={address}
-                      onChange={(e) => {
-                        setAddress(e.target.value);
-                        validateSingleField("address", e.target.value);
-                      }}
-                      placeholder="enter your address"
-                      className="checkout_input"
-                    />
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="checkout_field_label mb-0">{t("Delivery Address")}</label>
+                    </div>
+                    <div className="relative flex items-center">
+                      <Input
+                        type="text"
+                        readOnly
+                        value={address}
+                        onClick={handleOpenMapModal}
+                        placeholder={t("Click pin button to select location on map")}
+                        className="checkout_input pr-28 cursor-pointer select-none bg-gray-50/50 hover:bg-gray-50 transition-colors"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleOpenMapModal}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 bg-[#A1255B] hover:bg-[#881d52] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95 border-none"
+                      >
+                        <MapPin className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                     {errors.address && <TooltipAlert message={errors.address} />}
                   </div>
                 </>
@@ -578,45 +724,40 @@ export function CheckoutpageView() {
             {items.length === 0 ? (
               <p className="checkout_summary_empty" suppressHydrationWarning>{t("Your cart is empty")}</p>
             ) : (
-              items.map((item, idx) => {
-                const config = getItemCustomizationConfig(item.title);
-                const prod = getProductByIdOrTitle(item.id, item.title);
-                const origPrice = item.originalPrice ?? prod?.originalPrice;
-                const hasDiscount = origPrice !== undefined && origPrice > item.price;
-                const adjustedOrigPrice = hasDiscount ? calculateSizePrice(origPrice!, item.size) : undefined;
+              items.map((item) => {
                 const customDetails: string[] = [];
-                if (config.hasIce && item.iceLevel) customDetails.push(`Ice: ${item.iceLevel}`);
-                if (config.hasSugar && item.sugarLevel) customDetails.push(`Sugar: ${item.sugarLevel}`);
-                if (config.hasMilk && item.milkType) customDetails.push(`Milk: ${item.milkType}`);
+                if (item.iceLevel) customDetails.push(`Ice: ${ICE_LABELS[item.iceLevel]}`);
+                if (item.sugarLevel)
+                  customDetails.push(`Sugar: ${SUGAR_LABELS[item.sugarLevel]}`);
+                if (item.milkType) customDetails.push(`Milk: ${MILK_LABELS[item.milkType]}`);
 
                 return (
-                  <div key={`${item.id}-${idx}`} className="checkout_item_row">
+                  <div key={item.lineId} className="checkout_item_row">
                     <div className="checkout_item_info">
                       <div className="checkout_item_image_wrapper">
-                        {item.image ? (
-                          <Image
-                            src={item.image}
-                            alt={item.title}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : null}
+                        <Image
+                          src={resolveProductImage(item.image)}
+                          alt={item.title}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
                       </div>
                       <div className="checkout_item_details">
                         <h3 className="checkout_item_title">{t(item.title)}</h3>
                         <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                           <p className="checkout_item_price font-extrabold text-[#A1255B]" suppressHydrationWarning>
-                            ${(item.price * item.quantity).toFixed(2)}
+                            ${(item.unitPrice * item.quantity).toFixed(2)}
                           </p>
-                          {item.size && (
-                            <span className="text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5 rounded-full">
-                              Size: {item.size}
+                          {item.sizeName && (
+                            <span className="text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5 ">
+                              Size: {item.sizeName}
                             </span>
                           )}
                           {customDetails.map((detail, dIdx) => (
                             <span
                               key={dIdx}
-                              className="text-[10px] font-semibold text-gray-700 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded-md"
+                              className="text-[10px] font-semibold text-gray-700 bg-gray-100 border border-gray-200 px-1.5 py-0.5 "
                             >
                               {detail}
                             </span>
@@ -635,11 +776,10 @@ export function CheckoutpageView() {
           {/* Pricing Breakdown */}
           <div className="checkout_summary_breakdown" suppressHydrationWarning>
             {(() => {
+              // Pre-discount total; each line carries its own original unit price.
               const fullSubtotal = items.reduce((acc, item) => {
-                const prod = getProductByIdOrTitle(item.id, item.title);
-                const origPrice = item.originalPrice ?? prod?.originalPrice;
-                const itemOrigPrice = (origPrice && origPrice > item.price) ? calculateSizePrice(origPrice, item.size) : item.price;
-                return acc + itemOrigPrice * item.quantity;
+                const original = item.originalUnitPrice ?? item.unitPrice;
+                return acc + Math.max(original, item.unitPrice) * item.quantity;
               }, 0);
 
               const totalDiscount = Math.max(0, fullSubtotal - subtotal);
@@ -675,6 +815,28 @@ export function CheckoutpageView() {
               <span className="checkout_summary_label_bold">{t("Total:")}</span>
               <span className="checkout_summary_value" suppressHydrationWarning>${grandTotal.toFixed(2)}</span>
             </div>
+          </div>
+
+          {/* Goes straight to whoever makes the drink, on the barista queue board. */}
+          <div className="w-full mt-3">
+            <label
+              htmlFor="barista-note"
+              className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-1"
+            >
+              {t("Note for the barista")}{" "}
+              <span className="font-medium normal-case text-gray-400">
+                ({t("optional")})
+              </span>
+            </label>
+            <textarea
+              id="barista-note"
+              rows={2}
+              maxLength={200}
+              value={baristaNote}
+              onChange={(e) => setBaristaNote(e.target.value)}
+              placeholder={t("e.g. less ice, extra hot, no straw")}
+              className="w-full p-2.5 bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:border-[#A1255B] focus:bg-white transition-all resize-none"
+            />
           </div>
 
           <div className="flex flex-col gap-1.5 w-full mt-1">
@@ -743,6 +905,113 @@ export function CheckoutpageView() {
         grandTotal={grandTotal}
         onConfirm={handleConfirmPaymentMethod}
       />
+      {checkoutError && <p role="alert" className="mt-3 text-center text-sm text-red-600">{checkoutError}</p>}
+
+      {/* INTERACTIVE DYNAMIC GOOGLE MAP LOCATION PICKER MODAL */}
+      <Modal open={isMapModalOpen} onOpenChange={setIsMapModalOpen}>
+        <ModalContent className="max-w-xl p-0 overflow-hidden rounded-2xl border border-gray-100 shadow-2xl">
+          {/* Header */}
+          <div className="bg-[#A1255B] text-white p-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-amber-300" />
+              <div>
+                <h3 className="text-base font-bold leading-tight">{t("Select Delivery Location")}</h3>
+                <p className="text-xs text-white/80">{t("Drag or pinpoint your current location on the map")}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Action Bar */}
+          <div className="p-3 bg-gray-50 border-b border-gray-100 flex flex-wrap sm:flex-nowrap gap-2 items-center">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchLocationQuery}
+                onChange={(e) => setSearchLocationQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearchLocation()}
+                placeholder={t("Search street, landmark, or area...")}
+                className="w-full pl-9 pr-3 py-2 bg-white text-xs sm:text-sm  border border-gray-200 outline-none focus:border-[#A1255B] transition-colors"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleSearchLocation}
+              className="px-3 py-2 bg-gray-800 hover:bg-gray-900 text-white text-xs font-semibold  border-none cursor-pointer transition-all"
+            >
+              {t("Search")}
+            </button>
+            <button
+              type="button"
+              onClick={handleDetectCurrentLocation}
+              disabled={isLocating}
+              className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold  border-none cursor-pointer transition-all shadow-xs disabled:opacity-50"
+            >
+              {isLocating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Navigation className="w-3.5 h-3.5" />
+              )}
+              <span>{t("Locate Me")}</span>
+            </button>
+          </div>
+
+          {/* Dynamic Google Map Embed */}
+          <div className="relative w-full h-72 sm:h-80 bg-gray-100">
+            <iframe
+              title="Google Map Location Picker"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              allowFullScreen
+              src={`https://maps.google.com/maps?q=${mapCoords.lat},${mapCoords.lng}&z=16&output=embed`}
+            />
+
+            {/* Pin Overlay Badge */}
+            <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-md text-xs font-medium text-gray-800 flex items-center gap-1.5 border border-white">
+              <Compass className="w-4 h-4 text-[#A1255B] animate-spin" style={{ animationDuration: '8s' }} />
+              <span>
+                {mapCoords.lat.toFixed(4)}, {mapCoords.lng.toFixed(4)}
+              </span>
+            </div>
+          </div>
+
+          {/* Address Confirmation Panel */}
+          <div className="p-4 bg-white space-y-3">
+            <div>
+              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-1">
+                {t("Confirmed Location Address")}
+              </label>
+              <textarea
+                rows={2}
+                value={tempAddress}
+                onChange={(e) => setTempAddress(e.target.value)}
+                placeholder={t("Address details will appear here...")}
+                className="w-full p-2.5 bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:border-[#A1255B] focus:bg-white transition-all resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setIsMapModalOpen(false)}
+                className="w-full bg-white hover:bg-gray-100 text-gray-700 font-semibold py-2.5 px-4 text-xs sm:text-sm border border-gray-200 transition-all cursor-pointer"
+              >
+                {t("Cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLocation}
+                className="w-full bg-[#A1255B] hover:bg-[#881d52] text-white font-semibold py-2.5 px-4 text-xs sm:text-sm transition-all cursor-pointer shadow-md border-none flex items-center justify-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>{t("Confirm Location")}</span>
+              </button>
+            </div>
+          </div>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
