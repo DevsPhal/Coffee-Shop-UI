@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Mail, Phone, Send } from "lucide-react";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { useMounted } from "@/hooks/useMounted";
 import "@/app/globals.scss";
@@ -78,16 +79,19 @@ export function Footer() {
               <h3 className="footer_column_title">
                 {displayT("Contact for Service")}
               </h3>
-              <p className="footer_contact_text">
-                Telegram:{" "}
-                <a
-                 href="tg://resolve?domain=069 955 878"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  069 955 878
-                </a>
-              </p>
+              <ul className="footer_list">
+                <li>
+                  <a
+                    href="tg://resolve?domain=069 955 878"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="footer_link footer_link_icon"
+                  >
+                    <Send className="footer_link_icon_glyph" />
+                    069 955 878
+                  </a>
+                </li>
+              </ul>
             </div>
 
             <div>
@@ -97,20 +101,23 @@ export function Footer() {
 
               <ul className="footer_list">
                 <li>
-                  <a href="tel:+85595600676" className="footer_link">
+                  <a href="tel:+85595600676" className="footer_link footer_link_icon">
+                    <Phone className="footer_link_icon_glyph" />
                     095 600 676
                   </a>
                 </li>
                 <li>
-                  <a href="tel:+85569955878" className="footer_link">
+                  <a href="tel:+85569955878" className="footer_link footer_link_icon">
+                    <Phone className="footer_link_icon_glyph" />
                     069 955 878
                   </a>
                 </li>
                 <li>
                   <a
-                href="https://mail.google.com/mail/?view=cm&fs=1&to=lengsokpunlork611@gmail.com"
-                    className="footer_email_link"
+                    href="https://mail.google.com/mail/?view=cm&fs=1&to=lengsokpunlork611@gmail.com"
+                    className="footer_link footer_link_icon footer_email_link"
                   >
+                    <Mail className="footer_link_icon_glyph" />
                     lengsokpunlork611@gmail.com
                   </a>
                 </li>

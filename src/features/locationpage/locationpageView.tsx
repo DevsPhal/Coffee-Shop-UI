@@ -102,25 +102,27 @@ export function LocationpageView() {
                 </div>
               </div>
             </div>
-            <a
-              href={googleMapUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="map_preview_card"
-            >
-              <img
-                src="/images/map.png"
-                alt="590st cafe location map"
-                className="map_preview_image"
+            {/* A real, interactive embed rather than a flat screenshot linking out — visitors
+                can pan/zoom in place, and still have a direct link to the full app below it. */}
+            <div className="map_preview_card">
+              <iframe
+                src="https://www.google.com/maps?q=590st+Cafe,+Street+590,+Toul+Kork,+Phnom+Penh,+Cambodia&output=embed"
+                title="590st CAFE location map"
+                className="map_preview_image border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
               />
-              <div className="map_preview_overlay">
-                <div className="map_button_badge">
-                  <Navigation className="w-3.5 h-3.5" />
-                  {t("View on Google Maps")}
-                  <ExternalLink className="w-3 h-3 opacity-80" />
-                </div>
-              </div>
-            </a>
+              <a
+                href={googleMapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="map_button_badge pointer-events-auto absolute right-2 top-2 sm:right-3 sm:top-3"
+              >
+                <Navigation className="w-3.5 h-3.5" />
+                {t("Open in Google Maps")}
+                <ExternalLink className="w-3 h-3 opacity-80" />
+              </a>
+            </div>
           </div>
           <div className="action_row_border">
             <Link

@@ -7,6 +7,9 @@ import { useRouter } from "next/navigation";
 import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ExternalLink, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move, Trash2, Send } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { TelegramLinkModal } from "@/components/ui/TelegramLinkModal";
+import { GenderDropdown } from "@/components/ui/GenderDropdown";
+import { toTitleCase } from "@/lib/utils";
+import { VARIANT_LABELS } from "@/store/api/optionMapping";
 import { useContactStore } from "@/store/useContactStore";
 import { isAuthenticated } from "@/lib/authStorage";
 import { apiErrorMessage } from "@/store/api/baseApi";
@@ -31,6 +34,26 @@ const GENDER_LABELS: Record<Gender, string> = {
   MALE: "Male",
   FEMALE: "Female",
   OTHER: "Other",
+};
+
+/**
+ * The password-verification modal gates three different actions, so its copy needs to say
+ * what it's actually for — it previously read "Verify Password" as both title and subtitle,
+ * with a "Confirm Order" button left over from a copy-pasted checkout modal.
+ */
+const verifyModalCopy: Record<"changePassword" | "email" | "phone", { subtitle: string; confirmLabel: string }> = {
+  changePassword: {
+    subtitle: "Confirm your current password to set a new one.",
+    confirmLabel: "Continue",
+  },
+  email: {
+    subtitle: "Confirm your password to view your full email address.",
+    confirmLabel: "Reveal Email",
+  },
+  phone: {
+    subtitle: "Confirm your password to view your full phone number.",
+    confirmLabel: "Reveal Phone",
+  },
 };
 
 export interface UserProfileData {
@@ -508,11 +531,6 @@ export function UserprofilepageView() {
               {activeTab === "about" && (
                 <div className="user_profile_details">
                   <div className="user_profile_detail_row">
-                    <span className="user_profile_detail_label">{t("User Id")}</span>
-                    <span className="user_profile_detail_value" suppressHydrationWarning>#{profile.userId}</span>
-                  </div>
-
-                  <div className="user_profile_detail_row">
                     <span className="user_profile_detail_label">{t("Gender")}</span>
                     <span className="user_profile_detail_value">
                       {profile.gender ? t(GENDER_LABELS[profile.gender]) : t("Not specified")}
@@ -684,8 +702,8 @@ export function UserprofilepageView() {
                             {order.items.map((it) => (
                               <div key={it.id} className="order_item_row">
                                 <span>
-                                  {it.quantity}x {it.productName}{" "}
-                                  {it.sizeOptionName ? `(Size: ${it.sizeOptionName})` : ""}
+                                  {it.quantity}x {toTitleCase(it.productName)}{" "}
+                                  {it.variantName ? `(Size: ${VARIANT_LABELS[it.variantName]})` : ""}
                                 </span>
                                 <span className="order_item_price">
                                   $ {Number(it.subtotal).toFixed(2)}
@@ -708,10 +726,10 @@ export function UserprofilepageView() {
                                     addItem(
                                       {
                                         productId: item.productId,
-                                        title: item.productName,
+                                        title: toTitleCase(item.productName),
                                         unitPrice: Number(item.unitPrice),
                                         quantity: item.quantity,
-                                        sizeName: item.sizeOptionName,
+                                        variantName: item.variantName,
                                         iceLevel: item.iceLevel ?? undefined,
                                         sugarLevel: item.sugarLevel ?? undefined,
                                         milkType: item.milkType ?? undefined,
@@ -927,19 +945,6 @@ export function UserprofilepageView() {
                 <div className="profile_edit_grid_2col">
                   <div className="modal_input_group">
                     <label className="modal_input_label">
-                      User Id
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.userId}
-                      onChange={(e) => setEditForm({ ...editForm, userId: e.target.value })}
-                      className="modal_input_control modal_input_control_disabled"
-                      disabled
-                    />
-                  </div>
-
-                  <div className="modal_input_group">
-                    <label className="modal_input_label">
                       Display Name
                     </label>
                     <input
@@ -950,31 +955,16 @@ export function UserprofilepageView() {
                       required
                     />
                   </div>
-                </div>
 
-                <div className="profile_edit_grid_2col">
                   <div className="modal_input_group">
                     <label className="modal_input_label">
                       Gender
                     </label>
-                    <select
+                    <GenderDropdown
                       value={editForm.gender || ""}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, gender: e.target.value as Gender | "" })
-                      }
-                      className="modal_input_control bg-white cursor-pointer"
-                    >
-                      {/* Values are the API's enum, not the labels — the old options sent
-                          "Male", which the server rejects. */}
-                      <option value="" disabled>
-                        Select gender
-                      </option>
-                      {(Object.keys(GENDER_LABELS) as Gender[]).map((value) => (
-                        <option key={value} value={value}>
-                          {GENDER_LABELS[value]}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => setEditForm({ ...editForm, gender: value })}
+                      triggerClassName="modal_input_control bg-white cursor-pointer flex items-center justify-between"
+                    />
                   </div>
 
                   <div className="modal_input_group">
@@ -1049,7 +1039,8 @@ export function UserprofilepageView() {
         </ModalContent>
       </Modal>
 
-      {/* Verify Password Modal */}
+      {/* Verify Password Modal — this one gate covers three different actions, so its copy
+          follows verifyTarget rather than reading the same regardless of which one. */}
       <Modal open={isVerifyModalOpen} onOpenChange={setIsVerifyModalOpen}>
         <ModalContent className="max-w-[420px] w-[92%] p-6 text-left" showCloseButton={false}>
           <div className="modal_header_group">
@@ -1059,7 +1050,7 @@ export function UserprofilepageView() {
             <div>
               <h3 className="modal_title">{t("Verify Password")}</h3>
               <p className="modal_subtitle">
-                {t("Verify Password")}
+                {t(verifyModalCopy[verifyTarget ?? "changePassword"].subtitle)}
               </p>
             </div>
           </div>
@@ -1110,7 +1101,7 @@ export function UserprofilepageView() {
                 type="submit"
                 className="btn_modal_submit"
               >
-                {t("Confirm Order")}
+                {t(verifyModalCopy[verifyTarget ?? "changePassword"].confirmLabel)}
               </button>
             </div>
           </form>

@@ -13,14 +13,15 @@ import {
   MILK_LABELS,
   SUGAR_CHOICES,
   SUGAR_LABELS,
+  VARIANT_LABELS,
 } from "@/store/api/optionMapping";
-import { resolveProductImage, type StoreProduct } from "@/store/api/productAdapter";
+import { getDrinkCustomization, resolveProductImage, type StoreProduct } from "@/store/api/productAdapter";
 import type { IceLevel, MilkType, SugarLevel, UUID } from "@/store/api/types";
 
 /** A confirmed configuration, shaped so the caller can hand it straight to the cart. */
 export interface SizeSelection {
-  sizeOptionId: UUID | null;
-  sizeName: string | null;
+  variantId: UUID | null;
+  variantName: string | null;
   unitPrice: number;
   iceLevel?: IceLevel;
   sugarLevel?: SugarLevel;
@@ -111,7 +112,7 @@ export interface SelectSizeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: StoreProduct | null;
-  initialSizeOptionId?: UUID | null;
+  initialVariantId?: UUID | null;
   initialIce?: IceLevel;
   initialSugar?: SugarLevel;
   initialMilk?: MilkType;
@@ -122,16 +123,16 @@ export interface SelectSizeModalProps {
 /**
  * Product customization.
  *
- * Sizes come from the product's own `sizeOptions` — real rows with real price add-ons, so
- * there is no table of hardcoded packaging prices any more. Ice, sugar and milk are the API's
- * enum values; every one of them is optional on the cart request, so a product with no size
- * options still gets the drink controls and the customer can simply leave them at default.
+ * Sizes come from the product's own `variants` — each one prices itself outright now rather
+ * than adding a delta on top of a product-level price. Ice, sugar and milk are the API's enum
+ * values; every one of them is optional on the cart request, so a product with a single variant
+ * still gets the drink controls and the customer can simply leave them at default.
  */
 export function SelectSizeModal({
   open,
   onOpenChange,
   product,
-  initialSizeOptionId,
+  initialVariantId,
   initialIce,
   initialSugar,
   initialMilk,
@@ -140,39 +141,42 @@ export function SelectSizeModal({
 }: SelectSizeModalProps) {
   const { t } = useLanguage();
 
-  const sizeOptions = product?.sizeOptions ?? [];
-  const hasSizes = sizeOptions.length > 0;
+  const variants = product?.variants ?? [];
+  const hasSizes = variants.length > 1;
+  // A canned/bottled drink or a snack isn't made to order, so it gets no ice/sugar/milk step;
+  // a fresh drink only gets the ones that actually apply to it.
+  const drinkOptions = product
+    ? getDrinkCustomization(product)
+    : { ice: false, sugar: false, milk: false };
 
-  const [sizeOptionId, setSizeOptionId] = useState<UUID | null>(null);
-  const [iceLevel, setIceLevel] = useState<IceLevel>("HUNDRED");
-  const [sugarLevel, setSugarLevel] = useState<SugarLevel>("HUNDRED");
-  const [milkType, setMilkType] = useState<MilkType>("WHOLE_MILK");
+  const [variantId, setVariantId] = useState<UUID | null>(null);
+  const [iceLevel, setIceLevel] = useState<IceLevel>("NORMAL");
+  const [sugarLevel, setSugarLevel] = useState<SugarLevel>("NORMAL");
+  const [milkType, setMilkType] = useState<MilkType>("NORMAL");
 
   React.useEffect(() => {
     if (!product) return;
-    setSizeOptionId(
-      initialSizeOptionId ?? (sizeOptions.length > 0 ? sizeOptions[0].id : null)
-    );
-    setIceLevel(initialIce ?? "HUNDRED");
-    setSugarLevel(initialSugar ?? "HUNDRED");
-    setMilkType(initialMilk ?? "WHOLE_MILK");
+    setVariantId(initialVariantId ?? (variants.length > 0 ? variants[0].id : null));
+    setIceLevel(initialIce ?? "NORMAL");
+    setSugarLevel(initialSugar ?? "NORMAL");
+    setMilkType(initialMilk ?? "NORMAL");
     // Re-seed only when the modal opens on a different product.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.id, open]);
 
   if (!product) return null;
 
-  const selectedSize = sizeOptions.find((option) => option.id === sizeOptionId);
-  const unitPrice = product.price + Number(selectedSize?.priceDelta ?? 0);
+  const selectedVariant = variants.find((variant) => variant.id === variantId);
+  const unitPrice = Number(selectedVariant?.finalPrice ?? product.price);
 
   const handleConfirm = () => {
     onConfirm({
-      sizeOptionId,
-      sizeName: selectedSize?.name ?? null,
+      variantId,
+      variantName: selectedVariant?.name ?? null,
       unitPrice,
-      iceLevel,
-      sugarLevel,
-      milkType,
+      ...(drinkOptions.ice ? { iceLevel } : {}),
+      ...(drinkOptions.sugar ? { sugarLevel } : {}),
+      ...(drinkOptions.milk ? { milkType } : {}),
     });
     onOpenChange(false);
   };
@@ -221,26 +225,25 @@ export function SelectSizeModal({
             </label>
             <div
               className={`grid gap-2 ${
-                sizeOptions.length === 2 ? "grid-cols-2" : "grid-cols-3"
+                variants.length === 2 ? "grid-cols-2" : "grid-cols-3"
               }`}
             >
-              {sizeOptions.map((option) => {
-                const isSelected = sizeOptionId === option.id;
-                const optionPrice = product.price + Number(option.priceDelta);
+              {variants.map((variant) => {
+                const isSelected = variantId === variant.id;
                 return (
                   <button
-                    key={option.id}
+                    key={variant.id}
                     type="button"
-                    onClick={() => setSizeOptionId(option.id)}
+                    onClick={() => setVariantId(variant.id)}
                     className={`flex flex-col items-center py-1 justify-center transition-all cursor-pointer border ${
                       isSelected
                         ? "bg-[#A1255B] border-[#A1255B] text-white shadow-sm scale-[1.02]"
                         : "bg-white text-gray-700 hover:bg-gray-50 border-gray-200"
                     }`}
                   >
-                    <span className="text-sm font-bold">{option.name}</span>
+                    <span className="text-sm font-bold">{t(VARIANT_LABELS[variant.name])}</span>
                     <span className="text-[10px] opacity-80">
-                      ${optionPrice.toFixed(2)}
+                      ${Number(variant.finalPrice).toFixed(2)}
                     </span>
                   </button>
                 );
@@ -249,27 +252,33 @@ export function SelectSizeModal({
           </div>
         )}
 
-        <CustomModalOptionDropdown
-          label="Ice Level"
-          value={iceLevel}
-          choices={ICE_CHOICES}
-          labels={ICE_LABELS}
-          onChange={setIceLevel}
-        />
-        <CustomModalOptionDropdown
-          label="Sugar Level"
-          value={sugarLevel}
-          choices={SUGAR_CHOICES}
-          labels={SUGAR_LABELS}
-          onChange={setSugarLevel}
-        />
-        <CustomModalOptionDropdown
-          label="Milk"
-          value={milkType}
-          choices={MILK_CHOICES}
-          labels={MILK_LABELS}
-          onChange={setMilkType}
-        />
+        {drinkOptions.ice && (
+          <CustomModalOptionDropdown
+            label="Ice Level"
+            value={iceLevel}
+            choices={ICE_CHOICES}
+            labels={ICE_LABELS}
+            onChange={setIceLevel}
+          />
+        )}
+        {drinkOptions.sugar && (
+          <CustomModalOptionDropdown
+            label="Sugar Level"
+            value={sugarLevel}
+            choices={SUGAR_CHOICES}
+            labels={SUGAR_LABELS}
+            onChange={setSugarLevel}
+          />
+        )}
+        {drinkOptions.milk && (
+          <CustomModalOptionDropdown
+            label="Milk"
+            value={milkType}
+            choices={MILK_CHOICES}
+            labels={MILK_LABELS}
+            onChange={setMilkType}
+          />
+        )}
 
         <div className="space-y-2">
           <button

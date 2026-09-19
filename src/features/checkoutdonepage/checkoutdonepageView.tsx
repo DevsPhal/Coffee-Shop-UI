@@ -21,7 +21,8 @@ import { isAuthenticated } from "@/lib/authStorage";
 import { useGetCurrentUserQuery } from "@/store/api/authApi";
 import { useGetMyOrderQuery, useRequestOrderAssistanceMutation } from "@/store/api/orderApi";
 import { apiErrorMessage } from "@/store/api/baseApi";
-import { ICE_LABELS, MILK_LABELS, SUGAR_LABELS } from "@/store/api/optionMapping";
+import { ICE_LABELS, MILK_LABELS, SUGAR_LABELS, VARIANT_LABELS } from "@/store/api/optionMapping";
+import { toTitleCase } from "@/lib/utils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
@@ -80,7 +81,7 @@ export function CheckoutdonepageView() {
     : `$ ${amount.toFixed(2)}`;
   const displayCustomerName =
     order?.contactName || order?.customerName || delivery?.customerName || currentUser?.fullName || "Customer";
-  const displayLocation = order?.deliveryAddress || (order?.fulfillmentMethod === "PICKUP" ? "Pickup at store" : delivery?.location) || "Pickup at store";
+  const displayLocation = order?.deliveryAddress || (order?.fulfillmentMethod === "PICKUP" ? "Pickup at Store" : delivery?.location) || "Pickup at Store";
   const displayEstimatedTime = delivery?.estimatedTime || (order?.fulfillmentMethod === "DELIVERY" ? "10–15 mins (estimate)" : "5 mins (estimate)");
 
 
@@ -332,18 +333,18 @@ export function CheckoutdonepageView() {
                 customDetails.push(`Sugar: ${SUGAR_LABELS[item.sugarLevel]}`);
               if (item.milkType) customDetails.push(`Milk: ${MILK_LABELS[item.milkType]}`);
 
-              const sizeLabel = item.sizeOptionName;
+              const sizeLabel = item.variantName ? VARIANT_LABELS[item.variantName] : null;
 
               return (
                 <div key={item.id} className="pt-2 first:pt-0 space-y-1">
                   <div className="flex items-center justify-between gap-2 min-w-0">
                     <span
                       className="value_dark font-semibold text-xs sm:text-sm truncate min-w-0 flex-1"
-                      title={`${item.quantity}x ${item.productName}${
+                      title={`${item.quantity}x ${toTitleCase(item.productName)}${
                         sizeLabel ? ` (Size: ${sizeLabel})` : ""
                       }`}
                     >
-                      {item.quantity}x {t(item.productName)}{" "}
+                      {item.quantity}x {t(toTitleCase(item.productName))}{" "}
                       {sizeLabel ? `(${t("Size")}: ${sizeLabel})` : ""}
                     </span>
                     <span className="value_brand font-bold text-xs sm:text-sm shrink-0 whitespace-nowrap pl-1" suppressHydrationWarning>

@@ -12,9 +12,12 @@ import {
   MILK_LABELS,
   SUGAR_CHOICES,
   SUGAR_LABELS,
+  VARIANT_LABELS,
 } from "@/store/api/optionMapping";
-import { resolveProductImage } from "@/store/api/productAdapter";
+import { getDrinkCustomization, resolveProductImage } from "@/store/api/productAdapter";
 import { useCatalog } from "@/store/api/useCatalog";
+import { toTitleCase } from "@/lib/utils";
+import type { VariantName } from "@/store/api/types";
 import { ChevronDown, Check } from "lucide-react";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
@@ -299,7 +302,7 @@ export function OrderpageView() {
   const {
     items,
     updateQuantity,
-    updateSize,
+    updateVariant,
     updateIceLevel,
     updateSugarLevel,
     updateMilkType,
@@ -343,7 +346,6 @@ export function OrderpageView() {
               <div className="order_page_table_header_product">{t("Product")}</div>
               <div className="order_page_table_header_price hidden sm:block">{t("Price")}</div>
               <div className="order_page_table_header_quantity">{t("Quantity")}</div>
-              <div className="order_page_table_header_size">{t("Size")}</div>
               <div className="order_page_table_header_total">{t("Total")}</div>
             </div>
             <div className="order_page_items_list">
@@ -351,7 +353,10 @@ export function OrderpageView() {
                 // Sizes and their price deltas belong to the product, so look it up in the
                 // already-cached catalogue rather than storing them on the cart line.
                 const product = products.find((p) => p.id === item.productId);
-                const sizeOptions = product?.sizeOptions ?? [];
+                const variants = product?.variants ?? [];
+                const drinkOptions = product
+                  ? getDrinkCustomization(product)
+                  : { ice: false, sugar: false, milk: false };
 
                 return (
                   <div key={item.lineId} className="order_page_item_row">
@@ -359,42 +364,70 @@ export function OrderpageView() {
                       <div className="order_page_item_image_wrapper">
                         <Image
                           src={resolveProductImage(item.image)}
-                          alt={item.title}
+                          alt={toTitleCase(item.title)}
                           fill
                           unoptimized
                           className="object-cover"
                         />
                       </div>
                       <div className="order_page_item_details">
-                        <h3 className="order_page_item_title">{t(item.title)}</h3>
+                        <h3 className="order_page_item_title">{t(toTitleCase(item.title))}</h3>
                         <div className="flex flex-col items-start gap-1 mt-1 w-full max-w-full">
-                          <CustomIceDropdown
-                            value={ICE_LABELS[item.iceLevel ?? "HUNDRED"]}
-                            onChange={(label) => {
-                              const level = ICE_CHOICES.find(
-                                (c) => ICE_LABELS[c] === label
-                              );
-                              if (level) updateIceLevel(item.lineId, level);
-                            }}
-                          />
-                          <CustomSugarDropdown
-                            value={SUGAR_LABELS[item.sugarLevel ?? "HUNDRED"]}
-                            onChange={(label) => {
-                              const level = SUGAR_CHOICES.find(
-                                (c) => SUGAR_LABELS[c] === label
-                              );
-                              if (level) updateSugarLevel(item.lineId, level);
-                            }}
-                          />
-                          <CustomMilkDropdown
-                            value={MILK_LABELS[item.milkType ?? "WHOLE_MILK"]}
-                            onChange={(label) => {
-                              const kind = MILK_CHOICES.find(
-                                (c) => MILK_LABELS[c] === label
-                              );
-                              if (kind) updateMilkType(item.lineId, kind);
-                            }}
-                          />
+                          {variants.length > 1 && (
+                            <CustomSizeDropdown
+                              value={t(
+                                VARIANT_LABELS[
+                                  (item.variantName as VariantName) ?? variants[0].name
+                                ]
+                              )}
+                              options={variants.map((v) => t(VARIANT_LABELS[v.name]))}
+                              onChange={(label) => {
+                                const variant = variants.find(
+                                  (v) => t(VARIANT_LABELS[v.name]) === label
+                                );
+                                if (!variant || !product) return;
+                                updateVariant(
+                                  item.lineId,
+                                  variant.id,
+                                  variant.name,
+                                  Number(variant.finalPrice)
+                                );
+                              }}
+                            />
+                          )}
+                          {drinkOptions.ice && (
+                            <CustomIceDropdown
+                              value={ICE_LABELS[item.iceLevel ?? "NORMAL"]}
+                              onChange={(label) => {
+                                const level = ICE_CHOICES.find(
+                                  (c) => ICE_LABELS[c] === label
+                                );
+                                if (level) updateIceLevel(item.lineId, level);
+                              }}
+                            />
+                          )}
+                          {drinkOptions.sugar && (
+                            <CustomSugarDropdown
+                              value={SUGAR_LABELS[item.sugarLevel ?? "NORMAL"]}
+                              onChange={(label) => {
+                                const level = SUGAR_CHOICES.find(
+                                  (c) => SUGAR_LABELS[c] === label
+                                );
+                                if (level) updateSugarLevel(item.lineId, level);
+                              }}
+                            />
+                          )}
+                          {drinkOptions.milk && (
+                            <CustomMilkDropdown
+                              value={MILK_LABELS[item.milkType ?? "NORMAL"]}
+                              onChange={(label) => {
+                                const kind = MILK_CHOICES.find(
+                                  (c) => MILK_LABELS[c] === label
+                                );
+                                if (kind) updateMilkType(item.lineId, kind);
+                              }}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -424,26 +457,6 @@ export function OrderpageView() {
                           +
                         </button>
                       </div>
-                    </div>
-                    <div className="order_page_item_size">
-                      {sizeOptions.length === 0 ? (
-                        <span className="text-gray-400 text-xs font-semibold">—</span>
-                      ) : (
-                        <CustomSizeDropdown
-                          value={item.sizeName ?? sizeOptions[0].name}
-                          options={sizeOptions.map((o) => o.name)}
-                          onChange={(name) => {
-                            const option = sizeOptions.find((o) => o.name === name);
-                            if (!option || !product) return;
-                            updateSize(
-                              item.lineId,
-                              option.id,
-                              option.name,
-                              product.price + Number(option.priceDelta)
-                            );
-                          }}
-                        />
-                      )}
                     </div>
                     <div
                       className="order_page_item_total font-extrabold text-[#A1255B]"

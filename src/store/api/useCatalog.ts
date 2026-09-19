@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { toTitleCase } from "@/lib/utils";
 import { useListCategoriesQuery, useListProductsQuery } from "./catalogApi";
 import type { CustomerProductResponse, UUID } from "./types";
 
@@ -65,7 +66,7 @@ export function useCategories() {
     return (categoryList ?? [])
       .map((category) => ({
         id: category.id,
-        name: category.name,
+        name: toTitleCase(category.name),
         count: counts.get(category.id) ?? 0,
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -78,11 +79,19 @@ export function useCategories() {
   };
 }
 
-/** Price a customer actually pays, including an active discount and any size add-on. */
-export function priceWithSize(
+/**
+ * The price a customer actually pays for one variant, already discounted. Each variant prices
+ * itself now (no product-level price to add a delta to) — falls back to the first active
+ * variant when no id is given or matched, so callers never have to special-case "no size
+ * chosen yet".
+ */
+export function priceWithVariant(
   product: CustomerProductResponse,
-  sizeOptionId?: UUID | null
+  variantId?: UUID | null
 ): number {
-  const size = product.sizeOptions.find((option) => option.id === sizeOptionId);
-  return Number(product.finalPrice) + Number(size?.priceDelta ?? 0);
+  const variants = product.variants ?? [];
+  const chosen =
+    (variantId ? variants.find((variant) => variant.id === variantId) : undefined) ??
+    variants.find((variant) => variant.status === "ACTIVE");
+  return Number(chosen?.finalPrice ?? 0);
 }

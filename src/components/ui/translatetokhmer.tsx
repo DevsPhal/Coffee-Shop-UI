@@ -291,7 +291,7 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "Pickup at Store": "មកយកនៅហាង",
     "Home Delivery": "ដឹកជញ្ជូនដល់ផ្ទះ",
     "Payment Method": "វិធីសាស្ត្រទូទាត់ប្រាក់",
-    "ABA Pay / KHQR": "ABA Pay / KHQR",
+    "Bakong / KHQR": "Bakong / KHQR",
     Cash: "សាច់ប្រាក់",
     cash: "សាច់ប្រាក់",
     "Cash on Delivery": "ទូទាត់ប្រាក់ពេលទំនិញមកដល់",

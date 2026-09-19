@@ -62,7 +62,7 @@ export function useCheckout() {
           await addCartItem({
             productId: item.productId,
             quantity: item.quantity,
-            ...(item.sizeOptionId ? { sizeOptionId: item.sizeOptionId } : {}),
+            ...(item.variantId ? { variantId: item.variantId } : {}),
             ...(item.sugarLevel ? { sugarLevel: item.sugarLevel } : {}),
             ...(item.iceLevel ? { iceLevel: item.iceLevel } : {}),
             ...(item.milkType ? { milkType: item.milkType } : {}),
