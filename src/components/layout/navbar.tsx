@@ -191,17 +191,21 @@ export function Navbar() {
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={() => openCart()}
-              className="nav_cart_link cursor-pointer border-none bg-transparent shrink-0"
-              aria-label="Open cart"
-            >
-              <span className="relative">
-                <ShoppingCart className="h-5.25 w-5.25 text-gray-700" aria-hidden />
-                <span className="nav_cart_badge" suppressHydrationWarning>{displayTotalCount}</span>
-              </span>
-            </button>
+            {/* Only shown once signed in — checkout requires an account anyway, so the cart
+                icon has nothing to offer a logged-out visitor. */}
+            {userIsLoggedIn && (
+              <button
+                type="button"
+                onClick={() => openCart()}
+                className="nav_cart_link cursor-pointer border-none bg-transparent shrink-0"
+                aria-label="Open cart"
+              >
+                <span className="relative">
+                  <ShoppingCart className="h-5.25 w-5.25 text-gray-700" aria-hidden />
+                  <span className="nav_cart_badge" suppressHydrationWarning>{displayTotalCount}</span>
+                </span>
+              </button>
+            )}
 
             {/* Login / User Profile Button */}
             {userIsLoggedIn ? (

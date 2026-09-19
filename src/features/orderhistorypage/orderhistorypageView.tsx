@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { ShoppingBag, Clock, MapPin, ChevronRight, RefreshCw, CheckCircle2, Truck, Package, ArrowRight, User } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
@@ -17,13 +17,21 @@ import "@/app/globals.scss";
 export function OrderhistorypageView() {
   const { t } = useLanguage();
   const router = useRouter();
+  const pathname = usePathname();
   const { addItem, openCart } = useCart();
 
   const [filterStatus, setFilterStatus] = useState<string>("All");
 
   // The API scopes /api/customer/orders to the signed-in customer, so no client-side
-  // filtering by user is needed — and there is nothing to show for a guest.
+  // filtering by user is needed — and there is nothing to show for a guest, so they're sent
+  // to log in instead of seeing an empty order list that looks like an account with no history.
   const signedIn = isAuthenticated();
+  useEffect(() => {
+    if (!signedIn) {
+      router.push(`/login?next=${encodeURIComponent(pathname)}`);
+    }
+  }, [signedIn, router, pathname]);
+
   const { data, isLoading, error } = useListMyOrdersQuery(
     {
       page: 1,
@@ -94,6 +102,10 @@ export function OrderhistorypageView() {
     { value: "DELIVERED", label: "Delivered" },
     { value: "CANCELLED", label: "Cancelled" },
   ];
+
+  // Redirecting (see the effect above) — render nothing rather than flash an empty order
+  // list for a frame first.
+  if (!signedIn) return null;
 
   return (
     <div className="contact_page_container font-sans min-h-screen">

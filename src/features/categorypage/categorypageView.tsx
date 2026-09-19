@@ -7,6 +7,7 @@ import { useLanguage } from "@/components/ui/translatetokhmer";
 import { iconFor } from "@/components/ui/CategoryDropdown";
 import { resolveProductImage } from "@/store/api/productAdapter";
 import { useCatalog, useCategories } from "@/store/api/useCatalog";
+import { toTitleCase } from "@/lib/utils";
 import { Search, ChevronRight, ArrowUpRight, Filter } from "lucide-react";
 import "@/app/globals.scss";
 
@@ -129,7 +130,7 @@ export function CategorypageView() {
                         >
                           <Image
                             src={resolveProductImage(product.imageUrl)}
-                            alt={product.name}
+                            alt={toTitleCase(product.name)}
                             fill
                             unoptimized
                             className="object-cover"
@@ -151,7 +152,11 @@ export function CategorypageView() {
 
         {!isLoadingCategories && filteredCategories.length === 0 && (
           <div className="rounded-2xl border border-gray-200 bg-white py-16 text-center text-sm font-medium text-gray-500">
-            {t("No categories match your search.")}
+            {t(
+              searchQuery.trim()
+                ? "No categories match your search."
+                : "No categories available right now."
+            )}
           </div>
         )}
       </div>

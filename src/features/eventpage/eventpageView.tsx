@@ -39,9 +39,9 @@ export function EventpageView() {
           {t("No upcoming events yet. Check back soon!")}
         </p>}
         <div className="bento_grid">
-          {events.map((event, index) => (
+          {events.map((event) => (
             <button type="button" key={event.id} onClick={() => setSelectedId(event.id)}
-              className={`event_card text-left ${index % 5 === 0 ? "span_col_2" : "span_col_1"}`}>
+              className="event_card text-left">
               <Image src={imageFor(event)} alt={event.title} fill unoptimized
                 sizes="(max-width: 768px) 100vw, 50vw" className="card_image" />
               <div className="card_overlay" />

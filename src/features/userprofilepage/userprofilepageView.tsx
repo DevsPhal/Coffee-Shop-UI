@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ExternalLink, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move, Trash2, Send } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { TelegramLinkModal } from "@/components/ui/TelegramLinkModal";
@@ -73,6 +73,7 @@ export interface UserProfileData {
 export function UserprofilepageView() {
   const { t } = useLanguage();
   const router = useRouter();
+  const pathname = usePathname();
   const { logout, user } = useAuth();
   const { messagesHistory, clearHistory: clearContactHistory } = useContactStore();
   const { addItem, openCart } = useCart();
@@ -92,6 +93,16 @@ export function UserprofilepageView() {
 
   // Orders come from the API, scoped to the signed-in customer by the server.
   const signedIn = isAuthenticated();
+
+  // This page shows real account data (email, phone, order history) — nothing here makes
+  // sense for a logged-out visitor, so it sends them to log in instead of rendering a
+  // "Guest" account shell with buttons that have nothing to act on.
+  useEffect(() => {
+    if (!signedIn) {
+      router.push(`/login?next=${encodeURIComponent(pathname)}`);
+    }
+  }, [signedIn, router, pathname]);
+
   const { data: currentUser } = useGetCurrentUserQuery(undefined, { skip: !signedIn });
   const { data: orderPage } = useListMyOrdersQuery(
     { page: 1, size: 50 },
@@ -403,6 +414,10 @@ export function UserprofilepageView() {
     logout();
     router.push("/login");
   };
+
+  // Redirecting (see the effect above) — render nothing rather than flash the "Guest" shell
+  // for a frame first.
+  if (!signedIn) return null;
 
   return (
     <div className="user_profile_container">

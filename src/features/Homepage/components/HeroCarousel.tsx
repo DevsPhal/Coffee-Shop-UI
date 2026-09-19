@@ -24,40 +24,12 @@ interface HeroSlide {
   href: string;
 }
 
-/**
- * Shown only when the shop has no banners configured yet (or the request fails) — the homepage
- * hero should never render empty. Real banners from /api/banners take priority when present.
- */
-const FALLBACK_SLIDES: HeroSlide[] = [
-  {
-    id: "fallback-1",
-    image: "/images/poster1.jpg",
-    title: "590st Cafe Refreshing Drinks",
-    description: "Handcrafted iced coffees and sparkling fruit sodas brewed fresh daily",
-    href: "/menu",
-  },
-  {
-    id: "fallback-2",
-    image: "/images/poster2.jpg",
-    title: "Signature Coffee Special",
-    description: "Rich espresso layered with creamy foam and single-origin beans",
-    href: "/menu",
-  },
-  {
-    id: "fallback-3",
-    image: "/images/poster3.jpg",
-    title: "Special Season Promotion",
-    description: "Limited time seasonal treats and handcrafted specialty lattes",
-    href: "/menu",
-  },
-];
-
 export default function HeroCarousel() {
   const [api, setApi] = useState<CarouselApi>();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
-  const { data: banners } = useListBannersQuery();
+  const { data: banners, isLoading } = useListBannersQuery();
 
   const activeBanners = (banners ?? []).filter((b) => b.status === "ACTIVE");
   // A banner's own linkUrl is only used when it looks like a real destination — seed/test data
@@ -65,15 +37,14 @@ export default function HeroCarousel() {
   const bannerHref = (linkUrl: string | null) =>
     linkUrl && (linkUrl.startsWith("/") || linkUrl.startsWith("http")) ? linkUrl : "/menu";
 
-  const slides: HeroSlide[] =
-    activeBanners.length > 0
-      ? activeBanners.map((banner) => ({
-          id: banner.id,
-          image: banner.imageUrl || "/images/590st cafe.jpg",
-          title: banner.title,
-          href: bannerHref(banner.linkUrl),
-        }))
-      : FALLBACK_SLIDES;
+  // Entirely from /api/banners now — no hardcoded poster images standing in while the real
+  // request is in flight or if the shop hasn't configured any banners yet.
+  const slides: HeroSlide[] = activeBanners.map((banner) => ({
+    id: banner.id,
+    image: banner.imageUrl || "/images/590st cafe.jpg",
+    title: banner.title,
+    href: bannerHref(banner.linkUrl),
+  }));
 
   useEffect(() => {
     const checkMobile = () => {
@@ -115,6 +86,24 @@ export default function HeroCarousel() {
     const loopDiff = count - diff;
     return Math.min(diff, loopDiff);
   };
+
+  // While the real banners are in flight, a skeleton matching the slide's own size — not
+  // hardcoded poster images pretending to be content.
+  if (isLoading) {
+    return (
+      <section className="hero_section">
+        <div className="hero_container">
+          <div className="aspect-video w-full min-h-55 animate-pulse bg-gray-100" aria-hidden />
+        </div>
+      </section>
+    );
+  }
+
+  // No banners configured is a real, valid state — nothing to show rather than standing in
+  // with content that isn't actually the shop's.
+  if (slides.length === 0) {
+    return null;
+  }
 
   return (
     <section className="hero_section">

@@ -1,5 +1,7 @@
 import { baseApi, unwrap } from "./baseApi";
+import { toTitleCase } from "@/lib/utils";
 import type {
+  ApiEnvelope,
   BannerResponse,
   CustomerCategoryResponse,
   CustomerProductResponse,
@@ -28,7 +30,11 @@ export const catalogApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     listEvents: builder.query<PublicEventResponse[], void>({
       query: () => "/api/events",
-      transformResponse: unwrap<PublicEventResponse[]>,
+      // Staff type event titles into the admin however they like ("summer sale", "DJ NIGHT") —
+      // title-cased here, once, so every card/modal downstream reads like a real event listing
+      // rather than needing each display site to remember to format it.
+      transformResponse: (response: ApiEnvelope<PublicEventResponse[]>) =>
+        unwrap(response).map((event) => ({ ...event, title: toTitleCase(event.title) })),
     }),
     /**
      * `/api/shop/settings` does not exist in the live API (checked against /v3/api-docs — no
@@ -70,7 +76,10 @@ export const catalogApi = baseApi.injectEndpoints({
 
     listBanners: builder.query<BannerResponse[], void>({
       query: () => "/api/banners",
-      transformResponse: unwrap<BannerResponse[]>,
+      // Same reasoning as listEvents' title-casing below — a banner's title is staff-entered
+      // in the admin and shown as-is on the storefront otherwise.
+      transformResponse: (response: ApiEnvelope<BannerResponse[]>) =>
+        unwrap(response).map((banner) => ({ ...banner, title: toTitleCase(banner.title) })),
       providesTags: ["Banner"],
     }),
   }),
