@@ -917,14 +917,12 @@
 @media (min-width: 1024px) { .header_title { font-size: 2.25rem; } }
 .header_description { font-size: 0.75rem; color: #6b7280; line-height: 1.625; font-weight: 400; }
 @media (min-width: 640px) { .header_description { font-size: 0.875rem; } }
-.bento_grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 0.5rem !important; }
-@media (min-width: 640px) { .bento_grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (min-width: 768px) { .bento_grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* auto-fit rather than a fixed column count: a handful of events fill and stretch evenly
+   across the row instead of a fixed-width bento grid leaving a bare gap beside a lone card
+   when there aren't enough events yet to fill every column. */
+.bento_grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
 .event_card { position: relative; overflow: hidden; background-color: #f1f5f9; cursor: pointer; box-shadow: 0 1px 2px 0 #0000000d; height: 340px; }
 @media (min-width: 640px) { .event_card { height: 380px; } }
-.event_card.span_col_1 { grid-column: span 1 / span 1; }
-.event_card.span_col_2 { grid-column: span 1 / span 1; }
-@media (min-width: 768px) { .event_card.span_col_2 { grid-column: span 2 / span 2; } }
 .card_image { object-fit: cover; object-position: center; transition: transform 700ms cubic-bezier(0, 0, 0.2, 1); }
 .event_card:hover .card_image { transform: scale(1.05); }
 .card_overlay { position: absolute; inset: 0; background-image: linear-gradient(to top, #000000d9, #0000004d, #00000000); opacity: 0.9; transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1); }
