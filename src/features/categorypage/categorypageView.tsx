@@ -4,10 +4,10 @@ import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useLanguage } from "@/components/ui/translatetokhmer";
-import { CATEGORY_ICONS } from "@/components/ui/CategoryDropdown";
+import { iconFor } from "@/components/ui/CategoryDropdown";
 import { resolveProductImage } from "@/store/api/productAdapter";
 import { useCatalog, useCategories } from "@/store/api/useCatalog";
-import { Search, ChevronRight, Layers, ArrowUpRight, Filter } from "lucide-react";
+import { Search, ChevronRight, ArrowUpRight, Filter } from "lucide-react";
 import "@/app/globals.scss";
 
 /**
@@ -96,7 +96,7 @@ export function CategorypageView() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredCategories.map((category) => {
               const previews = previewsFor(category.id);
-              const icon = CATEGORY_ICONS[category.name.toLowerCase()];
+              const Icon = iconFor(category.name);
 
               return (
                 <Link
@@ -106,18 +106,8 @@ export function CategorypageView() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[#f0383e] shrink-0">
-                        {icon ? (
-                          <Image
-                            src={icon}
-                            alt=""
-                            width={20}
-                            height={20}
-                            className="w-5 h-5 object-contain"
-                          />
-                        ) : (
-                          <Layers className="w-5 h-5" />
-                        )}
+                      <span className="text-[#A1255B] shrink-0">
+                        <Icon className="w-5 h-5" />
                       </span>
                       <h2 className="truncate text-base font-extrabold text-gray-900">
                         {t(category.name)}

@@ -11,10 +11,13 @@ import {
   MILK_LABELS,
   SUGAR_CHOICES,
   SUGAR_LABELS,
+  VARIANT_LABELS,
 } from "@/store/api/optionMapping";
-import { resolveProductImage } from "@/store/api/productAdapter";
+import { getDrinkCustomization, resolveProductImage } from "@/store/api/productAdapter";
+import { toTitleCase } from "@/lib/utils";
 import { useCatalog } from "@/store/api/useCatalog";
 import { useLanguage } from "@/components/ui/translatetokhmer";
+import type { VariantName } from "@/store/api/types";
 import { ChevronDown, Check } from "lucide-react";
 import "@/app/globals.scss";
 
@@ -184,7 +187,7 @@ export function CartDrawer() {
     closeCart,
     items,
     updateQuantity,
-    updateSize,
+    updateVariant,
     updateIceLevel,
     updateSugarLevel,
     updateMilkType,
@@ -286,7 +289,10 @@ export function CartDrawer() {
                   // extra request — and it is where the real size options and their price
                   // deltas come from.
                   const product = products.find((p) => p.id === item.productId);
-                  const sizeOptions = product?.sizeOptions ?? [];
+                  const variants = product?.variants ?? [];
+                  const drinkOptions = product
+                    ? getDrinkCustomization(product)
+                    : { ice: false, sugar: false, milk: false };
 
                   return (
                     <div key={item.lineId} className="cart_item">
@@ -294,7 +300,7 @@ export function CartDrawer() {
                       <div className="cart_item_thumbnail">
                         <Image
                           src={resolveProductImage(item.image)}
-                          alt={t(item.title)}
+                          alt={t(toTitleCase(item.title))}
                           fill
                           unoptimized
                           className="object-cover"
@@ -303,64 +309,76 @@ export function CartDrawer() {
 
                       {/* Details */}
                       <div className="cart_item_details">
-                        <h3 className="cart_item_title">{t(item.title)}</h3>
+                        <h3 className="cart_item_title">{t(toTitleCase(item.title))}</h3>
 
                         <div className="flex flex-wrap items-center gap-1.5 my-1.5">
-                          {sizeOptions.length > 0 && (
+                          {variants.length > 1 && (
                             <div className="flex items-center gap-1">
                               <span className="text-[11px] font-semibold text-gray-500">
                                 {t("Size:")}
                               </span>
                               <CustomDrawerSizeDropdown
-                                value={item.sizeName ?? sizeOptions[0].name}
-                                options={sizeOptions.map((o) => o.name)}
-                                onChange={(name) => {
-                                  const option = sizeOptions.find((o) => o.name === name);
-                                  if (!option || !product) return;
-                                  updateSize(
+                                value={t(
+                                  VARIANT_LABELS[
+                                    (item.variantName as VariantName) ?? variants[0].name
+                                  ]
+                                )}
+                                options={variants.map((v) => t(VARIANT_LABELS[v.name]))}
+                                onChange={(label) => {
+                                  const variant = variants.find(
+                                    (v) => t(VARIANT_LABELS[v.name]) === label
+                                  );
+                                  if (!variant || !product) return;
+                                  updateVariant(
                                     item.lineId,
-                                    option.id,
-                                    option.name,
-                                    product.price + Number(option.priceDelta)
+                                    variant.id,
+                                    variant.name,
+                                    Number(variant.finalPrice)
                                   );
                                 }}
                               />
                             </div>
                           )}
 
-                          <CustomDrawerOptionDropdown
-                            labelPrefix={t("Ice")}
-                            value={ICE_LABELS[item.iceLevel ?? "HUNDRED"]}
-                            options={ICE_CHOICES.map((c) => ICE_LABELS[c])}
-                            onChange={(label) => {
-                              const level = ICE_CHOICES.find((c) => ICE_LABELS[c] === label);
-                              if (level) updateIceLevel(item.lineId, level);
-                            }}
-                          />
+                          {drinkOptions.ice && (
+                            <CustomDrawerOptionDropdown
+                              labelPrefix={t("Ice")}
+                              value={ICE_LABELS[item.iceLevel ?? "NORMAL"]}
+                              options={ICE_CHOICES.map((c) => ICE_LABELS[c])}
+                              onChange={(label) => {
+                                const level = ICE_CHOICES.find((c) => ICE_LABELS[c] === label);
+                                if (level) updateIceLevel(item.lineId, level);
+                              }}
+                            />
+                          )}
 
-                          <CustomDrawerOptionDropdown
-                            labelPrefix={t("Sugar")}
-                            value={SUGAR_LABELS[item.sugarLevel ?? "HUNDRED"]}
-                            options={SUGAR_CHOICES.map((c) => SUGAR_LABELS[c])}
-                            onChange={(label) => {
-                              const level = SUGAR_CHOICES.find(
-                                (c) => SUGAR_LABELS[c] === label
-                              );
-                              if (level) updateSugarLevel(item.lineId, level);
-                            }}
-                          />
+                          {drinkOptions.sugar && (
+                            <CustomDrawerOptionDropdown
+                              labelPrefix={t("Sugar")}
+                              value={SUGAR_LABELS[item.sugarLevel ?? "NORMAL"]}
+                              options={SUGAR_CHOICES.map((c) => SUGAR_LABELS[c])}
+                              onChange={(label) => {
+                                const level = SUGAR_CHOICES.find(
+                                  (c) => SUGAR_LABELS[c] === label
+                                );
+                                if (level) updateSugarLevel(item.lineId, level);
+                              }}
+                            />
+                          )}
 
-                          <CustomDrawerOptionDropdown
-                            labelPrefix={t("Milk")}
-                            value={MILK_LABELS[item.milkType ?? "WHOLE_MILK"]}
-                            options={MILK_CHOICES.map((c) => MILK_LABELS[c])}
-                            onChange={(label) => {
-                              const kind = MILK_CHOICES.find(
-                                (c) => MILK_LABELS[c] === label
-                              );
-                              if (kind) updateMilkType(item.lineId, kind);
-                            }}
-                          />
+                          {drinkOptions.milk && (
+                            <CustomDrawerOptionDropdown
+                              labelPrefix={t("Milk")}
+                              value={MILK_LABELS[item.milkType ?? "NORMAL"]}
+                              options={MILK_CHOICES.map((c) => MILK_LABELS[c])}
+                              onChange={(label) => {
+                                const kind = MILK_CHOICES.find(
+                                  (c) => MILK_LABELS[c] === label
+                                );
+                                if (kind) updateMilkType(item.lineId, kind);
+                              }}
+                            />
+                          )}
                         </div>
 
                         {/* Quantity Pill */}

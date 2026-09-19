@@ -2,17 +2,24 @@
 
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import Image from "next/image";
 import { Card } from "@/components/cards/card";
 import { ALL_CATEGORIES } from "@/components/ui/CategoryDropdown";
+import { SortDropdown, type SortOption } from "@/components/ui/SortDropdown";
 import { toStoreProduct } from "@/store/api/productAdapter";
 import { useCatalog, useCategories } from "@/store/api/useCatalog";
 import { useLanguage } from "@/components/ui/translatetokhmer";
-import { Search, ChevronDown, ChevronRight, Filter } from "lucide-react";
+import { Search, ChevronRight, Filter, LayoutGrid } from "lucide-react";
 import "@/app/globals.scss";
 
 /** Client-side pseudo-category: everything currently discounted. */
 const FEATURED = "Featured";
+
+const SORT_OPTIONS: SortOption[] = [
+  { value: "newest", label: "Newest" },
+  { value: "price-asc", label: "Price: Low to High" },
+  { value: "price-desc", label: "Price: High to Low" },
+  { value: "name-asc", label: "Name: A-Z" },
+];
 
 export function MenupageView() {
   const searchParams = useSearchParams();
@@ -61,7 +68,12 @@ export function MenupageView() {
   const getPageTitle = () => {
     if (selectedCategory === ALL_CATEGORIES) return t("All Products");
     if (selectedCategory === FEATURED) return t("Featured Products");
-    return t(selectedCategory);
+    // `selectedCategory` holds the category's id once a specific one is picked (that's what
+    // gets compared against `category.id` for the sidebar highlight below and sent as the
+    // catalogue filter above) — the id itself is never something to show a customer, so this
+    // looks its name up rather than rendering the raw UUID.
+    const matched = categories.find((category) => category.id === selectedCategory);
+    return matched ? t(matched.name) : t("Menu");
   };
 
   return (
@@ -128,19 +140,7 @@ export function MenupageView() {
               <span className="text-xs sm:text-sm font-semibold text-gray-600">
                 {t("Sort by:")}
               </span>
-              <div className="relative">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="appearance-none bg-white border border-gray-300 px-3 py-1.5 pr-8 text-xs sm:text-sm font-semibold text-gray-800 hover:border-[#A1255B] focus:outline-none focus:ring-1 focus:ring-[#A1255B] cursor-pointer transition-all"
-                >
-                  <option value="newest">{t("Newest")}</option>
-                  <option value="price-asc">{t("Price: Low to High")}</option>
-                  <option value="price-desc">{t("Price: High to Low")}</option>
-                  <option value="name-asc">{t("Name: A-Z")}</option>
-                </select>
-                <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
+              <SortDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
             </div>
           </div>
         </div>
@@ -194,15 +194,10 @@ export function MenupageView() {
                         : "hover:bg-gray-100 text-gray-700"
                     }`}
                   >
-                    {/* test */}
                     <div className="flex items-center gap-2 min-w-0 truncate">
-                      <Image
-                        src="/icons/category.svg"
-                        alt=""
-                        width={16}
-                        height={16}
-                        className={`w-4 h-4 object-contain shrink-0 ${
-                          selectedCategory === ALL_CATEGORIES ? "brightness-0 invert" : ""
+                      <LayoutGrid
+                        className={`w-4 h-4 shrink-0 ${
+                          selectedCategory === ALL_CATEGORIES ? "text-white" : "text-[#A1255B]"
                         }`}
                       />
                       <span className="truncate">{t("All Products")}</span>

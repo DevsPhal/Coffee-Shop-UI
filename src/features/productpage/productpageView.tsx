@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { toast } from "@/components/ui/toast";
 import { useGetProductQuery } from "@/store/api/catalogApi";
-import { resolveProductImage, toStoreProduct } from "@/store/api/productAdapter";
+import { getDrinkCustomization, resolveProductImage, toStoreProduct } from "@/store/api/productAdapter";
 import {
   ICE_CHOICES,
   ICE_LABELS,
@@ -18,6 +18,7 @@ import {
   MILK_LABELS,
   SUGAR_CHOICES,
   SUGAR_LABELS,
+  VARIANT_LABELS,
 } from "@/store/api/optionMapping";
 import type { IceLevel, MilkType, SugarLevel } from "@/store/api/types";
 import { Clock, ChevronDown, Check } from "lucide-react";
@@ -160,24 +161,34 @@ export function ProductpageView({
   const displayCategory = product?.category ?? "";
   const displayImage = resolveProductImage(product?.image);
 
-  const sizeOptions = product?.sizeOptions ?? [];
+  const variants = product?.variants ?? [];
+  // Beer, soft drinks, snacks — anything sold as-is rather than made to order — get no ice/
+  // sugar/milk controls; a fresh drink gets whichever of the three actually apply to it (a hot
+  // drink has no ice option, a plain tea has no milk option).
+  const drinkOptions = product
+    ? getDrinkCustomization(product)
+    : { ice: false, sugar: false, milk: false };
+  const hasCustomization = drinkOptions.ice || drinkOptions.sugar || drinkOptions.milk;
 
-  const [selectedSizeId, setSelectedSizeId] = React.useState<string | null>(null);
-  const [selectedIce, setSelectedIce] = React.useState<IceLevel>("HUNDRED");
-  const [selectedSugar, setSelectedSugar] = React.useState<SugarLevel>("HUNDRED");
-  const [selectedMilk, setSelectedMilk] = React.useState<MilkType>("WHOLE_MILK");
+  const [selectedVariantId, setSelectedVariantId] = React.useState<string | null>(null);
+  const [selectedIce, setSelectedIce] = React.useState<IceLevel>("NORMAL");
+  const [selectedSugar, setSelectedSugar] = React.useState<SugarLevel>("NORMAL");
+  const [selectedMilk, setSelectedMilk] = React.useState<MilkType>("NORMAL");
 
-  // Default to the first size once the product arrives.
+  // Default to the first variant once the product arrives.
   React.useEffect(() => {
-    if (sizeOptions.length > 0 && !sizeOptions.some((o) => o.id === selectedSizeId)) {
-      setSelectedSizeId(sizeOptions[0].id);
+    if (variants.length > 0 && !variants.some((v) => v.id === selectedVariantId)) {
+      setSelectedVariantId(variants[0].id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product?.id, sizeOptions.length]);
+  }, [product?.id, variants.length]);
 
-  const selectedSize = sizeOptions.find((o) => o.id === selectedSizeId) ?? null;
+  const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? null;
+  // Each variant prices itself outright now — no product-level price to add a delta to — but
+  // `product.price` (the default variant's price) still covers the instant before the effect
+  // above has picked a variant.
   const basePrice = product?.price ?? 0;
-  const displayPrice = basePrice + Number(selectedSize?.priceDelta ?? 0);
+  const displayPrice = selectedVariant ? Number(selectedVariant.finalPrice) : basePrice;
 
   const discountInfo = formatDiscountBadge(
     basePrice,
@@ -203,11 +214,11 @@ export function ProductpageView({
       unitPrice: displayPrice,
       originalUnitPrice: displayOriginalPrice,
       quantity: 1,
-      sizeOptionId: selectedSize?.id ?? null,
-      sizeName: selectedSize?.name ?? null,
-      iceLevel: selectedIce,
-      sugarLevel: selectedSugar,
-      milkType: selectedMilk,
+      variantId: selectedVariant?.id ?? null,
+      variantName: selectedVariant?.name ?? null,
+      ...(drinkOptions.ice ? { iceLevel: selectedIce } : {}),
+      ...(drinkOptions.sugar ? { sugarLevel: selectedSugar } : {}),
+      ...(drinkOptions.milk ? { milkType: selectedMilk } : {}),
     });
     return true;
   };
@@ -337,68 +348,82 @@ export function ProductpageView({
           {/* Product Description */}
           <p className="product_description">{t(displayDescription)}</p>
 
-          {/* Customization Options Stack */}
-          <div className="my-4 space-y-3">
-            {/* Size Selector — the product's own options, each with its real price add-on. */}
-            {sizeOptions.length > 0 && (
-              <div>
-                <span className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                  {t("Size:")}
-                </span>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {sizeOptions.map((option) => {
-                    const isSel = selectedSizeId === option.id;
-                    const optionPrice = basePrice + Number(option.priceDelta);
+          {/* Customization Options Stack — skipped entirely for a single-size, non-drink
+              product (a can of beer, a snack) rather than leaving an empty gap where a size
+              picker and three drink controls would otherwise sit. */}
+          {(variants.length > 1 || hasCustomization) && (
+            <div className="my-4 space-y-3">
+              {/* Size Selector — each variant prices itself outright, so there's nothing to
+                  show when there's only the one default variant every product has. */}
+              {variants.length > 1 && (
+                <div>
+                  <span className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                    {t("Size:")}
+                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {variants.map((variant) => {
+                      const isSel = selectedVariantId === variant.id;
+                      const variantPrice = Number(variant.finalPrice);
 
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => setSelectedSizeId(option.id)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border ${
-                          isSel
-                            ? "bg-[#A1255B] border-[#A1255B] text-white shadow-2xs scale-105"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200"
-                        }`}
-                      >
-                        {option.name} (${optionPrice.toFixed(2)})
-                      </button>
-                    );
-                  })}
+                      return (
+                        <button
+                          key={variant.id}
+                          type="button"
+                          onClick={() => setSelectedVariantId(variant.id)}
+                          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border ${
+                            isSel
+                              ? "bg-[#A1255B] border-[#A1255B] text-white shadow-2xs scale-105"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200"
+                          }`}
+                        >
+                          {t(VARIANT_LABELS[variant.name])} (${variantPrice.toFixed(2)})
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <CustomProductPageOptionDropdown
-              label="Ice Level:"
-              value={ICE_LABELS[selectedIce]}
-              options={ICE_CHOICES.map((c) => ICE_LABELS[c])}
-              onChange={(label) => {
-                const level = ICE_CHOICES.find((c) => ICE_LABELS[c] === label);
-                if (level) setSelectedIce(level);
-              }}
-            />
+              {/* Ice/sugar/milk only apply to something made to order, and even then only the
+                  ones that make sense for this particular drink — a hot drink has no ice
+                  level, a plain tea has no milk option. */}
+              {drinkOptions.ice && (
+                <CustomProductPageOptionDropdown
+                  label="Ice Level:"
+                  value={ICE_LABELS[selectedIce]}
+                  options={ICE_CHOICES.map((c) => ICE_LABELS[c])}
+                  onChange={(label) => {
+                    const level = ICE_CHOICES.find((c) => ICE_LABELS[c] === label);
+                    if (level) setSelectedIce(level);
+                  }}
+                />
+              )}
 
-            <CustomProductPageOptionDropdown
-              label="Sugar Level:"
-              value={SUGAR_LABELS[selectedSugar]}
-              options={SUGAR_CHOICES.map((c) => SUGAR_LABELS[c])}
-              onChange={(label) => {
-                const level = SUGAR_CHOICES.find((c) => SUGAR_LABELS[c] === label);
-                if (level) setSelectedSugar(level);
-              }}
-            />
+              {drinkOptions.sugar && (
+                <CustomProductPageOptionDropdown
+                  label="Sugar Level:"
+                  value={SUGAR_LABELS[selectedSugar]}
+                  options={SUGAR_CHOICES.map((c) => SUGAR_LABELS[c])}
+                  onChange={(label) => {
+                    const level = SUGAR_CHOICES.find((c) => SUGAR_LABELS[c] === label);
+                    if (level) setSelectedSugar(level);
+                  }}
+                />
+              )}
 
-            <CustomProductPageOptionDropdown
-              label="Milk Type:"
-              value={MILK_LABELS[selectedMilk]}
-              options={MILK_CHOICES.map((c) => MILK_LABELS[c])}
-              onChange={(label) => {
-                const kind = MILK_CHOICES.find((c) => MILK_LABELS[c] === label);
-                if (kind) setSelectedMilk(kind);
-              }}
-            />
-          </div>
+              {drinkOptions.milk && (
+                <CustomProductPageOptionDropdown
+                  label="Milk Type:"
+                  value={MILK_LABELS[selectedMilk]}
+                  options={MILK_CHOICES.map((c) => MILK_LABELS[c])}
+                  onChange={(label) => {
+                    const kind = MILK_CHOICES.find((c) => MILK_LABELS[c] === label);
+                    if (kind) setSelectedMilk(kind);
+                  }}
+                />
+              )}
+            </div>
+          )}
 
           {/* Action Buttons Row */}
           <div className="product_actions_row">

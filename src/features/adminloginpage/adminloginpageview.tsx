@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { User, Eye, EyeOff, Check, Heart, ShieldCheck, ChevronDown } from "lucide-react";
+import { User, Eye, EyeOff, Check, Heart, ShieldCheck, ChevronDown, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Forgot } from "@/components/ui/forgot";
@@ -97,21 +97,13 @@ export function AdminloginpageView({ initialViewMode = "login" }: Adminloginpage
 
       {/* Left Side: Admin Login Form */}
       <div className="login_form_side">
-        {/* Top Left Back Button with back.svg icon */}
         <div className="flex justify-start">
           <Link
             href="/"
             className="login_back_home_btn"
             title="Return to Home"
           >
-            <Image
-              src="/icons/back.svg"
-              alt="Back to Home"
-              width={24}
-              height={24}
-              unoptimized
-              className="w-6 h-6 object-contain"
-            />
+            <ArrowLeft className="w-6 h-6" aria-label="Back to Home" />
           </Link>
         </div>
 

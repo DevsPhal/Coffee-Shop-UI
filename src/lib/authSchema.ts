@@ -148,7 +148,6 @@ export const shippingInformationSchema = z.object({
   phone: cambodianPhone,
   capital: z.string().trim().min(1, { message: "Please select your Capital." }),
   district: z.string().trim().min(1, { message: "Please select your District." }),
-  zipCode: z.string().trim().min(1, { message: "Please enter Zip Code." }),
   address: z
     .string()
     .trim()

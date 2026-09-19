@@ -1,7 +1,11 @@
 services:
   customer-web:
     build:
-      context: ../
+      # Two levels up: this file lives in Deployment/local/, and the Dockerfile is at the repo
+      # root (Coffee-Shop-UI/), not in Deployment/. A single "../" here silently pointed at
+      # Deployment/ instead — no Dockerfile there, so this needs to match wherever this file
+      # actually sits relative to the repo root.
+      context: ../../
       dockerfile: Dockerfile
       # No NEXT_PUBLIC_API_URL build arg — see the Dockerfile's build stage comment. The API
       # target is API_PROXY_TARGET below, a runtime env var the Dockerfile already defaults,

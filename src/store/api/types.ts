@@ -74,16 +74,14 @@ export type PaymentMethod = "CASH" | "BAKONG";
 export type DiscountType = "PERCENTAGE" | "FIXED";
 export type Currency = "USD" | "KHR";
 
-export type SugarLevel = "ZERO" | "TWENTY_FIVE" | "FIFTY" | "SEVENTY_FIVE" | "HUNDRED";
-export type IceLevel = SugarLevel;
-export type MilkType =
-  | "NONE"
-  | "WHOLE_MILK"
-  | "SKIM_MILK"
-  | "OAT_MILK"
-  | "ALMOND_MILK"
-  | "SOY_MILK"
-  | "CONDENSED_MILK";
+/**
+ * Re-checked against the live /v3/api-docs — these used to be percentage-based
+ * (ZERO/TWENTY_FIVE/FIFTY/SEVENTY_FIVE/HUNDRED, shared between sugar and ice). The API now
+ * uses qualitative levels instead, and ice and sugar no longer share one enum.
+ */
+export type SugarLevel = "ZERO" | "LESS" | "NORMAL" | "EXTRA";
+export type IceLevel = "NO_ICE" | "LESS_ICE" | "NORMAL" | "EXTRA_ICE";
+export type MilkType = "NONE" | "LESS" | "NORMAL" | "EXTRA";
 
 // ---- auth ----
 
@@ -197,37 +195,66 @@ export interface UserResponse {
 
 // ---- catalogue ----
 
-export interface ProductSizeOptionResponse {
+export type CategoryGroup = "FRESH_DRINK" | "BEVERAGE" | "SNACK";
+export type VariantName = "MEDIUM" | "LARGE" | "PIECE";
+export type StockUnit = "PACK" | "BOX" | "CARTON" | "PIECE";
+export type SellUnit = "PLATE" | "BOTTLE" | "CAN" | "CUP" | "CARTON" | "PACKAGE" | "TANK" | "PIECE";
+
+/**
+ * Was `ProductSizeOptionResponse` (free-form `name`, a `priceDelta` added to the product's own
+ * price). The API now prices each variant on its own — `price`/`finalPrice` here are absolute,
+ * not an add-on — and `name` is one of three fixed sizes rather than free text.
+ */
+export interface ProductVariantResponse {
   id: UUID;
   productId: UUID;
-  name: string;
-  priceDelta: Numeric;
+  name: VariantName;
+  price: Numeric;
+  finalPrice: Numeric;
   sortOrder: number | null;
   status: Status;
 }
 
-/** What /api/customer/products returns — no stock levels or audit fields. */
+/** An optional add-on (extra shot, pearls, ...) a customer can attach to a cart line. */
+export interface ProductExtraResponse {
+  id: UUID;
+  productId: UUID;
+  extraId: UUID;
+  name: string;
+  price: Numeric;
+  sortOrder: number | null;
+  status: Status;
+  quantityOnHand: Numeric | null;
+}
+
+/**
+ * What /api/customer/products returns. Re-checked against the live /v3/api-docs — the product
+ * itself no longer carries a `price`/`finalPrice` (or a single `unit`): pricing moved entirely
+ * onto `variants`, since every product must have at least a default size, and stock/sell units
+ * split in two (`stockUnit` for inventory counting, `sellUnit` for what's shown at checkout).
+ */
 export interface CustomerProductResponse {
   id: UUID;
   name: string;
+  nameKh: string | null;
   description: string | null;
   imageUrl: string | null;
   sku: string;
-  unit: string;
-  price: Numeric;
+  stockUnit: StockUnit;
+  sellUnit: SellUnit;
+  unitsPerStock: Numeric;
   categoryId: UUID;
   categoryName: string;
+  categoryGroup: CategoryGroup;
   status: Status;
   discountType: DiscountType | null;
   discountValue: Numeric | null;
   discountStartAt: string | null;
   discountEndAt: string | null;
   discountActive: boolean;
-  finalPrice: Numeric;
-  sizeOptions: ProductSizeOptionResponse[];
+  variants: ProductVariantResponse[];
+  extras: ProductExtraResponse[];
 }
-
-export type CategoryGroup = "FRESH_DRINK" | "BEVERAGE" | "SNACK";
 
 /** What GET /api/customer/categories returns. */
 export interface CustomerCategoryResponse {
@@ -252,19 +279,29 @@ export interface BannerResponse {
 
 // ---- cart ----
 
+/** An extra attached to a cart line — a snapshot (name/price at the time it was added), not a
+ *  live reference back to the product's extra list. */
+export interface CartItemExtraResponse {
+  extraId: UUID;
+  name: string;
+  price: Numeric;
+}
+
 export interface CartItemResponse {
   id: UUID;
   productId: UUID;
   productName: string;
+  productNameKh: string | null;
   productImageUrl: string | null;
   unitPrice: Numeric;
   quantity: number;
   subtotal: Numeric;
-  sizeOptionId: UUID | null;
-  sizeOptionName: string | null;
+  variantId: UUID | null;
+  variantName: VariantName | null;
   sugarLevel: SugarLevel | null;
   iceLevel: IceLevel | null;
   milkType: MilkType | null;
+  extras: CartItemExtraResponse[];
 }
 
 export interface CartResponse {
@@ -276,44 +313,63 @@ export interface CartResponse {
 export interface AddCartItemRequest {
   productId: UUID;
   quantity: number;
-  sizeOptionId?: UUID;
+  variantId?: UUID;
   sugarLevel?: SugarLevel;
   iceLevel?: IceLevel;
   milkType?: MilkType;
+  extraIds?: UUID[];
 }
 
 export interface UpdateCartItemRequest {
   quantity: number;
-  sizeOptionId?: UUID;
+  variantId?: UUID;
   sugarLevel?: SugarLevel;
   iceLevel?: IceLevel;
   milkType?: MilkType;
+  extraIds?: UUID[];
 }
 
+/**
+ * Matches POST /api/customer/cart/checkout exactly (checked against the live /v3/api-docs) —
+ * there is no `paymentMethod` here despite an earlier version of this type having one: payment
+ * is a separate step after the order exists (POST .../pay/cash-on-pickup or .../pay/bakong/qr),
+ * not part of checkout. `deliveryLatitude`/`deliveryLongitude` are what the backend actually
+ * uses to price a delivery order by distance — omitting them (as this type used to) meant the
+ * server had no coordinates to compute a real fee from.
+ */
 export interface CheckoutRequest {
   note?: string;
+  deliveryLatitude?: number;
+  deliveryLongitude?: number;
   delivery?: {
     method: "PICKUP" | "DELIVERY";
     contactName: string;
     contactPhone: string;
     address?: string;
   };
-  paymentMethod?: PaymentMethod;
 }
 
 // ---- orders ----
+
+export interface OrderItemExtraResponse {
+  extraId: UUID;
+  name: string;
+  price: Numeric;
+}
 
 export interface OrderItemResponse {
   id: UUID;
   productId: UUID;
   productName: string;
+  productNameKh: string | null;
   quantity: number;
   unitPrice: Numeric;
   subtotal: Numeric;
-  sizeOptionName: string | null;
+  variantName: VariantName | null;
   sugarLevel: SugarLevel | null;
   iceLevel: IceLevel | null;
   milkType: MilkType | null;
+  extras: OrderItemExtraResponse[];
 }
 
 export interface OrderResponse {

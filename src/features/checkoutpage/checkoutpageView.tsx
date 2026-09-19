@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useMounted } from "@/hooks/useMounted";
@@ -14,14 +15,28 @@ import { shippingInformationSchema } from "@/lib/authSchema";
 import { cleanPhoneInput } from "@/lib/phoneUtils";
 import { AlertCircle, ChevronDown, Check, MapPin, Navigation, Compass, Search, Loader2 } from "lucide-react";
 import { isAuthenticated } from "@/lib/authStorage";
+import { apiErrorMessage } from "@/store/api/baseApi";
 import { useGetCurrentUserQuery } from "@/store/api/authApi";
-import { useGetShopSettingsQuery } from "@/store/api/catalogApi";
-import { ICE_LABELS, MILK_LABELS, SUGAR_LABELS } from "@/store/api/optionMapping";
+import { usePayCashOnPickupMutation } from "@/store/api/orderApi";
+import { ICE_LABELS, MILK_LABELS, SUGAR_LABELS, VARIANT_LABELS } from "@/store/api/optionMapping";
+import type { VariantName } from "@/store/api/types";
 import { resolveProductImage } from "@/store/api/productAdapter";
+import { toTitleCase } from "@/lib/utils";
 import { useCheckout } from "@/store/api/useCheckout";
 import { PaymentMethodModal } from "@/components/ui/PaymentMethodModal";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
+
+// Leaflet touches `window` on import, which crashes during server rendering — this defers it
+// to the client, same as react-leaflet's own Next.js guidance.
+const DeliveryMapPicker = dynamic(() => import("@/components/ui/DeliveryMapPicker"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full w-full items-center justify-center text-xs font-medium text-gray-400">
+      Loading map…
+    </div>
+  ),
+});
 
 const DISTRICT_OPTIONS = [
   "Khan Boeng Keng Kang",
@@ -39,6 +54,29 @@ const DISTRICT_OPTIONS = [
   "Khan Sen Sok",
   "Khan Tuol Kouk",
 ];
+
+/**
+ * Nominatim's reverse/search results carry the district under different keys depending on the
+ * result (`city_district`, `suburb`, sometimes `county`), and its spelling doesn't always match
+ * the API's own khan names ("Toul Kork" vs "Tuol Kouk", no "Khan " prefix, different casing).
+ * Best-effort match against the picked location so the dropdown and the map pin agree, rather
+ * than silently drifting apart — returns null rather than guessing when nothing lines up, so
+ * the customer's own selection is never overwritten with a wrong district.
+ */
+function matchDistrictFromAddress(address: Record<string, string> | undefined): string | null {
+  if (!address) return null;
+  const normalize = (s: string) =>
+    s.replace(/^khan\s+/i, "").trim().toLowerCase().replace(/[^a-z]/g, "");
+  const candidates = [address.city_district, address.suburb, address.county, address.borough].filter(
+    (v): v is string => Boolean(v)
+  );
+  for (const candidate of candidates) {
+    const target = normalize(candidate);
+    const match = DISTRICT_OPTIONS.find((opt) => normalize(opt) === target);
+    if (match) return match;
+  }
+  return null;
+}
 
 function CustomDistrictSelect({
   value,
@@ -121,9 +159,7 @@ export function CheckoutpageView() {
     error: checkoutError,
     errorRef: checkoutErrorRef,
   } = useCheckout();
-  const { data: shopSettings, error: settingsError } = useGetShopSettingsQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-  });
+  const [payCashOnPickup] = usePayCashOnPickupMutation();
 
   const { t } = useLanguage();
   const isMounted = useMounted();
@@ -138,7 +174,6 @@ export function CheckoutpageView() {
   const [baristaNote, setBaristaNote] = useState("");
   const [capital, setCapital] = useState("Phnom Penh");
   const [district, setDistrict] = useState("Khan Boeng Keng Kang");
-  const [zipCode, setZipCode] = useState("120000");
   const [address, setAddress] = useState("");
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "grab">("pickup");
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -160,7 +195,6 @@ export function CheckoutpageView() {
     phone?: string;
     capital?: string;
     district?: string;
-    zipCode?: string;
     address?: string;
   }>({});
 
@@ -171,6 +205,34 @@ export function CheckoutpageView() {
     if (navigator.geolocation && !address) {
       handleDetectCurrentLocation();
     }
+  };
+
+  // Shared by "Locate Me" and by dragging/clicking the pin on the map itself — whichever set
+  // the coordinates, the address line and district should update to match.
+  const reverseGeocodeToAddress = async (lat: number, lng: number) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+      );
+      const data = await res.json();
+      if (data && data.display_name) {
+        const formatted = data.display_name.split(",").slice(0, 4).join(", ");
+        setTempAddress(formatted);
+        const matchedDistrict = matchDistrictFromAddress(data.address);
+        if (matchedDistrict) setDistrict(matchedDistrict);
+      } else {
+        setTempAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)} (Phnom Penh)`);
+      }
+    } catch {
+      setTempAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+    }
+  };
+
+  // Dragging or clicking the pin directly on the map — the map component only reports
+  // coordinates, so this is where they turn into an address.
+  const handlePickOnMap = (lat: number, lng: number) => {
+    setMapCoords({ lat, lng });
+    reverseGeocodeToAddress(lat, lng);
   };
 
   const handleDetectCurrentLocation = () => {
@@ -186,24 +248,10 @@ export function CheckoutpageView() {
       async (position) => {
         const { latitude, longitude } = position.coords;
         setMapCoords({ lat: latitude, lng: longitude });
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
-          );
-          const data = await res.json();
-          if (data && data.display_name) {
-            const formatted = data.display_name.split(",").slice(0, 4).join(", ");
-            setTempAddress(formatted);
-          } else {
-            setTempAddress(`Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)} (Phnom Penh)`);
-          }
-        } catch {
-          setTempAddress(`Street 590, Toul Kork, Phnom Penh (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
-        } finally {
-          setIsLocating(false);
-        }
+        await reverseGeocodeToAddress(latitude, longitude);
+        setIsLocating(false);
       },
-      (error) => {
+      () => {
         setIsLocating(false);
         toast.add({
           type: "warning",
@@ -219,7 +267,7 @@ export function CheckoutpageView() {
     setIsLocating(true);
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(
           searchLocationQuery + ", Cambodia"
         )}`
       );
@@ -230,6 +278,8 @@ export function CheckoutpageView() {
         const newLng = parseFloat(first.lon);
         setMapCoords({ lat: newLat, lng: newLng });
         setTempAddress(first.display_name.split(",").slice(0, 4).join(", "));
+        const matchedDistrict = matchDistrictFromAddress(first.address);
+        if (matchedDistrict) setDistrict(matchedDistrict);
       } else {
         toast.add({
           type: "warning",
@@ -256,14 +306,16 @@ export function CheckoutpageView() {
       description: "Delivery address updated from map!",
     });
   };
-  const deliveryFee = deliveryMethod === "grab" ? Number(shopSettings?.deliveryFee ?? 0) : 0;
-  const grandTotal = subtotal + deliveryFee;
+  // The API prices delivery by distance from the coordinates sent at checkout, computed
+  // server-side once the order exists — there is no "get a quote" endpoint, so no fee can be
+  // shown here in advance. The summary says so explicitly instead of showing a fake $0.00.
+  const grandTotal = subtotal;
 
   const validateSingleField = (
-    field: "fullName" | "email" | "phone" | "address" | "capital" | "district" | "zipCode",
+    field: "fullName" | "email" | "phone" | "address" | "capital" | "district",
     val?: string
   ) => {
-    if (deliveryMethod === "pickup" && ["capital", "district", "zipCode", "address"].includes(field)) {
+    if (deliveryMethod === "pickup" && ["capital", "district", "address"].includes(field)) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
       return;
     }
@@ -283,7 +335,6 @@ export function CheckoutpageView() {
         ...prev,
         capital: undefined,
         district: undefined,
-        zipCode: undefined,
         address: undefined,
       }));
     }
@@ -292,10 +343,6 @@ export function CheckoutpageView() {
   const handlePlaceOrderNow = (e: React.MouseEvent) => {
     e.preventDefault();
     if (isPlacing) return;
-    if (deliveryMethod === "grab" && (!shopSettings || settingsError)) {
-      toast.add({ type: "error", description: "Could not load the delivery fee. Please reload and try again." });
-      return;
-    }
     if (items.length === 0) {
       toast.add({
         type: "warning",
@@ -316,7 +363,6 @@ export function CheckoutpageView() {
       phone: (phone || "").trim(),
       capital: (capital || "").trim(),
       district: (district || "").trim(),
-      zipCode: (zipCode || "").trim(),
       address: (address || "").trim(),
     });
 
@@ -330,7 +376,6 @@ export function CheckoutpageView() {
           ? {
               capital: fieldErrors.capital?.[0],
               district: fieldErrors.district?.[0],
-              zipCode: fieldErrors.zipCode?.[0],
               address: fieldErrors.address?.[0],
             }
           : {}),
@@ -342,7 +387,7 @@ export function CheckoutpageView() {
         newErrors.email ||
         newErrors.phone ||
         (deliveryMethod === "grab"
-          ? newErrors.capital || newErrors.district || newErrors.zipCode || newErrors.address
+          ? newErrors.capital || newErrors.district || newErrors.address
           : undefined) ||
         "Please complete shipping information.";
 
@@ -364,12 +409,13 @@ export function CheckoutpageView() {
    *
    * The cart is local until this point, so the flow is: require a signed-in customer (the API
    * has no guest checkout), push the lines to the server cart and check out, then choose how
-   * to pay. Cash-on-pickup completes here; Bakong hands off to /payment, which generates the
-   * QR against the order id.
+   * to pay. Cash-on-pickup is confirmed right here with its own call; Bakong hands off to
+   * /payment, which generates the QR against the order id.
    *
    * The fulfillment method, contact details and (for delivery) the address are sent with the
-   * order; the API stores them and applies its own delivery fee. The localStorage copy only
-   * carries the presentation extras the order has no field for, such as the ETA estimate.
+   * order — along with the map pin's coordinates, which is what the API actually prices a
+   * delivery by distance from. There is no `paymentMethod` field on checkout itself: that's a
+   * separate step once the order exists, which is why this doesn't send one.
    */
   const handleConfirmPaymentMethod = async (chosenMethod: "QR Scan" | "Cash") => {
     if (!isAuthenticated()) {
@@ -381,21 +427,21 @@ export function CheckoutpageView() {
       return;
     }
 
-    const deliveryLocation =
-      deliveryMethod === "grab"
-        ? [address, district, capital].filter(Boolean).join(", ") || "Delivery address"
-        : "Pickup at store";
+    const isDelivery = deliveryMethod === "grab";
+    const deliveryLocation = isDelivery
+      ? [address, district, capital].filter(Boolean).join(", ") || "Delivery Address"
+      : "Pickup at Store";
 
-    const estimatedTime = deliveryMethod === "grab" ? "10 - 15 mins" : "5 mins";
+    const estimatedTime = isDelivery ? "10 - 15 mins" : "5 mins";
 
-    const order = await placeOrder({
+    let order = await placeOrder({
       note: baristaNote.trim(),
-      paymentMethod: chosenMethod === "Cash" ? "CASH" : "BAKONG",
+      ...(isDelivery ? { deliveryLatitude: mapCoords.lat, deliveryLongitude: mapCoords.lng } : {}),
       delivery: {
-        method: deliveryMethod === "grab" ? "DELIVERY" : "PICKUP",
+        method: isDelivery ? "DELIVERY" : "PICKUP",
         contactName: fullName.trim(),
         contactPhone: phone.trim(),
-        ...(deliveryMethod === "grab" ? { address: deliveryLocation } : {}),
+        ...(isDelivery ? { address: deliveryLocation } : {}),
       },
     });
     if (!order) {
@@ -409,13 +455,32 @@ export function CheckoutpageView() {
       return;
     }
 
+    if (chosenMethod === "Cash") {
+      try {
+        order = await payCashOnPickup(order.id).unwrap();
+      } catch (err) {
+        // The order already exists at this point — staff can still collect cash and mark it
+        // paid at the counter, so a failed confirmation call here shouldn't block the customer
+        // from seeing their order.
+        toast.add({
+          type: "warning",
+          description: apiErrorMessage(
+            err as Parameters<typeof apiErrorMessage>[0],
+            "Order placed, but could not confirm cash payment automatically."
+          ),
+        });
+      }
+    }
+
     try {
       localStorage.setItem(
         "checkout_delivery",
         JSON.stringify({
           orderId: order.id,
           method: deliveryMethod,
-          fee: deliveryFee,
+          // The real, server-computed fee — priced by distance from the coordinates sent
+          // above — not a client-side guess.
+          fee: Number(order.deliveryFee ?? 0),
           customerName:
             (fullName || "").trim() || currentUser?.fullName || "Customer",
           location: deliveryLocation,
@@ -592,29 +657,13 @@ export function CheckoutpageView() {
                     </div>
                   </div>
 
-                  <div className="checkout_form_row">
-                    <div>
-                      <label className="checkout_field_label">{t("District")}</label>
-                      <CustomDistrictSelect
-                        value={district}
-                        onChange={setDistrict}
-                      />
-                      {errors.district && <TooltipAlert message={errors.district} />}
-                    </div>
-
-                    <div>
-                      <label className="checkout_field_label">Zip Code</label>
-                      <Input
-                        type="text"
-                        value={zipCode}
-                        onChange={(e) => setZipCode(e.target.value)}
-                        className="checkout_input checkout_input_disabled"
-                      />
-                      <p className="checkout_help_text">
-                        For Cambodia, Input 120000 if you don&apos;t know
-                      </p>
-                      {errors.zipCode && <TooltipAlert message={errors.zipCode} />}
-                    </div>
+                  <div>
+                    <label className="checkout_field_label">{t("District")}</label>
+                    <CustomDistrictSelect
+                      value={district}
+                      onChange={setDistrict}
+                    />
+                    {errors.district && <TooltipAlert message={errors.district} />}
                   </div>
 
                   <div>
@@ -701,7 +750,10 @@ export function CheckoutpageView() {
                   </div>
                   <div>
                     <h3 className="checkout_delivery_title">{t("Home Delivery")}</h3>
-                    <p className="checkout_delivery_price">$0.50</p>
+                    {/* Was a hardcoded "$0.50" — the real fee is priced by distance once the
+                        order exists, so a fixed number here would just be wrong most of the
+                        time rather than an estimate. */}
+                    <p className="checkout_delivery_price text-xs">{t("Priced by distance")}</p>
                   </div>
                 </div>
 
@@ -737,21 +789,21 @@ export function CheckoutpageView() {
                       <div className="checkout_item_image_wrapper">
                         <Image
                           src={resolveProductImage(item.image)}
-                          alt={item.title}
+                          alt={toTitleCase(item.title)}
                           fill
                           unoptimized
                           className="object-cover"
                         />
                       </div>
                       <div className="checkout_item_details">
-                        <h3 className="checkout_item_title">{t(item.title)}</h3>
+                        <h3 className="checkout_item_title">{t(toTitleCase(item.title))}</h3>
                         <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                           <p className="checkout_item_price font-extrabold text-[#A1255B]" suppressHydrationWarning>
                             ${(item.unitPrice * item.quantity).toFixed(2)}
                           </p>
-                          {item.sizeName && (
+                          {item.variantName && (
                             <span className="text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5 ">
-                              Size: {item.sizeName}
+                              Size: {VARIANT_LABELS[item.variantName as VariantName]}
                             </span>
                           )}
                           {customDetails.map((detail, dIdx) => (
@@ -806,10 +858,14 @@ export function CheckoutpageView() {
               );
             })()}
 
-            <div className="checkout_summary_line">
-              <span className="checkout_summary_label">{t("Delivery Method")}:</span>
-              <span className="checkout_summary_value" suppressHydrationWarning>${deliveryFee.toFixed(2)}</span>
-            </div>
+            {deliveryMethod === "grab" && (
+              <div className="checkout_summary_line">
+                <span className="checkout_summary_label">{t("Delivery Fee:")}</span>
+                <span className="checkout_summary_value text-gray-500 text-xs sm:text-sm" suppressHydrationWarning>
+                  {t("Added once your order is placed")}
+                </span>
+              </div>
+            )}
 
             <div className="checkout_summary_line_total">
               <span className="checkout_summary_label_bold">{t("Total:")}</span>
@@ -916,7 +972,7 @@ export function CheckoutpageView() {
               <MapPin className="w-5 h-5 text-amber-300" />
               <div>
                 <h3 className="text-base font-bold leading-tight">{t("Select Delivery Location")}</h3>
-                <p className="text-xs text-white/80">{t("Drag or pinpoint your current location on the map")}</p>
+                <p className="text-xs text-white/80">{t("Drag the pin or tap anywhere on the map")}</p>
               </div>
             </div>
           </div>
@@ -956,20 +1012,18 @@ export function CheckoutpageView() {
             </button>
           </div>
 
-          {/* Dynamic Google Map Embed */}
+          {/* Interactive Map — drag the marker or click anywhere to move it */}
           <div className="relative w-full h-72 sm:h-80 bg-gray-100">
-            <iframe
-              title="Google Map Location Picker"
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              loading="lazy"
-              allowFullScreen
-              src={`https://maps.google.com/maps?q=${mapCoords.lat},${mapCoords.lng}&z=16&output=embed`}
-            />
+            {isMapModalOpen && (
+              <DeliveryMapPicker
+                lat={mapCoords.lat}
+                lng={mapCoords.lng}
+                onPick={handlePickOnMap}
+              />
+            )}
 
             {/* Pin Overlay Badge */}
-            <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-md text-xs font-medium text-gray-800 flex items-center gap-1.5 border border-white">
+            <div className="absolute top-3 left-3 z-1000 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-md text-xs font-medium text-gray-800 flex items-center gap-1.5 border border-white pointer-events-none">
               <Compass className="w-4 h-4 text-[#A1255B] animate-spin" style={{ animationDuration: '8s' }} />
               <span>
                 {mapCoords.lat.toFixed(4)}, {mapCoords.lng.toFixed(4)}

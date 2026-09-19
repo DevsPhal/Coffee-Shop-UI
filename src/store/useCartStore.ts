@@ -25,30 +25,16 @@ export const cartItemSchema = z.object({
   productId: z.string().uuid({ message: "Product id must be a UUID from the API." }),
   title: z.string().trim().min(1, { message: "Item title is required." }),
   image: z.string().nullable().optional(),
-  /** finalPrice + the chosen size's priceDelta, as the API will charge it. */
+  /** The chosen variant's finalPrice, as the API will charge it. */
   unitPrice: z.number().nonnegative({ message: "Price cannot be negative." }),
   /** Pre-discount unit price, present only while a discount is running. */
   originalUnitPrice: z.number().nonnegative().optional(),
   quantity: z.number().int().positive({ message: "Quantity must be at least 1." }),
-  sizeOptionId: z.string().uuid().nullable().optional(),
-  sizeName: z.string().nullable().optional(),
-  sugarLevel: z
-    .enum(["ZERO", "TWENTY_FIVE", "FIFTY", "SEVENTY_FIVE", "HUNDRED"])
-    .optional(),
-  iceLevel: z
-    .enum(["ZERO", "TWENTY_FIVE", "FIFTY", "SEVENTY_FIVE", "HUNDRED"])
-    .optional(),
-  milkType: z
-    .enum([
-      "NONE",
-      "WHOLE_MILK",
-      "SKIM_MILK",
-      "OAT_MILK",
-      "ALMOND_MILK",
-      "SOY_MILK",
-      "CONDENSED_MILK",
-    ])
-    .optional(),
+  variantId: z.string().uuid().nullable().optional(),
+  variantName: z.string().nullable().optional(),
+  sugarLevel: z.enum(["ZERO", "LESS", "NORMAL", "EXTRA"]).optional(),
+  iceLevel: z.enum(["NO_ICE", "LESS_ICE", "NORMAL", "EXTRA_ICE"]).optional(),
+  milkType: z.enum(["NONE", "LESS", "NORMAL", "EXTRA"]).optional(),
 });
 
 export type CartItem = z.infer<typeof cartItemSchema>;
@@ -62,14 +48,14 @@ export type AddItemInput = z.input<typeof addItemInputSchema>;
 /** Two lines merge only when the product *and* every chosen option match. */
 export function buildLineId(item: {
   productId: UUID;
-  sizeOptionId?: UUID | null;
+  variantId?: UUID | null;
   sugarLevel?: SugarLevel;
   iceLevel?: IceLevel;
   milkType?: MilkType;
 }): string {
   return [
     item.productId,
-    item.sizeOptionId ?? "",
+    item.variantId ?? "",
     item.sugarLevel ?? "",
     item.iceLevel ?? "",
     item.milkType ?? "",
@@ -89,10 +75,10 @@ interface CartStoreState {
     openDrawer?: boolean
   ) => { success: boolean; message?: string };
   updateQuantity: (lineId: string, change: number) => { success: boolean; message?: string };
-  updateSize: (
+  updateVariant: (
     lineId: string,
-    sizeOptionId: UUID | null,
-    sizeName: string | null,
+    variantId: UUID | null,
+    variantName: string | null,
     unitPrice: number
   ) => void;
   updateIceLevel: (lineId: string, iceLevel: IceLevel) => void;
@@ -187,9 +173,9 @@ export const useCartStore = create<CartStoreState>()(
         return { success: true };
       },
 
-      updateSize: (lineId, sizeOptionId, sizeName, unitPrice) =>
+      updateVariant: (lineId, variantId, variantName, unitPrice) =>
         set((state) => ({
-          items: rekey(state.items, lineId, { sizeOptionId, sizeName, unitPrice }),
+          items: rekey(state.items, lineId, { variantId, variantName, unitPrice }),
         })),
 
       updateIceLevel: (lineId, iceLevel) =>
@@ -213,9 +199,11 @@ export const useCartStore = create<CartStoreState>()(
     }),
     {
       name: "cart-storage",
-      // Bumped because the line shape changed from mock ids to API UUIDs: an old persisted
-      // cart cannot be checked out, so it is dropped rather than half-migrated.
-      version: 2,
+      // Bumped again: sizeOptionId/sizeName renamed to variantId/variantName, and the sugar/
+      // ice/milk enums changed shape entirely (see optionMapping.ts) — an old persisted cart
+      // cannot be checked out against the current API, so it is dropped rather than
+      // half-migrated, same as the v2 bump.
+      version: 3,
       migrate: () => ({ items: [], isOpen: false }),
       partialize: (state) => ({ items: state.items }),
     }

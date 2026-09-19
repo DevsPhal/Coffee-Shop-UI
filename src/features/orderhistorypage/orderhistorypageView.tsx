@@ -9,6 +9,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
 import { isAuthenticated } from "@/lib/authStorage";
 import { useListMyOrdersQuery } from "@/store/api/orderApi";
+import { toTitleCase } from "@/lib/utils";
 import type { OrderResponse, OrderStatus } from "@/store/api/types";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
@@ -41,10 +42,10 @@ export function OrderhistorypageView() {
       addItem(
         {
           productId: item.productId,
-          title: item.productName,
+          title: toTitleCase(item.productName),
           unitPrice: Number(item.unitPrice),
           quantity: item.quantity,
-          sizeName: item.sizeOptionName,
+          variantName: item.variantName,
           iceLevel: item.iceLevel ?? undefined,
           sugarLevel: item.sugarLevel ?? undefined,
           milkType: item.milkType ?? undefined,
@@ -223,7 +224,7 @@ export function OrderhistorypageView() {
                         {item.quantity}x
                       </span>
                       <span className="text-gray-800 font-medium">
-                        {item.productName}
+                        {toTitleCase(item.productName)}
                       </span>
                     </div>
                     <span className="font-bold text-gray-900">

@@ -2,8 +2,23 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
-import { ChevronDown, Check, X } from "lucide-react";
+import {
+  ChevronDown,
+  Check,
+  X,
+  LayoutGrid,
+  Coffee,
+  Package,
+  Cookie,
+  Beer,
+  CupSoda,
+  Snowflake,
+  Flame,
+  Droplet,
+  IceCreamCone,
+  Star,
+  type LucideIcon,
+} from "lucide-react";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { useCategories, type CatalogCategory } from "@/store/api/useCatalog";
 import "@/app/globals.scss";
@@ -12,39 +27,39 @@ import "@/app/globals.scss";
  * Icon per category name. Purely presentational — the API has no icon field — and every
  * unknown name falls back, so a category the café adds later still renders.
  */
-export const CATEGORY_ICONS: Record<string, string> = {
-  all: "/icons/category.svg",
-  category: "/icons/category.svg",
-  beverage: "/icons/coffee.svg",
-  "fresh drink": "/icons/material.svg",
-  snack: "/icons/snack.svg",
-  beer: "/icons/beer.svg",
-  "soft drink": "/icons/soft_drink.svg",
-  "ice coffee": "/icons/iced.svg",
-  "iced coffee": "/icons/iced.svg",
-  "hot coffee": "/icons/hot.svg",
-  "iced tea": "/icons/material.svg",
-  "hot tea": "/icons/hot.svg",
-  passion: "/icons/material.svg",
-  "pure water": "/icons/water.svg",
-  "pour water": "/icons/water.svg",
-  "energy drink": "/icons/soft_drink.svg",
-  noddle: "/icons/snack.svg",
-  noodle: "/icons/snack.svg",
-  eggs: "/icons/snack.svg",
-  iced: "/icons/iced.svg",
-  hot: "/icons/hot.svg",
-  coffee: "/icons/coffee.svg",
-  frappe: "/icons/frappe.svg",
-  signature: "/icons/signature.svg",
-  water: "/icons/water.svg",
-  material: "/icons/material.svg",
-  tea: "/icons/material.svg",
-  pastries: "/icons/snack.svg",
+export const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  all: LayoutGrid,
+  category: LayoutGrid,
+  beverage: Coffee,
+  "fresh drink": Package,
+  snack: Cookie,
+  beer: Beer,
+  "soft drink": CupSoda,
+  "ice coffee": Snowflake,
+  "iced coffee": Snowflake,
+  "hot coffee": Flame,
+  "iced tea": Package,
+  "hot tea": Flame,
+  passion: Package,
+  "pure water": Droplet,
+  "pour water": Droplet,
+  "energy drink": CupSoda,
+  noddle: Cookie,
+  noodle: Cookie,
+  eggs: Cookie,
+  iced: Snowflake,
+  hot: Flame,
+  coffee: Coffee,
+  frappe: IceCreamCone,
+  signature: Star,
+  water: Droplet,
+  material: Package,
+  tea: Package,
+  pastries: Cookie,
 };
 
-const iconFor = (name: string) =>
-  CATEGORY_ICONS[name.toLowerCase()] || "/icons/coffee.svg";
+export const iconFor = (name: string): LucideIcon =>
+  CATEGORY_ICONS[name.toLowerCase()] || Coffee;
 
 /** "All" is a client-side pseudo-category, not something the API returns. */
 export const ALL_CATEGORIES = "All";
@@ -107,8 +122,14 @@ export function CategoryDropdown({
   const current =
     entries.find((entry) => entry.id === selectedCategory) ?? entries[0];
 
+  const renderCurrentIcon = () => {
+    const Icon = iconFor(current?.name ?? ALL_CATEGORIES);
+    return <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-[#A1255B]" />;
+  };
+
   const renderCategoryItem = (entry: CatalogCategory) => {
     const isSelected = selectedCategory === entry.id;
+    const Icon = iconFor(entry.name);
 
     return (
       <button
@@ -125,15 +146,7 @@ export function CategoryDropdown({
         }`}
       >
         <div className="flex items-center gap-2 min-w-0 pr-2">
-          <Image
-            src={iconFor(entry.name)}
-            alt=""
-            width={18}
-            height={18}
-            className={`w-4 h-4 object-contain shrink-0 ${
-              isSelected ? "brightness-0 invert" : ""
-            }`}
-          />
+          <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-white" : "text-[#A1255B]"}`} />
           <span className="truncate">{t(entry.name)}</span>
         </div>
 
@@ -155,6 +168,7 @@ export function CategoryDropdown({
 
   const renderMobileCategoryItem = (entry: CatalogCategory) => {
     const isSelected = selectedCategory === entry.id;
+    const Icon = iconFor(entry.name);
 
     return (
       <button
@@ -172,13 +186,7 @@ export function CategoryDropdown({
         } ${touchActiveCat === entry.id ? "touch_active" : ""}`}
       >
         <div className="category_drawer_item_left flex items-center gap-2">
-          <Image
-            src={iconFor(entry.name)}
-            alt=""
-            width={20}
-            height={20}
-            className="category_drawer_item_icon object-contain"
-          />
+          <Icon className="category_drawer_item_icon h-5 w-5 text-[#A1255B]" />
           <span className="category_drawer_item_name">{t(entry.name)}</span>
         </div>
 
@@ -199,13 +207,7 @@ export function CategoryDropdown({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <Image
-          src={iconFor(current?.name ?? ALL_CATEGORIES)}
-          alt=""
-          width={16}
-          height={16}
-          className="w-3.5 h-3.5 sm:w-4 sm:h-4 object-contain shrink-0"
-        />
+        {renderCurrentIcon()}
         <span>{t(current?.name ?? ALL_CATEGORIES)}</span>
         <span className="text-gray-700 text-[10px] sm:text-[11px] font-medium px-1.5 sm:px-2 py-0.5 shrink-0">
           {isLoading ? "…" : current?.count ?? 0}

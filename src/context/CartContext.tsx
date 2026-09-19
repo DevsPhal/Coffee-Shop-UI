@@ -28,7 +28,7 @@ export function useCart() {
     addItem: (item: AddItemInput, openDrawer?: boolean) =>
       store.addItem(item, openDrawer),
     updateQuantity: store.updateQuantity,
-    updateSize: store.updateSize,
+    updateVariant: store.updateVariant,
     updateIceLevel: store.updateIceLevel,
     updateSugarLevel: store.updateSugarLevel,
     updateMilkType: store.updateMilkType,

@@ -4,7 +4,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Home,
+  UtensilsCrossed,
+  LayoutGrid,
+  CalendarDays,
+  MapPin,
+  Phone,
+  User,
+  LogIn,
+  ShoppingCart,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import "@/app/globals.scss";
 
@@ -72,17 +85,17 @@ export function Navbar() {
     return null;
   }
 
-  const mobileNavItems = [
-    { key: "Home", href: "/", icon: "/icons/home.svg" },
-    { key: "Menu", href: "/menuphone", icon: "/icons/menu.svg" },
-    { key: "Category", href: "/category", icon: "/icons/category.svg" },
-    { key: "Events", href: "/events", icon: "/icons/event.svg" },
-    { key: "Location", href: "/location", icon: "/icons/location.svg" },
-    { key: "Contact", href: "/contact", icon: "/icons/contact.svg" },
+  const mobileNavItems: { key: string; href: string; icon: LucideIcon }[] = [
+    { key: "Home", href: "/", icon: Home },
+    { key: "Menu", href: "/menuphone", icon: UtensilsCrossed },
+    { key: "Category", href: "/category", icon: LayoutGrid },
+    { key: "Events", href: "/events", icon: CalendarDays },
+    { key: "Location", href: "/location", icon: MapPin },
+    { key: "Contact", href: "/contact", icon: Phone },
     {
       key: userIsLoggedIn ? "Profile" : "Login",
       href: userIsLoggedIn ? "/userprofile" : "/login",
-      icon: userIsLoggedIn ? "/icons/user.svg" : "/icons/login.svg",
+      icon: userIsLoggedIn ? User : LogIn,
     },
   ];
 
@@ -185,13 +198,7 @@ export function Navbar() {
               aria-label="Open cart"
             >
               <span className="relative">
-                <Image
-                  src="/icons/shoppingcart.svg"
-                  alt=""
-                  width={21}
-                  height={22}
-                  aria-hidden
-                />
+                <ShoppingCart className="h-5.25 w-5.25 text-gray-700" aria-hidden />
                 <span className="nav_cart_badge" suppressHydrationWarning>{displayTotalCount}</span>
               </span>
             </button>
@@ -203,26 +210,12 @@ export function Navbar() {
                 className="nav_desktop_only items-center justify-center p-2 rounded-full hover:bg-gray-100 transition-colors"
                 title="User Profile"
               >
-                <Image
-                  src="/icons/user.svg"
-                  alt="User Profile"
-                  width={24}
-                  height={24}
-                  unoptimized
-                  className="w-6 h-6 object-contain"
-                />
+                <User className="h-6 w-6 text-gray-700" />
               </Link>
             ) : (
               <Link href="/login" className="nav_desktop_only">
                 <Button className="button_nav_login flex items-center gap-2">
-                  <Image
-                    src="/icons/login.svg"
-                    alt="Login"
-                    width={18}
-                    height={18}
-                    unoptimized
-                    className="brightness-0 invert"
-                  />
+                  <LogIn className="h-4.5 w-4.5 text-white" />
                   <span>{displayT("Login")}</span>
                 </Button>
               </Link>
@@ -243,6 +236,7 @@ export function Navbar() {
           <div className="max-w-md mx-auto flex items-center justify-around gap_10">
             {mobileNavItems.map((item) => {
               const active = isMobileNavActive(item.href);
+              const Icon = item.icon;
 
               return (
                 <Link
@@ -253,14 +247,9 @@ export function Navbar() {
                   }`}
                 >
                   <div className="icon-wrapper flex items-center justify-center">
-                    <Image
-                      src={item.icon}
-                      alt={displayT(item.key)}
-                      width={24}
-                      height={24}
-                      unoptimized
-                      className={`nav-icon transition-all duration-200 ${
-                        active ? "active-mobile-icon" : "opacity-60 hover:opacity-100"
+                    <Icon
+                      className={`nav-icon h-6 w-6 transition-all duration-200 ${
+                        active ? "text-[#A1255B]" : "text-gray-500 opacity-60 hover:opacity-100"
                       }`}
                     />
                   </div>

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { User, Mail, Eye, EyeOff, UserPlus, Phone, ChevronDown, Users, Check, Send } from "lucide-react";
+import React, { useState } from "react";
+import { User, Mail, Eye, EyeOff, UserPlus, Phone, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { GenderDropdown } from "@/components/ui/GenderDropdown";
 import { toast } from "@/components/ui/toast";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import {
@@ -19,13 +20,6 @@ import { signUpSchema } from "@/lib/authSchema";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { cleanPhoneInput } from "@/lib/phoneUtils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
-
-/** Value is the API's enum; label is what the customer reads. */
-const GENDER_CHOICES: { value: Gender; label: string }[] = [
-  { value: "MALE", label: "Male" },
-  { value: "FEMALE", label: "Female" },
-  { value: "OTHER", label: "Other" },
-];
 
 
 type FormErrors = {
@@ -50,28 +44,11 @@ export function Create({ onBackToLogin, isAdmin = false }: CreateProps) {
   const [awaitingOtp, setAwaitingOtp] = useState(false);
   const [otp, setOtp] = useState("");
   const [username, setUsername] = useState("");
-  const [gender, setGender] = useState("");
+  const [gender, setGender] = useState<Gender | "">("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
-  // Custom Dropdown Open States & Refs
-  const [isGenderOpen, setIsGenderOpen] = useState(false);
-  const genderRef = useRef<HTMLDivElement>(null);
-
-  // Click Outside to Dismiss Custom Dropdown
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (genderRef.current && !genderRef.current.contains(e.target as Node)) {
-        setIsGenderOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   // Zod Errors & Active Focused Input
   const [errors, setErrors] = useState<FormErrors>({});
@@ -288,62 +265,21 @@ export function Create({ onBackToLogin, isAdmin = false }: CreateProps) {
           )}
         </div>
 
-        {/* Custom Gender Dropdown Selection */}
-        <div ref={genderRef} className="relative">
+        {/* Gender Dropdown Selection */}
+        <div>
           <label className="login_input_label">
             {t("Gender")}
           </label>
-          <button
-            type="button"
-            onClick={() => setIsGenderOpen(!isGenderOpen)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 border border-[#94a3b8] bg-white text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:border-[#475569] transition-all cursor-pointer select-none text-left"
-            aria-expanded={isGenderOpen}
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Users className="w-4 h-4 text-gray-400 shrink-0" />
-              <span className={gender ? "text-gray-900 font-semibold" : "text-gray-400"}>
-                {gender
-                  ? t(GENDER_CHOICES.find((g) => g.value === gender)?.label ?? gender)
-                  : "select your gender"}
-              </span>
-            </div>
-            <ChevronDown
-              className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${
-                isGenderOpen ? "rotate-180 text-[#A1255B]" : ""
-              }`}
-            />
-          </button>
-
-          {/* Clean Custom Floating Dropdown Menu */}
-          {isGenderOpen && (
-            <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-full bg-white border border-gray-100 rounded-2xl shadow-lg p-1.5 space-y-0.5 animate-in fade-in duration-150">
-              {GENDER_CHOICES.map(({ value, label }) => {
-                const isSelected = gender === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => {
-                      // Store the API's enum value, not the label: sending "Male" fails
-                      // Jackson's enum binding and the whole request is rejected as a
-                      // malformed body, before any field validation runs.
-                      setGender(value);
-                      setIsGenderOpen(false);
-                      validateField("gender", value);
-                    }}
-                    className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer border-none text-left select-none ${
-                      isSelected
-                        ? "bg-[#A1255B] text-white font-bold shadow-2xs"
-                        : "hover:bg-gray-100 text-gray-800"
-                    }`}
-                  >
-                    <span>{t(label)}</span>
-                    {isSelected && <Check className="w-4 h-4 text-white shrink-0 ml-1" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <GenderDropdown
+            value={gender}
+            onChange={(value) => {
+              // Store the API's enum value, not the label: sending "Male" fails Jackson's
+              // enum binding and the whole request is rejected as a malformed body, before
+              // any field validation runs.
+              setGender(value);
+              validateField("gender", value);
+            }}
+          />
           {errors.gender && (
             <TooltipAlert message={errors.gender} />
           )}

@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CategoryDropdown } from "@/components/ui";
-import { ALL_CATEGORIES } from "@/components/ui/CategoryDropdown";
+import { ALL_CATEGORIES, iconFor } from "@/components/ui/CategoryDropdown";
 import { resolveProductImage, toStoreProduct, type StoreProduct } from "@/store/api/productAdapter";
 import { useCatalog, useCategories } from "@/store/api/useCatalog";
 import type { SizeSelection } from "@/components/ui/SelectSizeModal";
@@ -16,35 +16,6 @@ import { ShoppingBag, ChevronRight, ShoppingCart, Plus, Check, Search, Clock } f
 import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidation";
 import SelectSizeModal from "@/components/ui/SelectSizeModal";
 import "@/app/globals.scss";
-
-const CATEGORY_ICONS: Record<string, string> = {
-  all: "/icons/category.svg",
-  category: "/icons/category.svg",
-  beverage: "/icons/coffee.svg",
-  "fresh drink": "/icons/material.svg",
-  snack: "/icons/snack.svg",
-  beer: "/icons/beer.svg",
-  "soft drink": "/icons/soft_drink.svg",
-  "ice coffee": "/icons/iced.svg",
-  "iced coffee": "/icons/iced.svg",
-  "hot coffee": "/icons/hot.svg",
-  "iced tea": "/icons/material.svg",
-  "hot tea": "/icons/hot.svg",
-  passion: "/icons/material.svg",
-  "pure water": "/icons/water.svg",
-  "pour water": "/icons/water.svg",
-  "energy drink": "/icons/soft_drink.svg",
-  noddle: "/icons/snack.svg",
-  noodle: "/icons/snack.svg",
-  eggs: "/icons/snack.svg",
-  iced: "/icons/iced.svg",
-  hot: "/icons/hot.svg",
-  coffee: "/icons/coffee.svg",
-  frappe: "/icons/frappe.svg",
-  signature: "/icons/signature.svg",
-  water: "/icons/water.svg",
-  material: "/icons/material.svg",
-};
 
 export interface PhoneCardProps {
   product: StoreProduct;
@@ -80,8 +51,8 @@ export function PhoneCard({
         unitPrice: selection.unitPrice,
         originalUnitPrice: product.originalPrice,
         quantity: 1,
-        sizeOptionId: selection.sizeOptionId,
-        sizeName: selection.sizeName,
+        variantId: selection.variantId,
+        variantName: selection.variantName,
         iceLevel: selection.iceLevel,
         sugarLevel: selection.sugarLevel,
         milkType: selection.milkType,
@@ -287,7 +258,7 @@ export function MenupageView() {
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {displayCategories.map((cat) => {
               const isSelected = selectedCategory === cat.id;
-              const iconSrc = CATEGORY_ICONS[cat.name.toLowerCase()];
+              const Icon = iconFor(cat.name);
 
               return (
                 <button
@@ -296,15 +267,7 @@ export function MenupageView() {
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`category_btn ${isSelected ? "active" : ""}`}
                 >
-                  {iconSrc && (
-                    <Image
-                      src={iconSrc}
-                      alt=""
-                      width={18}
-                      height={18}
-                      className="category_btn_icon"
-                    />
-                  )}
+                  <Icon className="category_btn_icon h-4.5 w-4.5" />
                   <span>{t(cat.name)}</span>
                   <span className="category_badge">{cat.count}</span>
                 </button>
