@@ -44,7 +44,7 @@ export function SortDropdown({ value, options, onChange, className = "" }: SortD
         onClick={() => setIsOpen((open) => !open)}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className="flex items-center gap-1.5 bg-white border border-gray-300 px-3 py-1.5 text-xs sm:text-sm font-semibold text-gray-800 hover:border-[#A1255B] focus:outline-none focus:ring-1 focus:ring-[#A1255B] cursor-pointer transition-all select-none"
+        className="flex items-center gap-1.5 rounded-full bg-white border border-gray-300 px-3 py-1.5 text-xs sm:text-sm font-semibold text-gray-800 hover:border-[#A1255B] focus:outline-none focus:ring-1 focus:ring-[#A1255B] cursor-pointer transition-all select-none"
       >
         <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
         <span>{t(selected?.label ?? "")}</span>

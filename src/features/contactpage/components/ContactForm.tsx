@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { User, Mail, Phone, MessageSquare, Send, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ const SUBJECT_OPTIONS = [
 
 export function ContactForm() {
   const { user } = useAuth();
+  const router = useRouter();
   const { t } = useLanguage();
   const {
     formData,
@@ -51,6 +53,12 @@ export function ContactForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // The feedback endpoint requires a signed-in customer — send them to log in rather than
+    // let the request fail with a 401 they can't do anything about.
+    if (!user) {
+      router.push(`/login?next=${encodeURIComponent("/contact")}`);
+      return;
+    }
     // Keep the contact details on this message, independently of the customer's profile.
     await submitMessage(user);
   };

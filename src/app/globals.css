@@ -4,39 +4,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@font-face {
-  font-family: "SF Pro Display";
-  src: url("/font/SFPRODISPLAYREGULAR.OTF") format("opentype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "SF Pro Display";
-  src: url("/font/SFPRODISPLAYMEDIUM.OTF") format("opentype");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "SF Pro Display";
-  src: url("/font/SFPRODISPLAYBOLD.OTF") format("opentype");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Khmer";
-  src: url("/font/Khmer-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+1780-17FF, U+200C, U+25CC;
-}
-
+/* English body/UI font is Google Sans Flex and Khmer body text is Noto Sans Khmer, both loaded
+ * via next/font/google in layout.tsx (self-hosted at build time, not a runtime Google request —
+ * important on mobile). That gives the --font-google-sans / --font-noto-khmer variables the
+ * --font-sans / --font-khmer stacks below build on. Moul stays self-hosted here since it's only
+ * used for decorative Khmer headings, not the fonts being replaced. */
 @font-face {
   font-family: "Moul";
   src: url("/font/Moul-Regular.ttf") format("truetype");
@@ -48,9 +20,9 @@
 
 @theme inline {
   --font-sans:
-    "SF Pro Display", "Khmer", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, sans-serif;
-  --font-khmer: "Moul", "Khmer", sans-serif;
+    var(--font-google-sans), var(--font-noto-khmer), -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-khmer: var(--font-noto-khmer), var(--font-google-sans), sans-serif;
   --font-heading: var(--font-sans);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -177,50 +149,31 @@
 
   * {
     @apply border-border outline-ring/50;
-    font-family:
-      "SF Pro Display",
-      "Khmer",
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      Roboto,
-      sans-serif;
+    font-family: var(--font-sans);
   }
   body {
     @apply bg-background text-foreground font-sans;
-    font-family:
-      "SF Pro Display",
-      "Khmer",
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      Roboto,
-      sans-serif;
+    font-family: var(--font-sans);
+    /* Crisp text rendering on both platforms — most noticeable on mobile screens, which is
+       exactly where thin/regular weights of a new font tend to look fuzziest if this is left
+       off. */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
   html {
     @apply font-sans;
-    font-family:
-      "SF Pro Display",
-      "Khmer",
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      Roboto,
-      sans-serif;
+    font-family: var(--font-sans);
   }
 
   /* Utility class for Moul (decorative Khmer headings) */
   .font-moul {
-    font-family: "Moul", "Khmer", sans-serif;
+    font-family: "Moul", var(--font-noto-khmer), sans-serif;
   }
 
   /* Utility class for Khmer body text */
   .font-khmer {
-    font-family:
-      "Khmer",
-      "SF Pro Display",
-      -apple-system,
-      sans-serif;
+    font-family: var(--font-khmer);
   }
 }
 

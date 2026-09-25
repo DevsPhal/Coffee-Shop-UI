@@ -125,14 +125,14 @@ export function TelegramLinkModal({
                 href={linkCode.deepLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 bg-sky-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-sky-600"
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-sky-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-sky-600"
               >
                 <Send className="h-4 w-4" />
                 {t("Open in Telegram")}
                 <ExternalLink className="h-3.5 w-3.5 opacity-80" />
               </a>
 
-              <div className="flex items-center justify-between gap-2 border border-gray-200 bg-gray-50 px-3 py-2">
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
                     {t("Or enter this code in the bot")}
@@ -144,7 +144,7 @@ export function TelegramLinkModal({
                 <button
                   type="button"
                   onClick={copyCode}
-                  className="flex items-center gap-1 border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100 cursor-pointer"
+                  className="flex items-center gap-1 rounded-full border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100 cursor-pointer"
                 >
                   {copied ? (
                     <Check className="h-3.5 w-3.5 text-green-600" />

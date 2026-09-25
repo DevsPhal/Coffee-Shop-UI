@@ -149,6 +149,6 @@ function dropSession(dispatch: Parameters<BaseQueryFn>[1]["dispatch"]): void {
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Auth", "Product", "Banner", "Cart", "Order"],
+  tagTypes: ["Auth", "Product", "Category", "Banner", "Cart", "Order"],
   endpoints: () => ({}),
 });

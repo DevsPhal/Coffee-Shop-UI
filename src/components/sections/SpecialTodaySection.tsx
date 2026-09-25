@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Card } from "@/components/cards/card";
+import { LoadingRegion, ProductCardSkeletons } from "@/components/ui/states";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { toStoreProduct } from "@/store/api/productAdapter";
 import { useCatalog } from "@/store/api/useCatalog";
@@ -25,7 +26,7 @@ export function SpecialTodaySection({
   subtitle = "Handcrafted daily specials picked fresh for you",
 }: SpecialTodaySectionProps) {
   const { t } = useLanguage();
-  const { products, isLoading } = useCatalog();
+  const { products, isLoading, error } = useCatalog();
 
   // The homepage splits the catalogue in two: everything on discount belongs here, everything
   // else to "Crafted with Passion". The cap matches that section's so a shop running several
@@ -37,6 +38,9 @@ export function SpecialTodaySection({
 
   // Nothing on promotion is a normal state, not an error — the section just stands down.
   if (!isLoading && specials.length === 0) return null;
+  // The "Crafted with Passion" section below reads the same request and shows the one error
+  // (with a retry) for both, so this section just steps aside.
+  if (error && !isLoading) return null;
 
   return (
     <section className="homepage_crafted_section font-sans">
@@ -45,17 +49,17 @@ export function SpecialTodaySection({
         <p className="homepage_section_subtitle">{t(subtitle)}</p>
       </div>
 
-      <div className="homepage_cards_grid">
-        {isLoading
-          ? Array.from({ length: HOMEPAGE_SECTION_LIMIT }).map((_, i) => (
-              <div
-                key={i}
-                className="h-64 animate-pulse rounded-2xl bg-gray-100"
-                aria-hidden
-              />
-            ))
-          : specials.map((product) => <Card key={product.id} product={product} />)}
-      </div>
+      {isLoading ? (
+        <LoadingRegion label="Loading specials..." className="homepage_cards_grid">
+          <ProductCardSkeletons count={HOMEPAGE_SECTION_LIMIT} />
+        </LoadingRegion>
+      ) : (
+        <div className="homepage_cards_grid">
+          {specials.map((product) => (
+            <Card key={product.id} product={product} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

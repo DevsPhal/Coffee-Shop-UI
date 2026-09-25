@@ -62,7 +62,7 @@ export function CoverflowCarousel({
   };
 
   return (
-    <div className={cn("w-full max-w-6xl mx-auto py-4 overflow-hidden", className)}>
+    <div className={cn("w-full max-w-(--page-max) mx-auto py-4 overflow-hidden", className)}>
       <Carousel
         setApi={setApi}
         plugins={autoplay ? [plugin.current] : []}

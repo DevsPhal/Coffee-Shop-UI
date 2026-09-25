@@ -225,6 +225,8 @@ export interface ProductExtraResponse {
   sortOrder: number | null;
   status: Status;
   quantityOnHand: Numeric | null;
+  /** Shown next to the add-on choice so customers can see what they're adding. Null if unset. */
+  imageUrl: string | null;
 }
 
 /**
@@ -374,7 +376,6 @@ export interface OrderItemResponse {
 
 export interface OrderResponse {
   fulfillmentMethod?: "PICKUP" | "DELIVERY" | null;
-  deliveryFee?: Numeric | null;
   deliveryAddress?: string | null;
   contactName?: string | null;
   contactPhone?: string | null;
@@ -397,6 +398,87 @@ export interface OrderResponse {
   note: string | null;
   paidAt: string | null;
   createdAt: string;
+  /** Bumped on every change. A live-push message older than the copy already held is stale. */
+  updatedAt: string;
+  /** Null for a pickup order. Both set together or not at all. */
+  deliveryLatitude: Numeric | null;
+  deliveryLongitude: Numeric | null;
+  /**
+   * Zero until staff quote it — check `awaitingDeliveryFee`, not this being non-null/non-zero,
+   * to tell whether a delivery order's fee has actually been set yet. Already folded into
+   * `totalAmount`.
+   */
+  deliveryFee: Numeric;
+  /** Straight-line distance from the shop — null for pickup, or if the shop's own location
+   *  isn't configured. */
+  distanceMeters: Numeric | null;
+  /** When staff last quoted the delivery fee; null until then. */
+  deliveryFeeSetAt: string | null;
+  /** True while a delivery order waits for staff to quote its fee — can't be paid or prepared
+   *  until then. This is the field to check, not `deliveryFee == null` (it's never null). */
+  awaitingDeliveryFee: boolean;
+  /** Items only, before the delivery fee. totalAmount = itemsTotal + deliveryFee. */
+  itemsTotal: Numeric;
+}
+
+/** The customer's own live-order-status push channel, `/user/queue/orders` over STOMP. */
+export type OrderAuditAction =
+  | "CREATED"
+  | "CASH_COLLECTED"
+  | "BAKONG_CONFIRMED"
+  | "CANCELLED"
+  | "DELIVERY_FEE_SET"
+  | "CASH_SELECTED"
+  | "BAKONG_QR_GENERATED"
+  | "PREPARING"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "COMPLETED";
+
+export interface OrderUpdateMessage {
+  action: OrderAuditAction;
+  order: OrderResponse;
+  sentAt: string;
+}
+
+/** One open (unanswered) call, or the result of pressing "Call Staff". */
+export interface StaffCallResponse {
+  orderId: UUID;
+  customerName: string | null;
+  orderStatus: OrderStatus;
+  fulfillmentMethod: "PICKUP" | "DELIVERY" | null;
+  calledAt: string;
+  /** When the customer's button can be enabled again. Null on a stale/listed call. */
+  nextCallAllowedAt: string | null;
+}
+
+/** Pushed to the customer's own `/user/queue/staff-calls` only when a call is answered. */
+export interface StaffCallMessage {
+  type: "CALLED" | "ANSWERED";
+  orderId: UUID;
+  customerName: string | null;
+  orderStatus: OrderStatus;
+  fulfillmentMethod: "PICKUP" | "DELIVERY" | null;
+  calledAt: string;
+  /** Who answered — null for a CALLED message, set for ANSWERED. */
+  answeredByName: string | null;
+  sentAt: string;
+}
+
+/** A product, category or extra a customer's cart/catalogue can reference. */
+export type CatalogResourceType = "PRODUCT" | "CATEGORY" | "EXTRA";
+export type CatalogChangeType = "CREATED" | "UPDATED" | "DELETED";
+
+/**
+ * Pushed to `/topic/catalog` (any signed-in customer) whenever a product, category or extra
+ * changes. Carries no data — refetch through the normal REST endpoints, same reasoning as
+ * OrderUpdateMessage not being trusted as the order's own source of truth.
+ */
+export interface ResourceChangeMessage {
+  resource: CatalogResourceType;
+  id: UUID;
+  change: CatalogChangeType;
+  sentAt: string;
 }
 
 export interface BakongQrResponse {
@@ -417,6 +499,13 @@ export interface BakongQrResponse {
    * from it on a phone in another timezone would be wrong; this needs no clock reconciliation.
    */
   expiresInSeconds: number;
+}
+
+/** A link that opens whichever Bakong-enabled banking app the customer already has installed —
+ *  for viewing the QR on the same phone that would otherwise need to scan it. */
+export interface BakongDeeplinkResponse {
+  orderId: UUID;
+  deeplink: string;
 }
 
 export interface PublicEventResponse {

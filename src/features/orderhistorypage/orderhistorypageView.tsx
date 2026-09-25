@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ShoppingBag, Clock, MapPin, ChevronRight, RefreshCw, CheckCircle2, Truck, Package, ArrowRight, User } from "lucide-react";
+import { ShoppingBag, Clock, MapPin, ChevronRight, RefreshCw, CheckCircle2, Truck, Package, User } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
 import { isAuthenticated } from "@/lib/authStorage";
@@ -12,6 +12,8 @@ import { useListMyOrdersQuery } from "@/store/api/orderApi";
 import { toTitleCase } from "@/lib/utils";
 import type { OrderResponse, OrderStatus } from "@/store/api/types";
 import { useLanguage } from "@/components/ui/translatetokhmer";
+import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
+import { EmptyState, ErrorState, LoadingRegion, OrderCardSkeleton } from "@/components/ui/states";
 import "@/app/globals.scss";
 
 export function OrderhistorypageView() {
@@ -32,7 +34,7 @@ export function OrderhistorypageView() {
     }
   }, [signedIn, router, pathname]);
 
-  const { data, isLoading, error } = useListMyOrdersQuery(
+  const { data, currentData, isFetching, error, refetch } = useListMyOrdersQuery(
     {
       page: 1,
       size: 50,
@@ -41,7 +43,15 @@ export function OrderhistorypageView() {
     { skip: !signedIn }
   );
 
+  // A barista moving one of these orders along reaches this list the instant the API pushes
+  // it, rather than the customer needing to leave and come back to see the new status.
+  useOrderLiveUpdates(() => refetch());
+
   const filteredOrders = data?.content ?? [];
+  // Switching status tabs is a new request: show the skeleton until that tab's own result
+  // lands, rather than the previous tab's orders under the new tab's highlight. A live refetch
+  // of the same tab keeps its `currentData`, so it never flashes.
+  const isLoadingOrders = isFetching && currentData === undefined;
 
   // Re-adds the order's lines to the local cart. Prices come from the order as it was
   // charged; the cart re-prices against the live catalogue at checkout.
@@ -145,21 +155,27 @@ export function OrderhistorypageView() {
       </div>
 
       {/* Orders List */}
-      {filteredOrders.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center shadow-sm max-w-md mx-auto my-8">
-          <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-gray-900">No Orders Found</h3>
-          <p className="text-xs text-gray-500 mt-1 mb-6">
-            You haven't placed any orders matching this status yet.
-          </p>
-          <Link
-            href="/menu"
-            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-secondary-color text-white text-xs font-bold rounded-full shadow-md hover:bg-[#d84800] transition-colors"
-          >
-            <span>Explore Menu</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
+      {isLoadingOrders ? (
+        <LoadingRegion label="Loading your orders..." className="space-y-4 max-w-3xl mx-auto">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <OrderCardSkeleton key={i} />
+          ))}
+        </LoadingRegion>
+      ) : error && !currentData ? (
+        <ErrorState
+          title="We couldn't load your orders"
+          error={error}
+          onRetry={() => void refetch()}
+          className="my-8"
+        />
+      ) : filteredOrders.length === 0 ? (
+        <EmptyState
+          icon={ShoppingBag}
+          title="No orders found"
+          message="You haven't placed any orders matching this status yet."
+          action={{ label: "Explore Menu", href: "/menu" }}
+          className="my-8"
+        />
       ) : (
         <div className="space-y-4 max-w-3xl mx-auto">
           {filteredOrders.map((order) => (

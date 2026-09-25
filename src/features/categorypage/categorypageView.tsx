@@ -8,7 +8,8 @@ import { iconFor } from "@/components/ui/CategoryDropdown";
 import { resolveProductImage } from "@/store/api/productAdapter";
 import { useCatalog, useCategories } from "@/store/api/useCatalog";
 import { toTitleCase } from "@/lib/utils";
-import { Search, ChevronRight, ArrowUpRight, Filter } from "lucide-react";
+import { Search, ChevronRight, ArrowUpRight, Filter, SearchX } from "lucide-react";
+import { CategoryCardSkeleton, EmptyState, ErrorState, LoadingRegion } from "@/components/ui/states";
 import "@/app/globals.scss";
 
 /**
@@ -33,7 +34,12 @@ export function CategorypageView() {
 
   const menuBaseUrl = isMobile ? "/menuphone" : "/menu";
 
-  const { categories, isLoading: isLoadingCategories } = useCategories();
+  const {
+    categories,
+    isLoading: isLoadingCategories,
+    error: categoriesError,
+    refetch: refetchCategories,
+  } = useCategories();
   const { products } = useCatalog();
 
   const filteredCategories = useMemo(() => {
@@ -69,7 +75,7 @@ export function CategorypageView() {
 
           <form
             onSubmit={(e) => e.preventDefault()}
-            className="flex items-center bg-white border border-gray-200 focus-within:border-[#A1255B] p-1 pl-3.5 shadow-2xs transition-all flex-1 sm:flex-none sm:w-72"
+            className="flex items-center rounded-full bg-white border border-gray-200 focus-within:border-[#A1255B] p-1 pl-3.5 shadow-2xs transition-all flex-1 sm:flex-none sm:w-72"
           >
             <Search className="w-4 h-4 text-gray-400 shrink-0 mr-2 pointer-events-none" />
             <input
@@ -84,15 +90,35 @@ export function CategorypageView() {
 
         {/* Category Grid */}
         {isLoadingCategories ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <LoadingRegion
+            label="Loading categories..."
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+          >
             {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-48 animate-pulse rounded-2xl bg-gray-100"
-                aria-hidden
-              />
+              <CategoryCardSkeleton key={i} />
             ))}
-          </div>
+          </LoadingRegion>
+        ) : categoriesError ? (
+          <ErrorState
+            title="We couldn't load the categories"
+            error={categoriesError}
+            onRetry={refetchCategories}
+          />
+        ) : filteredCategories.length === 0 ? (
+          <EmptyState
+            icon={SearchX}
+            title={searchQuery.trim() ? "No matching categories" : "No categories yet"}
+            message={
+              searchQuery.trim()
+                ? "No categories match your search."
+                : "No categories available right now."
+            }
+            action={
+              searchQuery.trim()
+                ? { label: "Clear search", onClick: () => setSearchQuery("") }
+                : undefined
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredCategories.map((category) => {
@@ -150,15 +176,6 @@ export function CategorypageView() {
           </div>
         )}
 
-        {!isLoadingCategories && filteredCategories.length === 0 && (
-          <div className="rounded-2xl border border-gray-200 bg-white py-16 text-center text-sm font-medium text-gray-500">
-            {t(
-              searchQuery.trim()
-                ? "No categories match your search."
-                : "No categories available right now."
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

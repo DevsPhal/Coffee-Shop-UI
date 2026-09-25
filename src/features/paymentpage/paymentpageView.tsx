@@ -4,22 +4,24 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
-import { CheckCircle2, ChevronDown, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle2, ChevronDown, Loader2, RefreshCw, Smartphone } from "lucide-react";
 
 import { toast } from "@/components/ui/toast";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import {
   useConfirmBakongPaymentMutation,
+  useGenerateBakongDeeplinkMutation,
   useGenerateBakongQrMutation,
   useLazyGetMyOrderQuery,
 } from "@/store/api/orderApi";
+import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import type { Currency, OrderResponse } from "@/store/api/types";
 import "@/app/globals.scss";
 
 /** How often to ask the API whether the transfer has landed. */
 const POLL_MS = 4000;
 
-type Phase = "loading" | "waiting" | "paid" | "expired" | "error";
+type Phase = "loading" | "awaiting_fee" | "waiting" | "paid" | "expired" | "error";
 
 /**
  * The Bakong payment screen for a customer order.
@@ -50,10 +52,14 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const [settled, setSettled] = useState<"paid" | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [verificationError, setVerificationError] = useState<string | null>(null);
+  // A delivery order has no delivery fee until the shop prices it from the pinned location, and
+  // the QR must encode the final total — so payment waits here until that fee lands.
+  const [awaitingFee, setAwaitingFee] = useState(false);
 
   const [generateQr, { data: qr, isLoading: isGenerating }] = useGenerateBakongQrMutation();
   const [confirmPayment, { isLoading: isChecking }] = useConfirmBakongPaymentMutation();
   const [getOrder] = useLazyGetMyOrderQuery();
+  const [generateDeeplink, { isLoading: isOpeningApp }] = useGenerateBakongDeeplinkMutation();
 
   // Guards the poll so a slow request cannot overlap the next tick.
   const isPollingRef = useRef(false);
@@ -97,6 +103,14 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
         // replacing its QR/hash, including when the customer asks for a new QR after expiry.
         const existingOrder = await getOrder(orderId, false).unwrap();
         if (handleOrder(existingOrder)) return;
+        // deliveryFee defaults to 0 once an order exists, not null — awaitingDeliveryFee is the
+        // real "has the shop actually priced this yet" flag. Generating a QR while this is true
+        // would encode a total that's missing the fee entirely.
+        if (existingOrder.fulfillmentMethod === "DELIVERY" && existingOrder.awaitingDeliveryFee) {
+          setAwaitingFee(true);
+          return;
+        }
+        setAwaitingFee(false);
         if (existingOrder.bakongMd5Hash) {
           const checkedOrder = await confirmPayment(orderId).unwrap();
           if (handleOrder(checkedOrder)) return;
@@ -134,6 +148,27 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     return () => clearTimeout(timer);
   }, [orderId, currency, requestQr]);
 
+  // While the shop hasn't priced the delivery yet, re-check on the same interval as the payment
+  // poll below; requestQr itself flips awaitingFee back off once a fee (or a paid/cancelled
+  // order) shows up, which lets the effect above take over and generate the real QR.
+  useEffect(() => {
+    if (!awaitingFee) return;
+    const interval = setInterval(() => { void requestQr(currency); }, POLL_MS);
+    return () => clearInterval(interval);
+  }, [awaitingFee, currency, requestQr]);
+
+  // The push already carries the full order, so this settles paid/cancelled the instant the API
+  // broadcasts it (staff marking cash paid, a webhook, ...) without waiting on the next poll
+  // tick — and while still pricing the delivery, an instant nudge to fetch the real QR the
+  // moment the fee lands rather than waiting up to POLL_MS.
+  useOrderLiveUpdates((message) => {
+    if (message.order.id !== orderId) return;
+    if (handleOrder(message.order)) return;
+    if (awaitingFee && !message.order.awaitingDeliveryFee) {
+      void requestQr(currency);
+    }
+  });
+
   // The QR is tagged with the currency it was issued for, so a stale code is never shown while
   // a switch to the other currency is still in flight.
   const currentQr = qrImage && qrImage.currency === currency ? qrImage.dataUrl : null;
@@ -144,11 +179,13 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
       ? "paid"
       : failure
         ? "error"
-        : !currentQr || isGenerating
-          ? "loading"
-          : secondsLeft !== null && secondsLeft <= 0
-            ? "expired"
-            : "waiting";
+        : awaitingFee
+          ? "awaiting_fee"
+          : !currentQr || isGenerating
+            ? "loading"
+            : secondsLeft !== null && secondsLeft <= 0
+              ? "expired"
+              : "waiting";
 
   const effectiveMessage = !orderId
     ? "This payment link is missing its order. Please start from the checkout."
@@ -208,6 +245,25 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     };
   }, [effectivePhase, checkPayment]);
 
+  // The QR on this screen is on the same phone the customer would scan it with — physically
+  // impossible. This turns the same KHQR payload into a link that jumps straight into whichever
+  // Bakong-enabled banking app is already installed, no camera involved.
+  const handleOpenInBankApp = useCallback(async () => {
+    if (!orderId) return;
+    try {
+      const result = await generateDeeplink(orderId).unwrap();
+      window.location.href = result.deeplink;
+    } catch (err) {
+      toast.add({
+        type: "warning",
+        description: apiErrorMessage(
+          err as Parameters<typeof apiErrorMessage>[0],
+          "Could not open a banking app. Please scan the QR instead."
+        ),
+      });
+    }
+  }, [orderId, generateDeeplink]);
+
   const formattedTime =
     secondsLeft === null
       ? "--:--"
@@ -230,6 +286,22 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
         <p className="text-sm text-gray-600">Opening your order progress...</p>
         <button type="button" onClick={() => router.replace(`/checkoutdone?orderId=${encodeURIComponent(orderId!)}`)} className="rounded-xl bg-gray-900 px-5 py-3 text-sm font-bold text-white">
           Track my order
+        </button>
+      </div>
+    );
+  }
+
+  if (effectivePhase === "awaiting_fee") {
+    return (
+      <div className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col items-center justify-center gap-4 px-4 text-center" role="status" aria-live="polite">
+        <Loader2 className="h-12 w-12 animate-spin text-[#A1255B]" />
+        <h1 className="text-xl font-extrabold text-gray-900">Confirming your delivery fee</h1>
+        <p className="text-sm text-gray-600">
+          The shop is reviewing your pinned location and pricing the delivery. Your payment QR
+          will appear here automatically — no need to refresh.
+        </p>
+        <button type="button" onClick={() => router.push("/checkout")} className="rounded-xl bg-gray-100 px-5 py-3 text-sm font-bold text-gray-700">
+          Back to checkout
         </button>
       </div>
     );
@@ -296,6 +368,27 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
               </div>
             )}
           </div>
+
+          {effectivePhase === "waiting" ? (
+            <button
+              type="button"
+              onClick={() => { void handleOpenInBankApp(); }}
+              disabled={isOpeningApp}
+              className="mb-3 inline-flex w-full items-center justify-center gap-2 rounded-full border-none bg-[#A1255B] px-4 py-3 text-sm font-bold text-white shadow-md shadow-[#A1255B]/20 transition hover:bg-[#881d52] active:scale-98 disabled:opacity-60 cursor-pointer"
+            >
+              {isOpeningApp ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Smartphone className="h-4 w-4" />
+              )}
+              {isOpeningApp ? "Opening..." : "Open in Banking App"}
+            </button>
+          ) : null}
+          {effectivePhase === "waiting" ? (
+            <p className="mb-1 mt-0 text-[11px] text-gray-400">
+              On this phone? Tap above instead of scanning.
+            </p>
+          ) : null}
 
           {effectivePhase === "expired" || effectivePhase === "error" ? (
             <button

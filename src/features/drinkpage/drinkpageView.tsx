@@ -1,20 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
 import { Card } from "@/components/cards/card";
 import { CategoryDropdown } from "@/components/ui";
 import { ALL_CATEGORIES } from "@/components/ui/CategoryDropdown";
 import { toStoreProduct } from "@/store/api/productAdapter";
 import { useCatalog } from "@/store/api/useCatalog";
-import { Search } from "lucide-react";
+import { Search, SearchX } from "lucide-react";
+import { EmptyState, ErrorState, LoadingRegion, ProductCardSkeletons } from "@/components/ui/states";
 import "@/app/globals.scss";
 
 export function DrinkpageView() {
   const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const { products, isLoading, error } = useCatalog(
+  const { products, isLoading, error, refetch } = useCatalog(
     selectedCategory === ALL_CATEGORIES ? undefined : selectedCategory
   );
 
@@ -87,15 +87,38 @@ export function DrinkpageView() {
         </div>
 
         {/* Menu Cards Grid */}
-        <div className="menu_page_grid">
-          {filteredProducts.map((product) => (
-            <Card key={product.id} product={product} />
-          ))}
-        </div>
-
-        {filteredProducts.length === 0 && (
-          <div className="text-center py-16 text-gray-500 text-sm">
-            No drinks found in this category.
+        {isLoading ? (
+          <LoadingRegion label="Loading drinks..." className="menu_page_grid">
+            <ProductCardSkeletons count={8} />
+          </LoadingRegion>
+        ) : error ? (
+          <ErrorState
+            title="We couldn't load the drinks"
+            error={error}
+            onRetry={() => void refetch()}
+            className="my-8"
+          />
+        ) : filteredProducts.length === 0 ? (
+          <EmptyState
+            icon={SearchX}
+            title={searchQuery.trim() ? "No matching drinks" : "Nothing here yet"}
+            message={
+              searchQuery.trim()
+                ? "Try a different search word or category."
+                : "No drinks found in this category."
+            }
+            action={
+              searchQuery.trim()
+                ? { label: "Clear search", onClick: () => setSearchQuery("") }
+                : { label: "View all drinks", onClick: () => setSelectedCategory(ALL_CATEGORIES) }
+            }
+            className="my-8"
+          />
+        ) : (
+          <div className="menu_page_grid">
+            {filteredProducts.map((product) => (
+              <Card key={product.id} product={product} />
+            ))}
           </div>
         )}
       </div>

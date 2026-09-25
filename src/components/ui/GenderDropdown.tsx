@@ -63,7 +63,7 @@ export function GenderDropdown({
         aria-haspopup="listbox"
         className={
           triggerClassName ??
-          "w-full flex items-center justify-between px-3.5 py-2.5 border border-[#94a3b8] bg-white text-xs sm:text-sm font-medium text-gray-900 hover:border-[#A1255B] focus:outline-none focus:border-[#475569] transition-all cursor-pointer select-none text-left"
+          "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-[#94a3b8] bg-white text-xs sm:text-sm font-medium text-gray-900 hover:border-[#A1255B] focus:outline-none focus:border-[#475569] transition-all cursor-pointer select-none text-left"
         }
       >
         <div className="flex items-center gap-2.5 min-w-0">

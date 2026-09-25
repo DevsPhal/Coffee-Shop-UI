@@ -2,6 +2,16 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { z } from "zod";
 import { toast } from "@/components/ui/toast";
+import { getAccessToken, isAuthenticated } from "@/lib/authStorage";
+
+/** UI labels (shown in ContactForm's topic pills) mapped to the API's FeedbackTopic enum. */
+const TOPIC_TO_API_ENUM: Record<string, string> = {
+  "General Inquiry": "GENERAL_INQUIRY",
+  "Catering & Events": "CATERING_EVENTS",
+  "Feedback & Suggestions": "FEEDBACK_SUGGESTIONS",
+  "Partnership": "PARTNERSHIP",
+  "Order Support": "ORDER_SUPPORT",
+};
 
 export const contactMessageSchema = z.object({
   fullName: z
@@ -163,15 +173,31 @@ export const useContactStore = create<ContactStoreState>()(
           return { success: false, message: firstErr };
         }
 
+        // The feedback endpoint requires a signed-in customer — there is no guest/anonymous
+        // route for it on the API.
+        if (!isAuthenticated()) {
+          const message = "Please sign in to send a message.";
+          toast.add({ type: "warning", description: message });
+          return { success: false, message };
+        }
+
         const validData = validationResult.data;
         set({ isSubmitting: true, errors: {} });
 
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/contact-messages`, {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/customer/feedback`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fullName: validData.fullName, email: validData.email,
-              phone: validData.phone, topic: validData.topic, message: validData.message }),
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${getAccessToken()}`,
+            },
+            body: JSON.stringify({
+              fullName: validData.fullName,
+              email: validData.email,
+              phoneNumber: validData.phone || undefined,
+              topic: TOPIC_TO_API_ENUM[validData.topic] ?? validData.topic,
+              message: validData.message,
+            }),
             signal: AbortSignal.timeout(15000),
           });
           const result = await response.json();

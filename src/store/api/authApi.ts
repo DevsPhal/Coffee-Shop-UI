@@ -1,4 +1,5 @@
 import { clearTokens, setTokens } from "@/lib/authStorage";
+import { markWelcomePending } from "@/lib/welcomeToast";
 import { baseApi, unwrap } from "./baseApi";
 import type {
   ApiEnvelope,
@@ -37,7 +38,10 @@ export const authApi = baseApi.injectEndpoints({
       transformResponse: (response: ApiEnvelope<LoginResponse>) => {
         const result = unwrap(response);
         // Customers always get an OTP challenge, but handle the direct-token branch too.
-        if (result.tokens) setTokens(result.tokens);
+        if (result.tokens) {
+          setTokens(result.tokens);
+          markWelcomePending();
+        }
         return result;
       },
       invalidatesTags: ["Auth", "Cart", "Order"],
@@ -48,6 +52,7 @@ export const authApi = baseApi.injectEndpoints({
       transformResponse: (response: ApiEnvelope<AuthTokenResponse>) => {
         const tokens = unwrap(response);
         setTokens(tokens);
+        markWelcomePending();
         return tokens;
       },
       invalidatesTags: ["Auth", "Cart", "Order"],
@@ -69,6 +74,7 @@ export const authApi = baseApi.injectEndpoints({
       transformResponse: (response: ApiEnvelope<AuthTokenResponse>) => {
         const tokens = unwrap(response);
         setTokens(tokens);
+        markWelcomePending();
         return tokens;
       },
       invalidatesTags: ["Auth", "Cart", "Order"],

@@ -1,11 +1,13 @@
 import { baseApi, unwrap } from "./baseApi";
 import type {
+  BakongDeeplinkResponse,
   BakongQrResponse,
   Currency,
   OrderResponse,
   OrderStatus,
   PageQuery,
   PageResponse,
+  StaffCallResponse,
   UUID,
 } from "./types";
 
@@ -19,8 +21,14 @@ interface OrderListQuery extends PageQuery {
  */
 export const orderApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    requestOrderAssistance: builder.mutation<unknown, UUID>({
-      query: (id) => ({ url: `/api/customer/orders/${id}/request-assistance`, method: "POST" }),
+    /**
+     * Asks staff to come help with this order. Rate-limited server-side (once per cooldown
+     * window) — a repeat press too soon comes back as a 429 whose message says how long is
+     * left; `nextCallAllowedAt` on a successful call is when the button can re-enable.
+     */
+    callStaff: builder.mutation<StaffCallResponse, UUID>({
+      query: (id) => ({ url: `/api/customer/orders/${id}/call-staff`, method: "POST" }),
+      transformResponse: unwrap<StaffCallResponse>,
     }),
     listMyOrders: builder.query<PageResponse<OrderResponse>, OrderListQuery | void>({
       query: (params) => ({
@@ -70,6 +78,19 @@ export const orderApi = baseApi.injectEndpoints({
       invalidatesTags: (_r, _e, { id }) => [{ type: "Order", id }],
     }),
 
+    /**
+     * A single link that opens whichever Bakong-enabled banking app is already on the phone —
+     * for a customer viewing this QR on the same phone they'd otherwise need to scan it with.
+     * Requires generateBakongQr to have run first (same order, same stored QR).
+     */
+    generateBakongDeeplink: builder.mutation<BakongDeeplinkResponse, UUID>({
+      query: (id) => ({
+        url: `/api/customer/orders/${id}/pay/bakong/deeplink`,
+        method: "POST",
+      }),
+      transformResponse: unwrap<BakongDeeplinkResponse>,
+    }),
+
     /** Verify the transfer with Bakong; unpaid orders remain pending until the bank confirms. */
     confirmBakongPayment: builder.mutation<OrderResponse, UUID>({
       query: (id) => ({
@@ -101,7 +122,8 @@ export const {
   useLazyGetMyOrderQuery,
   usePayCashOnPickupMutation,
   useGenerateBakongQrMutation,
+  useGenerateBakongDeeplinkMutation,
   useConfirmBakongPaymentMutation,
   useCancelMyOrderMutation,
-  useRequestOrderAssistanceMutation,
+  useCallStaffMutation,
 } = orderApi;

@@ -21,8 +21,12 @@ import {
   VARIANT_LABELS,
 } from "@/store/api/optionMapping";
 import type { IceLevel, MilkType, SugarLevel } from "@/store/api/types";
-import { Clock, ChevronDown, Check } from "lucide-react";
+import { Clock, ChevronDown, Check, PackageX } from "lucide-react";
+import { EmptyState, ErrorState, ProductDetailSkeleton } from "@/components/ui/states";
 import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidation";
+import { ExtrasSelector } from "@/components/ui/ExtrasSelector";
+import type { CartExtra } from "@/store/useCartStore";
+import { useCatalogLiveUpdates } from "@/hooks/useCatalogLiveUpdates";
 import "@/app/globals.scss";
 
 function CustomProductPageOptionDropdown({
@@ -147,7 +151,17 @@ export function ProductpageView({
     data: apiProduct,
     isLoading: isLoadingProduct,
     error: productError,
+    refetch: refetchProduct,
   } = useGetProductQuery(productId, { skip: !productId });
+
+  // An extra's push carries the extra's own id, not which products offer it, so a change to an
+  // extra this product happens to offer can't be targeted by id the way a direct product/
+  // category change can (see RealtimeCatalogSync) — refetch this one page's own product
+  // unconditionally instead, since it's cheap and this is the one place that actually needs to
+  // know an extra it's showing just changed.
+  useCatalogLiveUpdates(() => {
+    if (productId) refetchProduct();
+  });
 
   const product = apiProduct ? toStoreProduct(apiProduct) : null;
 
@@ -174,6 +188,7 @@ export function ProductpageView({
   const [selectedIce, setSelectedIce] = React.useState<IceLevel>("NORMAL");
   const [selectedSugar, setSelectedSugar] = React.useState<SugarLevel>("NORMAL");
   const [selectedMilk, setSelectedMilk] = React.useState<MilkType>("NORMAL");
+  const [selectedExtras, setSelectedExtras] = React.useState<CartExtra[]>([]);
 
   // Default to the first variant once the product arrives.
   React.useEffect(() => {
@@ -182,6 +197,12 @@ export function ProductpageView({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.id, variants.length]);
+
+  // A different product offers different extras — carrying a selection across would attach an
+  // add-on that product never listed.
+  React.useEffect(() => {
+    setSelectedExtras([]);
+  }, [product?.id]);
 
   const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? null;
   // Each variant prices itself outright now — no product-level price to add a delta to — but
@@ -219,6 +240,7 @@ export function ProductpageView({
       ...(drinkOptions.ice ? { iceLevel: selectedIce } : {}),
       ...(drinkOptions.sugar ? { sugarLevel: selectedSugar } : {}),
       ...(drinkOptions.milk ? { milkType: selectedMilk } : {}),
+      selectedExtras,
     });
     return true;
   };
@@ -242,30 +264,33 @@ export function ProductpageView({
   };
 
   if (isLoadingProduct) {
-    return (
-      <div className="product_detail_container font-sans">
-        <div className="py-24 text-center text-sm text-gray-500">
-          {t("Loading product…")}
-        </div>
-      </div>
-    );
+    return <ProductDetailSkeleton />;
   }
 
   // A missing id or a 404 both land here — a link to a product that has since been removed
-  // should say so rather than silently rendering the first item in the menu.
+  // should say so rather than silently rendering the first item in the menu. A 404 is "gone",
+  // anything else (network, server) is a failure worth retrying.
   if (!product) {
+    const isNotFound =
+      !productError ||
+      (typeof productError === "object" && "status" in productError && productError.status === 404);
     return (
-      <div className="product_detail_container font-sans">
-        <div className="py-24 text-center">
-          <p className="text-sm text-gray-600">
-            {productError
-              ? t("We could not load this product.")
-              : t("This product is no longer available.")}
-          </p>
-          <Link href={menuBaseUrl} className="mt-4 inline-block underline text-[#A1255B]">
-            {t("Back to the menu")}
-          </Link>
-        </div>
+      <div className="product_detail_container font-sans py-12">
+        {isNotFound ? (
+          <EmptyState
+            icon={PackageX}
+            title="Product not available"
+            message="This product is no longer available."
+            action={{ label: "Back to the menu", href: menuBaseUrl }}
+          />
+        ) : (
+          <ErrorState
+            title="We couldn't load this product"
+            error={productError}
+            onRetry={() => void refetchProduct()}
+            secondaryAction={{ label: "Back to the menu", href: menuBaseUrl }}
+          />
+        )}
       </div>
     );
   }
@@ -420,6 +445,14 @@ export function ProductpageView({
                     const kind = MILK_CHOICES.find((c) => MILK_LABELS[c] === label);
                     if (kind) setSelectedMilk(kind);
                   }}
+                />
+              )}
+
+              {product && (
+                <ExtrasSelector
+                  extras={product.extras}
+                  selected={selectedExtras}
+                  onChange={setSelectedExtras}
                 />
               )}
             </div>

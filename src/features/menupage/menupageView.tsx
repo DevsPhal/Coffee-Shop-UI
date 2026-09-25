@@ -3,12 +3,20 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/cards/card";
-import { ALL_CATEGORIES } from "@/components/ui/CategoryDropdown";
+import { ALL_CATEGORIES, iconFor } from "@/components/ui/CategoryDropdown";
 import { SortDropdown, type SortOption } from "@/components/ui/SortDropdown";
 import { toStoreProduct } from "@/store/api/productAdapter";
 import { useCatalog, useCategories } from "@/store/api/useCatalog";
 import { useLanguage } from "@/components/ui/translatetokhmer";
-import { Search, ChevronRight, Filter, LayoutGrid } from "lucide-react";
+import { Search, Filter, LayoutGrid, SearchX } from "lucide-react";
+import {
+  CategoryPillsSkeleton,
+  EmptyState,
+  ErrorState,
+  LoadingRegion,
+  ProductCardSkeletons,
+  Skeleton,
+} from "@/components/ui/states";
 import "@/app/globals.scss";
 
 /** Client-side pseudo-category: everything currently discounted. */
@@ -36,12 +44,12 @@ export function MenupageView() {
     }
   }, [queryCategory]);
 
-  const { categories } = useCategories();
+  const { categories, isLoading: isLoadingCategories } = useCategories();
 
   // "Featured" is a client-side view over the whole catalogue (everything discounted), not a
   // category the API knows about — so it must not be sent as a categoryId.
   const isFeatured = selectedCategory === FEATURED;
-  const { products, isLoading, error } = useCatalog(
+  const { products, isLoading, error, refetch } = useCatalog(
     selectedCategory === ALL_CATEGORIES || isFeatured ? undefined : selectedCategory
   );
 
@@ -96,9 +104,13 @@ export function MenupageView() {
             <h2 className="text-xl sm:text-2xl font-extrabold text-[#A1255B] tracking-tight">
               {getPageTitle()}
             </h2>
-            <span className="text-xs text-gray-600 ">
-              {sortedProducts.length} {t(sortedProducts.length === 1 ? "Item" : "Items")}
-            </span>
+            {isLoading ? (
+              <Skeleton className="h-4 w-14" />
+            ) : error ? null : (
+              <span className="text-xs text-gray-600 ">
+                {sortedProducts.length} {t(sortedProducts.length === 1 ? "Item" : "Items")}
+              </span>
+            )}
           </div>
 
           {/* Right Toolbar Controls: Search Bar & Sort Dropdown */}
@@ -106,7 +118,7 @@ export function MenupageView() {
             {/* Search Input Bar */}
             <form
               onSubmit={(e) => e.preventDefault()}
-              className="flex items-center bg-white border border-gray-200 focus-within:border-[#A1255B] focus-within:ring-1 focus-within:ring-[#A1255B] p-1 pl-3.5 shadow-2xs transition-all flex-1 sm:flex-none sm:w-64"
+              className="flex items-center rounded-full bg-white border border-gray-200 focus-within:border-[#A1255B] focus-within:ring-1 focus-within:ring-[#A1255B] p-1 pl-3.5 shadow-2xs transition-all flex-1 sm:flex-none sm:w-64"
             >
               <Search className="w-4 h-4 text-gray-400 shrink-0 mr-2 pointer-events-none" />
               <input
@@ -120,7 +132,7 @@ export function MenupageView() {
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="text-gray-400 hover:text-gray-700 text-xs font-bold bg-gray-100 hover:bg-gray-200 w-4 h-4 flex items-center justify-center cursor-pointer shrink-0 mr-1 transition-colors"
+                  className="rounded-full text-gray-400 hover:text-gray-700 text-xs font-bold bg-gray-100 hover:bg-gray-200 w-4 h-4 flex items-center justify-center cursor-pointer shrink-0 mr-1 transition-colors"
                   title="Clear search"
                 >
                   ✕
@@ -128,7 +140,7 @@ export function MenupageView() {
               )}
               <button
                 type="submit"
-                className="w-8 h-8 bg-[#A1255B] hover:bg-[#881d52] text-white shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none active:scale-95 ml-1"
+                className="w-8 h-8 rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none active:scale-95 ml-1"
                 title="Search"
               >
                 <Search className="w-4 h-4 text-white" />
@@ -145,123 +157,99 @@ export function MenupageView() {
           </div>
         </div>
 
-        {/* Main 2-Column Layout (Sidebar + Main Content Grid) */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          
-          {/* Left Column: Sidebar Category Navigation Panel (Brand Colors) */}
-          <aside className="md:col-span-1 space-y-4">
-            <div className="menu_filter">
-              <h2 className="text-xs font-black tracking-wider text-[#A1255B] uppercase mb-4 pb-2 border-b border-gray-100 flex items-center justify-between">
-                <span>{t("CATEGORIES")}</span>
-                <Filter className="w-3.5 h-3.5 text-[#A1255B]" />
-              </h2>
-
-              <ul className="space-y-1.5">
-                {/* Featured Products */}
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCategory(FEATURED)}
-                    className={`btn_menu transition-all cursor-pointer w-full flex justify-between py-2 px-2 border-none text-left ${
-                      selectedCategory === FEATURED
-                        ? "bg-[#A1255B]  text-white"
-                        : "hover:bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0 truncate">
-                      <span className="truncate">{t("Featured Products")}</span>
-                    </div>
-                    <span
-                      className={`txt_no ${
-                        selectedCategory === FEATURED
-                          ? "text-white"
-                          : "text-gray-600"
-                      }`}
-                    >
-                      {products.filter((p) => p.discountActive).length}
-                    </span>
-                  </button>
-                </li>
-
-                {/* All Products Button (Highlighted maroon pill when active) */}
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCategory(ALL_CATEGORIES)}
-                    className={`btn_menu py-2 px-2 flex justify-between align-center w-full transition-all cursor-pointer border-none text-left ${
-                      selectedCategory === ALL_CATEGORIES
-                        ? "bg-[#A1255B] text-white shadow-2xs font-bold"
-                        : "hover:bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0 truncate">
-                      <LayoutGrid
-                        className={`w-4 h-4 shrink-0 ${
-                          selectedCategory === ALL_CATEGORIES ? "text-white" : "text-[#A1255B]"
-                        }`}
-                      />
-                      <span className="truncate">{t("All Products")}</span>
-                    </div>
-                    <span
-                      className={`txt_no ${
-                        selectedCategory === ALL_CATEGORIES
-                          ? "text-white"
-                          : "text-gray-600"
-                      }`}
-                    >
-                      {categories.reduce((sum, c) => sum + c.count, 0)}
-                    </span>
-                  </button>
-                </li>
-
-                {/* Expandable Accordion Main Categories */}
-                {/* Categories, flat — the API has no parent/child relationship between them. */}
-                {categories.map((category) => {
-                  const isSelected = selectedCategory === category.id;
-                  return (
-                    <li key={category.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCategory(category.id)}
-                        className={`btn_menu py-2 px-2 flex justify-between align-center w-full transition-all cursor-pointer border-none text-left ${
-                          isSelected
-                            ? "bg-[#A1255B] text-white shadow-2xs font-bold"
-                            : "hover:bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0 truncate">
-                          <span className="truncate">{t(category.name)}</span>
-                        </div>
-                        <span className={`txt_no ${isSelected ? "text-white" : "text-gray-600"}`}>
-                          {category.count}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </aside>
-
-          {/* Right Column: Main Content Area (Product Grid & Category Headers) */}
-          <main className="md:col-span-3 space-y-6">
-            
-            {/* Product Card Grid (3 Columns on Desktop) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortedProducts.map((product) => (
-                <Card key={product.id} product={product} />
-              ))}
-            </div>
-
-            {/* Empty State */}
-            {sortedProducts.length === 0 && (
-              <div className="text-center py-16 bg-white rounded-2xl border border-gray-200 text-gray-500 text-sm font-medium">
-                {t("No items found in this category.")}
-              </div>
-            )}
-          </main>
-
+        {/* Category Filter Row — a horizontal, wrapping row of pills (same component style
+            already used on the phone menu page) rather than a sidebar, so the product grid
+            below gets the full page width. */}
+        <div className="flex items-center gap-1.5 mb-3">
+          <Filter className="w-3.5 h-3.5 text-[#A1255B]" />
+          <span className="text-xs font-black tracking-wider text-[#A1255B] uppercase">
+            {t("CATEGORIES")}
+          </span>
         </div>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-8">
+          {isLoadingCategories ? (
+            <CategoryPillsSkeleton count={7} />
+          ) : (
+          <>
+          <button
+            type="button"
+            onClick={() => setSelectedCategory(FEATURED)}
+            className={`category_btn ${selectedCategory === FEATURED ? "active" : ""}`}
+          >
+            <span>{t("Featured Products")}</span>
+            <span className="category_badge">{products.filter((p) => p.discountActive).length}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectedCategory(ALL_CATEGORIES)}
+            className={`category_btn ${selectedCategory === ALL_CATEGORIES ? "active" : ""}`}
+          >
+            <LayoutGrid className="category_btn_icon h-4.5 w-4.5" />
+            <span>{t("All Products")}</span>
+            <span className="category_badge">{categories.reduce((sum, c) => sum + c.count, 0)}</span>
+          </button>
+
+          {/* Categories, flat — the API has no parent/child relationship between them. */}
+          {categories.map((category) => {
+            const isSelected = selectedCategory === category.id;
+            const Icon = iconFor(category.name);
+            return (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => setSelectedCategory(category.id)}
+                className={`category_btn ${isSelected ? "active" : ""}`}
+              >
+                <Icon className="category_btn_icon h-4.5 w-4.5" />
+                <span>{t(category.name)}</span>
+                <span className="category_badge">{category.count}</span>
+              </button>
+            );
+          })}
+          </>
+          )}
+        </div>
+
+        {/* Product Card Grid — 4 per row on desktop, now that categories no longer take up a
+            sidebar column. */}
+        {isLoading ? (
+          <LoadingRegion
+            label="Loading menu..."
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+          >
+            <ProductCardSkeletons count={8} />
+          </LoadingRegion>
+        ) : error ? (
+          <ErrorState
+            title="We couldn't load the menu"
+            error={error}
+            onRetry={() => void refetch()}
+            className="my-8"
+          />
+        ) : sortedProducts.length === 0 ? (
+          <EmptyState
+            icon={SearchX}
+            title={searchQuery.trim() ? "No matching items" : "Nothing here yet"}
+            message={
+              searchQuery.trim()
+                ? "Try a different search word or category."
+                : "No items found in this category."
+            }
+            action={
+              searchQuery.trim()
+                ? { label: "Clear search", onClick: () => setSearchQuery("") }
+                : { label: "View all products", onClick: () => setSelectedCategory(ALL_CATEGORIES) }
+            }
+            className="my-8"
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {sortedProducts.map((product) => (
+              <Card key={product.id} product={product} />
+            ))}
+          </div>
+        )}
 
       </div>
     </div>

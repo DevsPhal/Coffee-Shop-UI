@@ -92,6 +92,12 @@ const HOT_KEYWORD = /\bhot\b/;
  *  lemon tea) is deliberately left out — it only gets milk back if its own name says "milk"
  *  (milk tea), which this same regex already catches. */
 const MILK_KEYWORDS = /\b(milk|coffee|latte|cappuccino|mocha|matcha|chocolate|cocoa|smoothie)\b/;
+/** A name that is itself a milk drink — always offers milk, whatever else the name says
+ *  ("Americano Latte" is still a latte). */
+const MILK_DRINK_NAME = /\b(milk|latte|cappuccino|mocha|macchiato|flat white|frappe|frappuccino|matcha|chocolate|cocoa|smoothie)\b/;
+/** Drinks served black/clear. Checked against the product's own name only, so an "Ice Americano"
+ *  filed under the "Iced Coffee" category no longer picks up milk from the word "coffee". */
+const NO_MILK_NAME = /\b(americano|espresso|black|cold brew|ristretto|lungo|soda|juice|lemonade|sparkling|tonic|mojito)\b/;
 
 /**
  * Which of Ice/Sugar/Milk make sense for this product. `BEVERAGE` (a can of beer or soft drink)
@@ -118,13 +124,19 @@ export function getDrinkCustomization(product: {
   if (product.categoryGroup !== "FRESH_DRINK") {
     return { ice: false, sugar: false, milk: false };
   }
-  const text = `${product.title ?? product.name ?? ""} ${
-    product.category ?? product.categoryName ?? ""
-  }`.toLowerCase();
+  const name = (product.title ?? product.name ?? "").toLowerCase();
+  const text = `${name} ${product.category ?? product.categoryName ?? ""}`.toLowerCase();
+  // The product's own name wins over its category: a black coffee in a "Coffee" category gets
+  // no milk step, and only falls back to the category when the name says nothing either way.
+  const milk = MILK_DRINK_NAME.test(name)
+    ? true
+    : NO_MILK_NAME.test(name)
+      ? false
+      : MILK_KEYWORDS.test(text);
   return {
     ice: !HOT_KEYWORD.test(text),
     sugar: true,
-    milk: MILK_KEYWORDS.test(text),
+    milk,
   };
 }
 

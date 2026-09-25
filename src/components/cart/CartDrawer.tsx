@@ -18,8 +18,14 @@ import { toTitleCase } from "@/lib/utils";
 import { useCatalog } from "@/store/api/useCatalog";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import type { VariantName } from "@/store/api/types";
+import type { CartItem } from "@/store/useCartStore";
 import { ChevronDown, Check } from "lucide-react";
 import "@/app/globals.scss";
+
+/** Extras add a flat amount per unit, on top of whatever the variant itself prices at. */
+function extrasUnitTotal(item: Pick<CartItem, "selectedExtras">): number {
+  return (item.selectedExtras ?? []).reduce((sum, extra) => sum + extra.price, 0);
+}
 
 function CustomDrawerSizeDropdown({
   value,
@@ -379,6 +385,15 @@ export function CartDrawer() {
                               }}
                             />
                           )}
+
+                          {item.selectedExtras && item.selectedExtras.length > 0 && item.selectedExtras.map((extra) => (
+                            <span
+                              key={extra.extraId}
+                              className="rounded-full text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5"
+                            >
+                              + {t(extra.name)}
+                            </span>
+                          ))}
                         </div>
 
                         {/* Quantity Pill */}
@@ -406,7 +421,7 @@ export function CartDrawer() {
                           className="cart_item-price font-extrabold text-[#A1255B]"
                           suppressHydrationWarning
                         >
-                          ${(item.unitPrice * item.quantity).toFixed(2)}
+                          ${((item.unitPrice + extrasUnitTotal(item)) * item.quantity).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -420,10 +435,11 @@ export function CartDrawer() {
           <div className="cart_drawer_footer">
             {(() => {
               // Pre-discount total, so the drawer can show what the customer saved. The
-              // line already carries its own original unit price from the API.
+              // line already carries its own original unit price from the API. Extras are
+              // never discounted, so the same amount applies either way.
               const fullSubtotal = items.reduce((acc, item) => {
                 const original = item.originalUnitPrice ?? item.unitPrice;
-                return acc + Math.max(original, item.unitPrice) * item.quantity;
+                return acc + (Math.max(original, item.unitPrice) + extrasUnitTotal(item)) * item.quantity;
               }, 0);
 
               const totalDiscount = Math.max(0, fullSubtotal - subtotal);

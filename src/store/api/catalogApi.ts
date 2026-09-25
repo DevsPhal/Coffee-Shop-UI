@@ -1,5 +1,5 @@
 import { baseApi, unwrap } from "./baseApi";
-import { toTitleCase } from "@/lib/utils";
+import { capitalizeFirst, toTitleCase } from "@/lib/utils";
 import type {
   ApiEnvelope,
   BannerResponse,
@@ -32,9 +32,14 @@ export const catalogApi = baseApi.injectEndpoints({
       query: () => "/api/events",
       // Staff type event titles into the admin however they like ("summer sale", "DJ NIGHT") —
       // title-cased here, once, so every card/modal downstream reads like a real event listing
-      // rather than needing each display site to remember to format it.
+      // rather than needing each display site to remember to format it. The description is
+      // prose (full sentences), so only its first letter is fixed, not every word.
       transformResponse: (response: ApiEnvelope<PublicEventResponse[]>) =>
-        unwrap(response).map((event) => ({ ...event, title: toTitleCase(event.title) })),
+        unwrap(response).map((event) => ({
+          ...event,
+          title: toTitleCase(event.title),
+          description: event.description ? capitalizeFirst(event.description) : event.description,
+        })),
     }),
     /**
      * `/api/shop/settings` does not exist in the live API (checked against /v3/api-docs — no
@@ -49,6 +54,7 @@ export const catalogApi = baseApi.injectEndpoints({
     listCategories: builder.query<CustomerCategoryResponse[], void>({
       query: () => "/api/customer/categories",
       transformResponse: unwrap<CustomerCategoryResponse[]>,
+      providesTags: ["Category"],
     }),
     listProducts: builder.query<
       PageResponse<CustomerProductResponse>,

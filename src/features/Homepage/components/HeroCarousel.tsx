@@ -14,6 +14,7 @@ import {
 import Autoplay from "embla-carousel-autoplay";
 import { cn } from "@/lib/utils";
 import { useListBannersQuery } from "@/store/api/catalogApi";
+import { LoadingRegion, Skeleton } from "@/components/ui/states";
 import "@/app/globals.scss";
 
 interface HeroSlide {
@@ -93,7 +94,9 @@ export default function HeroCarousel() {
     return (
       <section className="hero_section">
         <div className="hero_container">
-          <div className="aspect-video w-full min-h-55 animate-pulse bg-gray-100" aria-hidden />
+          <LoadingRegion label="Loading banners...">
+            <Skeleton className="aspect-video w-full min-h-55 rounded-none" />
+          </LoadingRegion>
         </div>
       </section>
     );

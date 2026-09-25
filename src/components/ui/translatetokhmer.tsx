@@ -332,6 +332,11 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     Reorder: "កុម្ម៉ង់ម្តងទៀត",
     // Login / Sign Up / Forgot Password
     "Login to your account": "ចូលទៅកាន់គណនីរបស់អ្នក",
+    "Welcome back": "សូមស្វាគមន៍ការត្រឡប់មកវិញ",
+    "Ready for your next cup?": "ត្រៀមខ្លួនសម្រាប់កែវបន្ទាប់ហើយឬនៅ?",
+    "Good morning": "អរុណសួស្តី",
+    "Good afternoon": "ទិវាសួស្តី",
+    "Good evening": "សាយណ្ហសួស្តី",
     "Enter your credential to login": "បញ្ចូលព័ត៌មានរបស់អ្នកដើម្បីចូល",
     Username: "ឈ្មោះអ្នកប្រើប្រាស់",
     Password: "ពាក្យសម្ងាត់",

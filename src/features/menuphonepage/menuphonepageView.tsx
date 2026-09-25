@@ -12,7 +12,14 @@ import { useCatalog, useCategories } from "@/store/api/useCatalog";
 import type { SizeSelection } from "@/components/ui/SelectSizeModal";
 import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/components/ui/translatetokhmer";
-import { ShoppingBag, ChevronRight, ShoppingCart, Plus, Check, Search, Clock } from "lucide-react";
+import { ShoppingBag, ChevronRight, ShoppingCart, Plus, Check, Search, Clock, SearchX } from "lucide-react";
+import {
+  CategoryPillsSkeleton,
+  EmptyState,
+  ErrorState,
+  LoadingRegion,
+  PhoneCardSkeleton,
+} from "@/components/ui/states";
 import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidation";
 import SelectSizeModal from "@/components/ui/SelectSizeModal";
 import "@/app/globals.scss";
@@ -56,6 +63,7 @@ export function PhoneCard({
         iceLevel: selection.iceLevel,
         sugarLevel: selection.sugarLevel,
         milkType: selection.milkType,
+        selectedExtras: selection.selectedExtras,
       },
       false
     );
@@ -193,8 +201,8 @@ export function MenupageView() {
     setMounted(true);
   }, []);
 
-  const { categories } = useCategories();
-  const { products } = useCatalog(
+  const { categories, isLoading: isLoadingCategories } = useCategories();
+  const { products, isLoading, error, refetch } = useCatalog(
     selectedCategory === ALL_CATEGORIES ? undefined : selectedCategory
   );
 
@@ -256,7 +264,8 @@ export function MenupageView() {
         {/* Desktop Category Filter & Search Row */}
         <div className="category_desktop_row flex-col sm:flex-row items-center justify-between gap-4 my-6 px-2">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {displayCategories.map((cat) => {
+            {isLoadingCategories && <CategoryPillsSkeleton count={6} />}
+            {!isLoadingCategories && displayCategories.map((cat) => {
               const isSelected = selectedCategory === cat.id;
               const Icon = iconFor(cat.name);
 
@@ -323,7 +332,7 @@ export function MenupageView() {
           {/* Product Search Form Input with Search Button (Right) */}
           <form
             onSubmit={(e) => e.preventDefault()}
-            className="flex items-center flex-1 min-w-0 bg-white border border-gray-200 focus-within:border-[#A1255B] p-1 shadow-2xs transition-all"
+            className="flex items-center flex-1 min-w-0 rounded-full bg-white border border-gray-200 focus-within:border-[#A1255B] p-1 shadow-2xs transition-all"
           >
             <div className="flex items-center flex-1 min-w-0 pl-2.5 pr-1">
               <Search className="w-3.5 h-3.5 text-gray-400 shrink-0 mr-1.5 pointer-events-none" />
@@ -338,7 +347,7 @@ export function MenupageView() {
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="text-gray-400 hover:text-gray-700 text-[10px] font-bold bg-gray-100 w-3.5 h-3.5 flex items-center justify-center cursor-pointer shrink-0 ml-1"
+                  className="rounded-full text-gray-400 hover:text-gray-700 text-[10px] font-bold bg-gray-100 w-3.5 h-3.5 flex items-center justify-center cursor-pointer shrink-0 ml-1"
                   title="Clear search"
                 >
                   ✕
@@ -347,7 +356,7 @@ export function MenupageView() {
             </div>
             <button
               type="submit"
-              className="p-1.5 bg-[#A1255B] hover:bg-[#881d52] text-white shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none"
+              className="p-1.5 rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none"
               title="Search"
             >
               <Search className="w-3.5 h-3.5 text-white" />
@@ -356,23 +365,48 @@ export function MenupageView() {
         </div>
 
         {/* Phone Sized Cards Container */}
-        <div className="cards-container pb-6">
-          {filteredProducts.map((item) => (
-            <PhoneCard
-              key={item.id}
-              product={item}
-              isSelected={selectedId === item.id}
-              onSelect={() => setSelectedId(item.id)}
-              onOpenInfo={(prod) => setActiveModalProduct(prod)}
-            />
-          ))}
-
-          {filteredProducts.length === 0 && (
-            <div className="no-products">
-              {t("No products available in this category.")}
-            </div>
-          )}
-        </div>
+        {isLoading ? (
+          <LoadingRegion label="Loading menu..." className="cards-container pb-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <PhoneCardSkeleton key={i} />
+            ))}
+          </LoadingRegion>
+        ) : error ? (
+          <ErrorState
+            title="We couldn't load the menu"
+            error={error}
+            onRetry={() => void refetch()}
+            className="my-6"
+          />
+        ) : filteredProducts.length === 0 ? (
+          <EmptyState
+            icon={SearchX}
+            title={searchQuery.trim() ? "No matching items" : "Nothing here yet"}
+            message={
+              searchQuery.trim()
+                ? "Try a different search word or category."
+                : "No products available in this category."
+            }
+            action={
+              searchQuery.trim()
+                ? { label: "Clear search", onClick: () => setSearchQuery("") }
+                : { label: "View all products", onClick: () => setSelectedCategory(ALL_CATEGORIES) }
+            }
+            className="my-6"
+          />
+        ) : (
+          <div className="cards-container pb-6">
+            {filteredProducts.map((item) => (
+              <PhoneCard
+                key={item.id}
+                product={item}
+                isSelected={selectedId === item.id}
+                onSelect={() => setSelectedId(item.id)}
+                onOpenInfo={(prod) => setActiveModalProduct(prod)}
+              />
+            ))}
+          </div>
+        )}
 
       </div>
 

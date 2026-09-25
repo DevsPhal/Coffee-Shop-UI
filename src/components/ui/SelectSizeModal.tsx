@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { useLanguage } from "@/components/ui/translatetokhmer";
-import { Coffee, ShoppingBag, X, ChevronDown, Check } from "lucide-react";
+import { Coffee, ShoppingBag, X, Snowflake, Candy, Milk } from "lucide-react";
 
 import {
   ICE_CHOICES,
@@ -17,6 +17,8 @@ import {
 } from "@/store/api/optionMapping";
 import { getDrinkCustomization, resolveProductImage, type StoreProduct } from "@/store/api/productAdapter";
 import type { IceLevel, MilkType, SugarLevel, UUID } from "@/store/api/types";
+import { ExtrasSelector } from "@/components/ui/ExtrasSelector";
+import type { CartExtra } from "@/store/useCartStore";
 
 /** A confirmed configuration, shaped so the caller can hand it straight to the cart. */
 export interface SizeSelection {
@@ -26,83 +28,59 @@ export interface SizeSelection {
   iceLevel?: IceLevel;
   sugarLevel?: SugarLevel;
   milkType?: MilkType;
+  selectedExtras: CartExtra[];
 }
 
-function CustomModalOptionDropdown<T extends string>({
+/**
+ * One row of tappable chips per option. Every choice stays visible, so the customer sees at a
+ * glance what they picked and changes it with a single tap instead of opening a dropdown.
+ */
+function OptionChips<T extends string>({
   label,
+  icon,
   value,
   choices,
   labels,
   onChange,
 }: {
   label: string;
+  icon: React.ReactNode;
   value: T;
   choices: readonly T[];
   labels: Record<T, string>;
   onChange: (val: T) => void;
 }) {
   const { t } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen]);
 
   return (
     <div className="mb-4">
-      <label className="block text-[11px] text-gray-700 uppercase tracking-wider mb-1.5">
-        {t(label)}
-      </label>
-      <div ref={ref} className="relative w-full text-left">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between bg-pink-50/60 hover:bg-pink-100/60 border border-pink-200 text-[#A1255B] font-medium text-xs py-2.5 px-3.5 transition-all cursor-pointer select-none"
-        >
-          <span>{t(labels[value])}</span>
-          <ChevronDown
-            className={`w-4 h-4 text-[#A1255B] shrink-0 transition-transform duration-200 ${
-              isOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-
-        {isOpen && (
-          <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-full bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 space-y-1 animate-in fade-in duration-150">
-            {choices.map((choice) => {
-              const isSelected = value === choice;
-              return (
-                <button
-                  key={choice}
-                  type="button"
-                  onClick={() => {
-                    onChange(choice);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border-none text-left select-none ${
-                    isSelected
-                      ? "bg-[#A1255B] text-white"
-                      : "hover:bg-pink-50 text-gray-800"
-                  }`}
-                >
-                  <span>{t(labels[choice])}</span>
-                  {isSelected && <Check className="w-4 h-4 text-white shrink-0 ml-2" />}
-                </button>
-              );
-            })}
-          </div>
-        )}
+      <div className="flex items-center justify-between mb-2">
+        <label className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-700 uppercase tracking-wider">
+          {icon}
+          {t(label)}
+        </label>
+        <span className="text-[11px] font-medium text-[#A1255B]">{t(labels[value])}</span>
+      </div>
+      <div role="radiogroup" aria-label={t(label)} className="grid grid-cols-4 gap-1.5">
+        {choices.map((choice) => {
+          const isSelected = value === choice;
+          return (
+            <button
+              key={choice}
+              type="button"
+              role="radio"
+              aria-checked={isSelected}
+              onClick={() => onChange(choice)}
+              className={`rounded-full border px-1 py-2 text-[11px] font-semibold leading-tight transition-all cursor-pointer select-none ${
+                isSelected
+                  ? "bg-[#A1255B] border-[#A1255B] text-white shadow-sm"
+                  : "bg-white border-gray-200 text-gray-700 hover:border-[#A1255B]/40 hover:bg-pink-50/60"
+              }`}
+            >
+              {t(labels[choice])}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -153,6 +131,7 @@ export function SelectSizeModal({
   const [iceLevel, setIceLevel] = useState<IceLevel>("NORMAL");
   const [sugarLevel, setSugarLevel] = useState<SugarLevel>("NORMAL");
   const [milkType, setMilkType] = useState<MilkType>("NORMAL");
+  const [selectedExtras, setSelectedExtras] = useState<CartExtra[]>([]);
 
   React.useEffect(() => {
     if (!product) return;
@@ -160,6 +139,7 @@ export function SelectSizeModal({
     setIceLevel(initialIce ?? "NORMAL");
     setSugarLevel(initialSugar ?? "NORMAL");
     setMilkType(initialMilk ?? "NORMAL");
+    setSelectedExtras([]);
     // Re-seed only when the modal opens on a different product.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.id, open]);
@@ -168,6 +148,7 @@ export function SelectSizeModal({
 
   const selectedVariant = variants.find((variant) => variant.id === variantId);
   const unitPrice = Number(selectedVariant?.finalPrice ?? product.price);
+  const extrasTotal = selectedExtras.reduce((sum, extra) => sum + extra.price, 0);
 
   const handleConfirm = () => {
     onConfirm({
@@ -177,13 +158,14 @@ export function SelectSizeModal({
       ...(drinkOptions.ice ? { iceLevel } : {}),
       ...(drinkOptions.sugar ? { sugarLevel } : {}),
       ...(drinkOptions.milk ? { milkType } : {}),
+      selectedExtras,
     });
     onOpenChange(false);
   };
 
   return (
     <Modal open={open} onOpenChange={onOpenChange}>
-      <ModalContent className="max-w-sm p-5">
+      <ModalContent className="max-w-sm p-5" showCloseButton={false}>
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
             <Coffee className="w-5 h-5 text-[#A1255B]" />
@@ -198,8 +180,8 @@ export function SelectSizeModal({
           </button>
         </div>
 
-        <div className="box_product flex items-center gap-3 p-3 mb-4">
-          <div className="box_product relative w-12 h-12 overflow-hidden shrink-0">
+        <div className="box_product flex items-center gap-3 p-3 mb-4 rounded-2xl bg-gray-50">
+          <div className="box_product relative w-12 h-12 rounded-xl overflow-hidden shrink-0">
             <Image
               src={resolveProductImage(product.image)}
               alt={t(product.title)}
@@ -213,7 +195,7 @@ export function SelectSizeModal({
               {t(product.title)}
             </h4>
             <p className="text-xs font-extrabold text-[#A1255B] mt-0.5">
-              ${unitPrice.toFixed(2)}
+              ${(unitPrice + extrasTotal).toFixed(2)}
             </p>
           </div>
         </div>
@@ -235,7 +217,7 @@ export function SelectSizeModal({
                     key={variant.id}
                     type="button"
                     onClick={() => setVariantId(variant.id)}
-                    className={`flex flex-col items-center py-1 justify-center transition-all cursor-pointer border ${
+                    className={`flex flex-col items-center py-1 justify-center rounded-xl transition-all cursor-pointer border ${
                       isSelected
                         ? "bg-[#A1255B] border-[#A1255B] text-white shadow-sm scale-[1.02]"
                         : "bg-white text-gray-700 hover:bg-gray-50 border-gray-200"
@@ -253,8 +235,9 @@ export function SelectSizeModal({
         )}
 
         {drinkOptions.ice && (
-          <CustomModalOptionDropdown
+          <OptionChips
             label="Ice Level"
+            icon={<Snowflake className="w-3.5 h-3.5 text-[#A1255B]" />}
             value={iceLevel}
             choices={ICE_CHOICES}
             labels={ICE_LABELS}
@@ -262,8 +245,9 @@ export function SelectSizeModal({
           />
         )}
         {drinkOptions.sugar && (
-          <CustomModalOptionDropdown
+          <OptionChips
             label="Sugar Level"
+            icon={<Candy className="w-3.5 h-3.5 text-[#A1255B]" />}
             value={sugarLevel}
             choices={SUGAR_CHOICES}
             labels={SUGAR_LABELS}
@@ -271,8 +255,9 @@ export function SelectSizeModal({
           />
         )}
         {drinkOptions.milk && (
-          <CustomModalOptionDropdown
+          <OptionChips
             label="Milk"
+            icon={<Milk className="w-3.5 h-3.5 text-[#A1255B]" />}
             value={milkType}
             choices={MILK_CHOICES}
             labels={MILK_LABELS}
@@ -280,11 +265,17 @@ export function SelectSizeModal({
           />
         )}
 
+        <ExtrasSelector
+          extras={product.extras}
+          selected={selectedExtras}
+          onChange={setSelectedExtras}
+        />
+
         <div className="space-y-2">
           <button
             type="button"
             onClick={handleConfirm}
-            className="w-full bg-[#A1255B] hover:bg-[#881d52] text-white py-3 px-4 text-sm shadow-md shadow-[#A1255B]/20 transition-all cursor-pointer border-none flex items-center justify-center gap-2 active:scale-98"
+            className="w-full rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white py-3 px-4 text-sm shadow-md shadow-[#A1255B]/20 transition-all cursor-pointer border-none flex items-center justify-center gap-2 active:scale-98"
           >
             <ShoppingBag className="w-4 h-4" />
             <span>

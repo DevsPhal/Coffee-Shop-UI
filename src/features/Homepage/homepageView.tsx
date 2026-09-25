@@ -10,11 +10,12 @@ import { Card } from "@/components/cards/card";
 import { toStoreProduct } from "@/store/api/productAdapter";
 import { useCatalog } from "@/store/api/useCatalog";
 import { useLanguage } from "@/components/ui/translatetokhmer";
+import { ErrorState, LoadingRegion, ProductCardSkeletons } from "@/components/ui/states";
 import "@/app/globals.scss";
 
 export function HomepageView() {
   const { t } = useLanguage();
-  const { products, isLoading } = useCatalog();
+  const { products, isLoading, error, refetch } = useCatalog();
 
   // The two homepage grids partition the catalogue rather than overlap: anything on an active
   // discount is shown by SpecialTodaySection, so this one carries the rest. Without the split a
@@ -34,7 +35,7 @@ export function HomepageView() {
       />
       {/* Nothing left at full price is a normal state — every item is on promotion — so the
           section stands down rather than showing an empty grid under its heading. */}
-      {(isLoading || craftedProducts.length > 0) && (
+      {(isLoading || error || craftedProducts.length > 0) && (
         <section className="homepage_crafted_section">
           <div className="homepage_section_header">
             <h2 className="homepage_section_title">
@@ -44,19 +45,25 @@ export function HomepageView() {
               {t("Every item is made to order - no shortcuts, no compromises")}
             </p>
           </div>
-          <div className="homepage_cards_grid">
-            {isLoading
-              ? Array.from({ length: HOMEPAGE_SECTION_LIMIT }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-64 animate-pulse rounded-2xl bg-gray-100"
-                    aria-hidden
-                  />
-                ))
-              : craftedProducts.map((product) => (
-                  <Card key={product.id} product={product} />
-                ))}
-          </div>
+          {isLoading ? (
+            <LoadingRegion label="Loading products..." className="homepage_cards_grid">
+              <ProductCardSkeletons count={HOMEPAGE_SECTION_LIMIT} />
+            </LoadingRegion>
+          ) : error ? (
+            // One error for the whole catalogue: Special Today reads the same request and
+            // stands down on failure, so the page shows this once rather than twice.
+            <ErrorState
+              title="We couldn't load our menu"
+              error={error}
+              onRetry={() => void refetch()}
+            />
+          ) : (
+            <div className="homepage_cards_grid">
+              {craftedProducts.map((product) => (
+                <Card key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </section>
       )}
       <ReadyToOrderSection />

@@ -3,6 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 
+import { useMounted } from "@/hooks/useMounted";
 import { clearTokens, isAuthenticated } from "@/lib/authStorage";
 import { useGetCurrentUserQuery, useLogoutMutation } from "@/store/api/authApi";
 import type { UserResponse } from "@/store/api/types";
@@ -47,11 +48,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Where the session stands right now. "checking" covers both the server render / first client
+ * render (localStorage is unreadable on the server) and a stored token whose `/me` lookup is
+ * still in flight — the two moments the UI must not guess, or a signed-in customer sees a
+ * "Login" button flash on every reload.
+ */
+export type AuthStatus = "checking" | "signedIn" | "signedOut";
+
 export function useAuth() {
   const router = useRouter();
-  const signedIn = isAuthenticated();
+  const mounted = useMounted();
+  const signedIn = mounted && isAuthenticated();
 
-  const { data, isLoading } = useGetCurrentUserQuery(undefined, { skip: !signedIn });
+  const { data, isLoading, isFetching } = useGetCurrentUserQuery(undefined, { skip: !signedIn });
+
+  const status: AuthStatus = !mounted
+    ? "checking"
+    : !signedIn
+      ? "signedOut"
+      : data
+        ? "signedIn"
+        : isLoading || isFetching
+          ? "checking"
+          : "signedOut";
   const [logoutMutation] = useLogoutMutation();
 
   const logout = async () => {
@@ -65,8 +85,9 @@ export function useAuth() {
   };
 
   return {
-    isLoggedIn: signedIn && Boolean(data),
+    isLoggedIn: status === "signedIn",
     isLoading,
+    status,
     user: data ? toAuthUser(data) : null,
     logout,
   };

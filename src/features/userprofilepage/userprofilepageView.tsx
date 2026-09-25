@@ -21,12 +21,19 @@ import {
 } from "@/store/api/authApi";
 import type { Gender, UpdateProfileRequest } from "@/store/api/types";
 import { useListMyOrdersQuery } from "@/store/api/orderApi";
+import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { cleanPhoneInput } from "@/lib/phoneUtils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
+import {
+  ErrorState,
+  LoadingRegion,
+  OrderCardSkeleton,
+  ProfileCardSkeleton,
+} from "@/components/ui/states";
 import "@/app/globals.scss";
 
 /** The API stores gender as an enum; customers should never be shown the raw MALE/FEMALE/OTHER. */
@@ -103,11 +110,23 @@ export function UserprofilepageView() {
     }
   }, [signedIn, router, pathname]);
 
-  const { data: currentUser } = useGetCurrentUserQuery(undefined, { skip: !signedIn });
-  const { data: orderPage } = useListMyOrdersQuery(
+  const {
+    data: currentUser,
+    isLoading: isLoadingUser,
+    error: userError,
+    refetch: refetchUser,
+  } = useGetCurrentUserQuery(undefined, { skip: !signedIn });
+  const {
+    data: orderPage,
+    isLoading: isLoadingOrders,
+    error: ordersError,
+    refetch: refetchOrders,
+  } = useListMyOrdersQuery(
     { page: 1, size: 50 },
     { skip: !signedIn }
   );
+  // A barista moving one of these orders along reaches this tab the instant the API pushes it.
+  useOrderLiveUpdates(() => refetchOrders());
   const userOrders = orderPage?.content ?? [];
 
   /**
@@ -436,7 +455,19 @@ export function UserprofilepageView() {
           </nav>
         </div>
 
-        {/* User Profile Main Card */}
+        {/* User Profile Main Card — sketched until the account arrives, so it never flashes
+            "Guest" / "N/A" placeholders at a signed-in customer. */}
+        {isLoadingUser ? (
+          <LoadingRegion label="Loading your profile...">
+            <ProfileCardSkeleton />
+          </LoadingRegion>
+        ) : userError && !currentUser ? (
+          <ErrorState
+            title="We couldn't load your profile"
+            error={userError}
+            onRetry={() => void refetchUser()}
+          />
+        ) : (
         <div className="user_profile_card">
           {/* Left Avatar Side */}
           <div className="user_profile_avatar_side">
@@ -579,7 +610,7 @@ export function UserprofilepageView() {
                       <button
                         type="button"
                         onClick={() => setIsTelegramModalOpen(true)}
-                        className="inline-flex items-center gap-1.5 border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700 transition-colors hover:bg-sky-100 cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700 transition-colors hover:bg-sky-100 cursor-pointer"
                       >
                         <Send className="h-3.5 w-3.5" />
                         {t("Link Telegram")}
@@ -624,7 +655,7 @@ export function UserprofilepageView() {
                             }
                             toast.add({ type: "warning", description: "Message history cleared." });
                           }}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1 border border-rose-200 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 rounded-full text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1 border border-rose-200 transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>Clear History</span>
@@ -662,7 +693,20 @@ export function UserprofilepageView() {
               {/* Order History Tab Content */}
               {activeTab === "orders" && (
                 <div>
-                  {userOrders.length === 0 ? (
+                  {isLoadingOrders ? (
+                    <LoadingRegion label="Loading your orders..." className="space-y-3">
+                      {Array.from({ length: 2 }).map((_, i) => (
+                        <OrderCardSkeleton key={i} />
+                      ))}
+                    </LoadingRegion>
+                  ) : ordersError && !orderPage ? (
+                    <ErrorState
+                      compact
+                      title="We couldn't load your orders"
+                      error={ordersError}
+                      onRetry={() => void refetchOrders()}
+                    />
+                  ) : userOrders.length === 0 ? (
                     <div className="profile_empty_state">
                       <ShoppingBag className="profile_empty_icon" />
                       <p className="profile_empty_title">No Past Orders Found</p>
@@ -802,6 +846,7 @@ export function UserprofilepageView() {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Change Password Modal */}

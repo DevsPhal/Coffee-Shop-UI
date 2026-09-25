@@ -96,6 +96,7 @@ export function Card({
         iceLevel: selection.iceLevel,
         sugarLevel: selection.sugarLevel,
         milkType: selection.milkType,
+        selectedExtras: selection.selectedExtras,
       },
       false
     );

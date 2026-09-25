@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { PageLoader } from "@/components/ui/states";
 
 import PaymentpageView from "@/features/paymentpage";
 
@@ -8,13 +9,7 @@ import PaymentpageView from "@/features/paymentpage";
  */
 export default function PaymentPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="w-full max-w-md mx-auto px-4 py-10 text-center text-sm text-gray-400">
-          Preparing your payment...
-        </div>
-      }
-    >
+    <Suspense fallback={<PageLoader label="Preparing your payment..." />}>
       <PaymentpageView />
     </Suspense>
   );

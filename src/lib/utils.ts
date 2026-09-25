@@ -25,3 +25,14 @@ export function toTitleCase(text: string): string {
     return isMinor ? word.toLowerCase() : word[0].toUpperCase() + word.slice(1).toLowerCase();
   });
 }
+
+/**
+ * Capitalizes just the first letter — for staff-entered prose (an event/banner description)
+ * where `toTitleCase` would be wrong (it would capitalize every word of a full sentence). Only
+ * the first letter needed fixing to stop a lowercase-typed description ("testings") from
+ * reading as unfinished; the rest of the sentence is left exactly as staff wrote it.
+ */
+export function capitalizeFirst(text: string): string {
+  if (!text) return text;
+  return text[0].toUpperCase() + text.slice(1);
+}

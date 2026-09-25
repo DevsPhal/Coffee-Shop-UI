@@ -22,9 +22,6 @@ import type { CheckoutRequest, OrderResponse } from "./types";
  * customer's basket intact and they can retry.
  */
 export function useCheckout() {
-  const items = useCartStore((state) => state.items);
-  const clearLocalCart = useCartStore((state) => state.clearCart);
-
   const [clearServerCart] = useClearCartMutation();
   const [addCartItem] = useAddCartItemMutation();
   const [checkout] = useCheckoutMutation();
@@ -43,6 +40,13 @@ export function useCheckout() {
   const placeOrder = useCallback(
     async (request: CheckoutRequest): Promise<OrderResponse | null> => {
       if (placingRef.current) return null;
+      // Read fresh at call time rather than subscribing to the store reactively — this hook
+      // never displays cart data, it only needs whatever the cart holds at the moment the
+      // customer clicks. (Subscribing here caused a real, reproduced bug: a second reactive
+      // subscription to the same persisted store, alongside CheckoutpageView's own via
+      // useCart(), left the page's own subtotal stuck at 0 on a cold load of /checkout even
+      // though the items list itself rendered correctly.)
+      const items = useCartStore.getState().items;
       if (items.length === 0) {
         fail("Your cart is empty.");
         return null;
@@ -66,11 +70,14 @@ export function useCheckout() {
             ...(item.sugarLevel ? { sugarLevel: item.sugarLevel } : {}),
             ...(item.iceLevel ? { iceLevel: item.iceLevel } : {}),
             ...(item.milkType ? { milkType: item.milkType } : {}),
+            ...(item.selectedExtras && item.selectedExtras.length > 0
+              ? { extraIds: item.selectedExtras.map((extra) => extra.extraId) }
+              : {}),
           }).unwrap();
         }
 
         const order = await checkout(request).unwrap();
-        clearLocalCart();
+        useCartStore.getState().clearCart();
         return order;
       } catch (err) {
         fail(
@@ -85,7 +92,7 @@ export function useCheckout() {
         setIsPlacing(false);
       }
     },
-    [items, clearServerCart, addCartItem, checkout, clearLocalCart, fail]
+    [clearServerCart, addCartItem, checkout, fail]
   );
 
   return { placeOrder, isPlacing, error, errorRef };

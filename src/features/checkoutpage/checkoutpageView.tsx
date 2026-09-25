@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -13,7 +13,7 @@ import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { shippingInformationSchema } from "@/lib/authSchema";
 import { cleanPhoneInput } from "@/lib/phoneUtils";
-import { AlertCircle, ChevronDown, Check, MapPin, Navigation, Compass, Search, Loader2 } from "lucide-react";
+import { AlertCircle, Check, MapPin, Navigation, Compass, Search, Loader2 } from "lucide-react";
 import { isAuthenticated } from "@/lib/authStorage";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import { useGetCurrentUserQuery } from "@/store/api/authApi";
@@ -37,115 +37,6 @@ const DeliveryMapPicker = dynamic(() => import("@/components/ui/DeliveryMapPicke
     </div>
   ),
 });
-
-const DISTRICT_OPTIONS = [
-  "Khan Boeng Keng Kang",
-  "Khan Chamkar Mon",
-  "Khan Chbar Ampov",
-  "Khan Chroy Changvar",
-  "Khan Dangkao",
-  "Khan Daun Penh",
-  "Khan Kambol",
-  "Khan Meanchey",
-  "Khan Prampir Makara",
-  "Khan Prek Pnov",
-  "Khan Pur Senchey",
-  "Khan Russei Keo",
-  "Khan Sen Sok",
-  "Khan Tuol Kouk",
-];
-
-/**
- * Nominatim's reverse/search results carry the district under different keys depending on the
- * result (`city_district`, `suburb`, sometimes `county`), and its spelling doesn't always match
- * the API's own khan names ("Toul Kork" vs "Tuol Kouk", no "Khan " prefix, different casing).
- * Best-effort match against the picked location so the dropdown and the map pin agree, rather
- * than silently drifting apart — returns null rather than guessing when nothing lines up, so
- * the customer's own selection is never overwritten with a wrong district.
- */
-function matchDistrictFromAddress(address: Record<string, string> | undefined): string | null {
-  if (!address) return null;
-  const normalize = (s: string) =>
-    s.replace(/^khan\s+/i, "").trim().toLowerCase().replace(/[^a-z]/g, "");
-  const candidates = [address.city_district, address.suburb, address.county, address.borough].filter(
-    (v): v is string => Boolean(v)
-  );
-  for (const candidate of candidates) {
-    const target = normalize(candidate);
-    const match = DISTRICT_OPTIONS.find((opt) => normalize(opt) === target);
-    if (match) return match;
-  }
-  return null;
-}
-
-function CustomDistrictSelect({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (val: string) => void;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen]);
-
-  return (
-    <div ref={ref} className="relative w-full">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-[44px] px-3.5 flex items-center justify-between bg-white border border-gray-200 hover:border-gray-300 rounded-xl text-xs sm:text-sm font-medium text-gray-900 shadow-2xs transition-all cursor-pointer select-none"
-        aria-expanded={isOpen}
-      >
-        <span className="truncate">{value || "Select District"}</span>
-        <ChevronDown
-          className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ml-2 ${
-            isOpen ? "rotate-180 text-[#A1255B]" : ""
-          }`}
-        />
-      </button>
-
-      {isOpen && (
-        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-60 overflow-y-auto bg-white border border-gray-100 rounded-2xl shadow-2xl p-1.5 space-y-0.5 animate-in fade-in duration-150">
-          {DISTRICT_OPTIONS.map((opt) => {
-            const isSelected = value === opt;
-            return (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => {
-                  onChange(opt);
-                  setIsOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer border-none text-left select-none ${
-                  isSelected
-                    ? "bg-[#A1255B] text-white shadow-2xs font-semibold"
-                    : "hover:bg-gray-100 text-gray-800"
-                }`}
-              >
-                <span className="truncate">{opt}</span>
-                {isSelected && <Check className="w-4 h-4 text-white shrink-0 ml-2" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function CheckoutpageView() {
   const router = useRouter();
@@ -173,12 +64,11 @@ export function CheckoutpageView() {
   // person actually making the drink, on the queue board.
   const [baristaNote, setBaristaNote] = useState("");
   const [capital, setCapital] = useState("Phnom Penh");
-  const [district, setDistrict] = useState("Khan Boeng Keng Kang");
   const [address, setAddress] = useState("");
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "grab">("pickup");
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  
+
   // Location Picker State
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number }>({
@@ -194,21 +84,20 @@ export function CheckoutpageView() {
     email?: string;
     phone?: string;
     capital?: string;
-    district?: string;
     address?: string;
   }>({});
 
   // Location Picker Helper Functions
   const handleOpenMapModal = () => {
     setIsMapModalOpen(true);
-    setTempAddress(address || `${district}, ${capital}`);
+    setTempAddress(address || capital);
     if (navigator.geolocation && !address) {
       handleDetectCurrentLocation();
     }
   };
 
   // Shared by "Locate Me" and by dragging/clicking the pin on the map itself — whichever set
-  // the coordinates, the address line and district should update to match.
+  // the coordinates, the address line should update to match.
   const reverseGeocodeToAddress = async (lat: number, lng: number) => {
     try {
       const res = await fetch(
@@ -218,8 +107,6 @@ export function CheckoutpageView() {
       if (data && data.display_name) {
         const formatted = data.display_name.split(",").slice(0, 4).join(", ");
         setTempAddress(formatted);
-        const matchedDistrict = matchDistrictFromAddress(data.address);
-        if (matchedDistrict) setDistrict(matchedDistrict);
       } else {
         setTempAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)} (Phnom Penh)`);
       }
@@ -278,8 +165,6 @@ export function CheckoutpageView() {
         const newLng = parseFloat(first.lon);
         setMapCoords({ lat: newLat, lng: newLng });
         setTempAddress(first.display_name.split(",").slice(0, 4).join(", "));
-        const matchedDistrict = matchDistrictFromAddress(first.address);
-        if (matchedDistrict) setDistrict(matchedDistrict);
       } else {
         toast.add({
           type: "warning",
@@ -297,7 +182,7 @@ export function CheckoutpageView() {
   };
 
   const handleConfirmLocation = () => {
-    const finalAddr = tempAddress.trim() || `${district}, ${capital}`;
+    const finalAddr = tempAddress.trim() || capital;
     setAddress(finalAddr);
     validateSingleField("address", finalAddr);
     setIsMapModalOpen(false);
@@ -306,16 +191,17 @@ export function CheckoutpageView() {
       description: "Delivery address updated from map!",
     });
   };
-  // The API prices delivery by distance from the coordinates sent at checkout, computed
-  // server-side once the order exists — there is no "get a quote" endpoint, so no fee can be
-  // shown here in advance. The summary says so explicitly instead of showing a fake $0.00.
+  // Delivery fee is a manual figure the shop sets once it can see the pinned address — there's
+  // no auto-pricing by distance, and no order exists yet at this point on the page, so this is
+  // always just the cart subtotal. The fee (and the real, server-computed grand total) only
+  // exist from /checkoutdone onward, once the order has actually been placed.
   const grandTotal = subtotal;
 
   const validateSingleField = (
-    field: "fullName" | "email" | "phone" | "address" | "capital" | "district",
+    field: "fullName" | "email" | "phone" | "address" | "capital",
     val?: string
   ) => {
-    if (deliveryMethod === "pickup" && ["capital", "district", "address"].includes(field)) {
+    if (deliveryMethod === "pickup" && ["capital", "address"].includes(field)) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
       return;
     }
@@ -334,7 +220,6 @@ export function CheckoutpageView() {
       setErrors((prev) => ({
         ...prev,
         capital: undefined,
-        district: undefined,
         address: undefined,
       }));
     }
@@ -362,7 +247,6 @@ export function CheckoutpageView() {
       email: (email || "").trim(),
       phone: (phone || "").trim(),
       capital: (capital || "").trim(),
-      district: (district || "").trim(),
       address: (address || "").trim(),
     });
 
@@ -375,7 +259,6 @@ export function CheckoutpageView() {
         ...(deliveryMethod === "grab"
           ? {
               capital: fieldErrors.capital?.[0],
-              district: fieldErrors.district?.[0],
               address: fieldErrors.address?.[0],
             }
           : {}),
@@ -387,7 +270,7 @@ export function CheckoutpageView() {
         newErrors.email ||
         newErrors.phone ||
         (deliveryMethod === "grab"
-          ? newErrors.capital || newErrors.district || newErrors.address
+          ? newErrors.capital || newErrors.address
           : undefined) ||
         "Please complete shipping information.";
 
@@ -400,41 +283,44 @@ export function CheckoutpageView() {
 
     setErrors({});
 
-    // Open Payment Method Modal to choose Cash or QR Code Scan
-    setIsPaymentModalOpen(true);
+    // Delivery has no Cash/QR choice to make yet — the shop hasn't set a fee for it (there's
+    // no auto-pricing by distance, a person sets it by hand once the pin is visible), so
+    // there's nothing to charge either method for. Pickup has a fixed price up front, so it
+    // still asks right here.
+    if (deliveryMethod === "grab") {
+      void handleSubmitDeliveryOrder();
+    } else {
+      setIsPaymentModalOpen(true);
+    }
   };
 
   /**
-   * Places the order for real.
-   *
-   * The cart is local until this point, so the flow is: require a signed-in customer (the API
-   * has no guest checkout), push the lines to the server cart and check out, then choose how
-   * to pay. Cash-on-pickup is confirmed right here with its own call; Bakong hands off to
-   * /payment, which generates the QR against the order id.
+   * Creates the order for real — the cart is local until this point. Shared by both the
+   * pickup (pay-now) and delivery (pay-later) paths below; what happens after the order exists
+   * is where they diverge.
    *
    * The fulfillment method, contact details and (for delivery) the address are sent with the
-   * order — along with the map pin's coordinates, which is what the API actually prices a
-   * delivery by distance from. There is no `paymentMethod` field on checkout itself: that's a
-   * separate step once the order exists, which is why this doesn't send one.
+   * order — along with the map pin's coordinates, which is what lets the shop see where the
+   * order needs to go and set a delivery fee by hand (there's no auto-pricing by distance).
+   * There is no `paymentMethod` field on checkout itself: that's a separate step once the
+   * order exists, which is why this doesn't send one.
    */
-  const handleConfirmPaymentMethod = async (chosenMethod: "QR Scan" | "Cash") => {
+  const submitOrder = async () => {
     if (!isAuthenticated()) {
       toast.add({
         type: "warning",
         description: "Please sign in to place your order.",
       });
       router.push(`/login?next=${encodeURIComponent("/checkout")}`);
-      return;
+      return null;
     }
 
     const isDelivery = deliveryMethod === "grab";
     const deliveryLocation = isDelivery
-      ? [address, district, capital].filter(Boolean).join(", ") || "Delivery Address"
+      ? [address, capital].filter(Boolean).join(", ") || "Delivery Address"
       : "Pickup at Store";
 
-    const estimatedTime = isDelivery ? "10 - 15 mins" : "5 mins";
-
-    let order = await placeOrder({
+    const order = await placeOrder({
       note: baristaNote.trim(),
       ...(isDelivery ? { deliveryLatitude: mapCoords.lat, deliveryLongitude: mapCoords.lng } : {}),
       delivery: {
@@ -452,8 +338,47 @@ export function CheckoutpageView() {
           checkoutError ??
           "Could not place your order. Please try again.",
       });
-      return;
+      return null;
     }
+    return { order, isDelivery, deliveryLocation };
+  };
+
+  const persistCheckoutSummary = (
+    order: { id: string; deliveryFee?: number | null },
+    isDelivery: boolean,
+    deliveryLocation: string,
+    paymentType: string
+  ) => {
+    try {
+      localStorage.setItem(
+        "checkout_delivery",
+        JSON.stringify({
+          orderId: order.id,
+          method: deliveryMethod,
+          // The real fee the shop set — not a client-side guess. Still null here for a fresh
+          // delivery order; /checkoutdone picks up the real value once staff set it.
+          fee: Number(order.deliveryFee ?? 0),
+          customerName:
+            (fullName || "").trim() || currentUser?.fullName || "Customer",
+          location: deliveryLocation,
+          estimatedTime: isDelivery ? "10 - 15 mins" : "5 mins",
+          paymentType,
+        })
+      );
+    } catch {
+      // Storage unavailable — the confirmation screen falls back to the order itself.
+    }
+  };
+
+  /**
+   * Pickup only: price is fixed up front, so Cash-on-pickup is confirmed right here with its
+   * own call, and Bakong hands off to /payment, which generates the QR against the order id.
+   */
+  const handleConfirmPaymentMethod = async (chosenMethod: "QR Scan" | "Cash") => {
+    const result = await submitOrder();
+    if (!result) return;
+    let { order } = result;
+    const { isDelivery, deliveryLocation } = result;
 
     if (chosenMethod === "Cash") {
       try {
@@ -472,31 +397,25 @@ export function CheckoutpageView() {
       }
     }
 
-    try {
-      localStorage.setItem(
-        "checkout_delivery",
-        JSON.stringify({
-          orderId: order.id,
-          method: deliveryMethod,
-          // The real, server-computed fee — priced by distance from the coordinates sent
-          // above — not a client-side guess.
-          fee: Number(order.deliveryFee ?? 0),
-          customerName:
-            (fullName || "").trim() || currentUser?.fullName || "Customer",
-          location: deliveryLocation,
-          estimatedTime,
-          paymentType: chosenMethod,
-        })
-      );
-    } catch {
-      // Storage unavailable — the confirmation screen falls back to the order itself.
-    }
-
+    persistCheckoutSummary(order, isDelivery, deliveryLocation, chosenMethod);
     if (chosenMethod === "Cash") {
       router.push(`/checkoutdone?orderId=${order.id}`);
     } else {
       router.push(`/payment?orderId=${order.id}`);
     }
+  };
+
+  /**
+   * Delivery: the order goes in as a hold, visible to staff immediately over the realtime
+   * order feed so they can price it from the pinned location. No payment method is chosen yet
+   * — /checkoutdone offers that choice itself once the fee lands.
+   */
+  const handleSubmitDeliveryOrder = async () => {
+    const result = await submitOrder();
+    if (!result) return;
+    const { order, isDelivery, deliveryLocation } = result;
+    persistCheckoutSummary(order, isDelivery, deliveryLocation, "Pending");
+    router.push(`/checkoutdone?orderId=${order.id}`);
   };
 
   const handleCancelOrder = (e: React.MouseEvent) => {
@@ -658,15 +577,6 @@ export function CheckoutpageView() {
                   </div>
 
                   <div>
-                    <label className="checkout_field_label">{t("District")}</label>
-                    <CustomDistrictSelect
-                      value={district}
-                      onChange={setDistrict}
-                    />
-                    {errors.district && <TooltipAlert message={errors.district} />}
-                  </div>
-
-                  <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="checkout_field_label mb-0">{t("Delivery Address")}</label>
                     </div>
@@ -682,7 +592,7 @@ export function CheckoutpageView() {
                       <button
                         type="button"
                         onClick={handleOpenMapModal}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 bg-[#A1255B] hover:bg-[#881d52] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95 border-none"
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95 border-none"
                       >
                         <MapPin className="w-3.5 h-3.5" />
                       </button>
@@ -750,10 +660,10 @@ export function CheckoutpageView() {
                   </div>
                   <div>
                     <h3 className="checkout_delivery_title">{t("Home Delivery")}</h3>
-                    {/* Was a hardcoded "$0.50" — the real fee is priced by distance once the
-                        order exists, so a fixed number here would just be wrong most of the
-                        time rather than an estimate. */}
-                    <p className="checkout_delivery_price text-xs">{t("Priced by distance")}</p>
+                    {/* Was a hardcoded "$0.50" — the shop sets the real fee by hand once it can
+                        see the pinned address, so a fixed number here would just be wrong most
+                        of the time rather than an estimate. */}
+                    <p className="checkout_delivery_price text-xs">{t("Fee set by the shop")}</p>
                   </div>
                 </div>
 
@@ -782,6 +692,10 @@ export function CheckoutpageView() {
                 if (item.sugarLevel)
                   customDetails.push(`Sugar: ${SUGAR_LABELS[item.sugarLevel]}`);
                 if (item.milkType) customDetails.push(`Milk: ${MILK_LABELS[item.milkType]}`);
+                const extrasTotal = (item.selectedExtras ?? []).reduce(
+                  (sum, extra) => sum + extra.price,
+                  0
+                );
 
                 return (
                   <div key={item.lineId} className="checkout_item_row">
@@ -799,19 +713,27 @@ export function CheckoutpageView() {
                         <h3 className="checkout_item_title">{t(toTitleCase(item.title))}</h3>
                         <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                           <p className="checkout_item_price font-extrabold text-[#A1255B]" suppressHydrationWarning>
-                            ${(item.unitPrice * item.quantity).toFixed(2)}
+                            ${((item.unitPrice + extrasTotal) * item.quantity).toFixed(2)}
                           </p>
                           {item.variantName && (
-                            <span className="text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5 ">
+                            <span className="rounded-full text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5 ">
                               Size: {VARIANT_LABELS[item.variantName as VariantName]}
                             </span>
                           )}
                           {customDetails.map((detail, dIdx) => (
                             <span
                               key={dIdx}
-                              className="text-[10px] font-semibold text-gray-700 bg-gray-100 border border-gray-200 px-1.5 py-0.5 "
+                              className="rounded-full text-[10px] font-semibold text-gray-700 bg-gray-100 border border-gray-200 px-1.5 py-0.5 "
                             >
                               {detail}
+                            </span>
+                          ))}
+                          {(item.selectedExtras ?? []).map((extra) => (
+                            <span
+                              key={extra.extraId}
+                              className="rounded-full text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5 "
+                            >
+                              + {t(extra.name)}
                             </span>
                           ))}
                         </div>
@@ -828,10 +750,15 @@ export function CheckoutpageView() {
           {/* Pricing Breakdown */}
           <div className="checkout_summary_breakdown" suppressHydrationWarning>
             {(() => {
-              // Pre-discount total; each line carries its own original unit price.
+              // Pre-discount total; each line carries its own original unit price. Extras are
+              // never discounted, so the same amount applies either way.
               const fullSubtotal = items.reduce((acc, item) => {
                 const original = item.originalUnitPrice ?? item.unitPrice;
-                return acc + Math.max(original, item.unitPrice) * item.quantity;
+                const extrasTotal = (item.selectedExtras ?? []).reduce(
+                  (sum, extra) => sum + extra.price,
+                  0
+                );
+                return acc + (Math.max(original, item.unitPrice) + extrasTotal) * item.quantity;
               }, 0);
 
               const totalDiscount = Math.max(0, fullSubtotal - subtotal);
@@ -862,7 +789,7 @@ export function CheckoutpageView() {
               <div className="checkout_summary_line">
                 <span className="checkout_summary_label">{t("Delivery Fee:")}</span>
                 <span className="checkout_summary_value text-gray-500 text-xs sm:text-sm" suppressHydrationWarning>
-                  {t("Added once your order is placed")}
+                  {t("Set by the shop once you place your order — you'll pick how to pay after")}
                 </span>
               </div>
             )}
@@ -891,7 +818,7 @@ export function CheckoutpageView() {
               value={baristaNote}
               onChange={(e) => setBaristaNote(e.target.value)}
               placeholder={t("e.g. less ice, extra hot, no straw")}
-              className="w-full p-2.5 bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:border-[#A1255B] focus:bg-white transition-all resize-none"
+              className="w-full p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:border-[#A1255B] focus:bg-white transition-all resize-none"
             />
           </div>
 
@@ -987,13 +914,13 @@ export function CheckoutpageView() {
                 onChange={(e) => setSearchLocationQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearchLocation()}
                 placeholder={t("Search street, landmark, or area...")}
-                className="w-full pl-9 pr-3 py-2 bg-white text-xs sm:text-sm  border border-gray-200 outline-none focus:border-[#A1255B] transition-colors"
+                className="w-full pl-9 pr-3 py-2 rounded-full bg-white text-xs sm:text-sm  border border-gray-200 outline-none focus:border-[#A1255B] transition-colors"
               />
             </div>
             <button
               type="button"
               onClick={handleSearchLocation}
-              className="px-3 py-2 bg-gray-800 hover:bg-gray-900 text-white text-xs font-semibold  border-none cursor-pointer transition-all"
+              className="px-3 py-2 rounded-full bg-gray-800 hover:bg-gray-900 text-white text-xs font-semibold  border-none cursor-pointer transition-all"
             >
               {t("Search")}
             </button>
@@ -1001,7 +928,7 @@ export function CheckoutpageView() {
               type="button"
               onClick={handleDetectCurrentLocation}
               disabled={isLocating}
-              className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold  border-none cursor-pointer transition-all shadow-xs disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold  border-none cursor-pointer transition-all shadow-xs disabled:opacity-50"
             >
               {isLocating ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1042,7 +969,7 @@ export function CheckoutpageView() {
                 value={tempAddress}
                 onChange={(e) => setTempAddress(e.target.value)}
                 placeholder={t("Address details will appear here...")}
-                className="w-full p-2.5 bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:border-[#A1255B] focus:bg-white transition-all resize-none"
+                className="w-full p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:border-[#A1255B] focus:bg-white transition-all resize-none"
               />
             </div>
 
@@ -1050,14 +977,14 @@ export function CheckoutpageView() {
               <button
                 type="button"
                 onClick={() => setIsMapModalOpen(false)}
-                className="w-full bg-white hover:bg-gray-100 text-gray-700 font-semibold py-2.5 px-4 text-xs sm:text-sm border border-gray-200 transition-all cursor-pointer"
+                className="w-full rounded-full bg-white hover:bg-gray-100 text-gray-700 font-semibold py-2.5 px-4 text-xs sm:text-sm border border-gray-200 transition-all cursor-pointer"
               >
                 {t("Cancel")}
               </button>
               <button
                 type="button"
                 onClick={handleConfirmLocation}
-                className="w-full bg-[#A1255B] hover:bg-[#881d52] text-white font-semibold py-2.5 px-4 text-xs sm:text-sm transition-all cursor-pointer shadow-md border-none flex items-center justify-center gap-1.5"
+                className="w-full rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white font-semibold py-2.5 px-4 text-xs sm:text-sm transition-all cursor-pointer shadow-md border-none flex items-center justify-center gap-1.5"
               >
                 <Check className="w-4 h-4" />
                 <span>{t("Confirm Location")}</span>

@@ -203,7 +203,7 @@ export function CategoryDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 border border-gray-200 bg-white hover:border-[#A1255B] text-gray-900 font-bold text-xs sm:text-sm shadow-2xs transition-all cursor-pointer select-none"
+        className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full border border-gray-200 bg-white hover:border-[#A1255B] text-gray-900 font-bold text-xs sm:text-sm shadow-2xs transition-all cursor-pointer select-none"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >

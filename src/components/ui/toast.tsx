@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import { Toast as ToastPrimitive } from "@base-ui/react/toast"
 
 import { cn } from "@/lib/utils"
@@ -154,23 +155,63 @@ function ToastIcon({ type }: { type: string | undefined }) {
   )
 }
 
+/** Extra fields a `type: "welcome"` toast carries in `data` (see LoginWelcome). */
+export interface WelcomeToastData {
+  greeting: string
+  initials: string
+  avatarUrl?: string | null
+  duration: number
+}
+
+/**
+ * The post-login greeting: a card rather than the pill every other toast uses, with the
+ * customer's avatar (or initials) and a bar that drains while the toast is on screen.
+ * Mirrors the admin dashboard's WelcomeToast so both apps greet people the same way.
+ */
+function WelcomeToastBody({ data }: { data: WelcomeToastData }) {
+  return (
+    <ToastContent className="welcome_toast">
+      <span className="welcome_toast_avatar" aria-hidden="true">
+        {data.avatarUrl ? (
+          <Image src={data.avatarUrl} alt="" fill sizes="44px" unoptimized className="welcome_toast_avatar_img" />
+        ) : (
+          data.initials
+        )}
+      </span>
+      <div className="welcome_toast_text">
+        <p className="welcome_toast_eyebrow">{data.greeting}</p>
+        <ToastTitle className="welcome_toast_title" />
+        <ToastDescription className="welcome_toast_desc" />
+      </div>
+      <ToastClose className="welcome_toast_close" />
+      <span className="welcome_toast_progress" style={{ animationDuration: `${data.duration}ms` }} />
+    </ToastContent>
+  )
+}
+
 function ToastList() {
   const { toasts } = ToastPrimitive.useToastManager()
   const activeToasts = toasts.slice(-1)
 
-  return activeToasts.map((toastItem) => (
-    <Toast key={toastItem.id} toast={toastItem} data-type={toastItem.type}>
-      <ToastContent>
-        <ToastIcon type={toastItem.type} />
-        <div className="toast_details">
-          <ToastTitle />
-          <ToastDescription />
-        </div>
-        <ToastAction />
-        <ToastClose />
-      </ToastContent>
-    </Toast>
-  ))
+  return activeToasts.map((toastItem) =>
+    toastItem.type === "welcome" && toastItem.data ? (
+      <Toast key={toastItem.id} toast={toastItem} data-type="welcome">
+        <WelcomeToastBody data={toastItem.data as WelcomeToastData} />
+      </Toast>
+    ) : (
+      <Toast key={toastItem.id} toast={toastItem} data-type={toastItem.type}>
+        <ToastContent>
+          <ToastIcon type={toastItem.type} />
+          <div className="toast_details">
+            <ToastTitle />
+            <ToastDescription />
+          </div>
+          <ToastAction />
+          <ToastClose />
+        </ToastContent>
+      </Toast>
+    )
+  )
 }
 
 function Toaster({

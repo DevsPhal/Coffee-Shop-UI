@@ -20,7 +20,13 @@ import { toTitleCase } from "@/lib/utils";
 import type { VariantName } from "@/store/api/types";
 import { ChevronDown, Check } from "lucide-react";
 import { useLanguage } from "@/components/ui/translatetokhmer";
+import type { CartItem } from "@/store/useCartStore";
 import "@/app/globals.scss";
+
+/** Extras add a flat amount per unit, on top of whatever the variant itself prices at. */
+function extrasUnitTotal(item: Pick<CartItem, "selectedExtras">): number {
+  return (item.selectedExtras ?? []).reduce((sum, extra) => sum + extra.price, 0);
+}
 
 function CustomSizeDropdown({
   value,
@@ -327,14 +333,14 @@ export function OrderpageView() {
       <h1 className="order_page_title">{t("Shopping Cart")}</h1>
 
       {items.length === 0 ? (
-        <div className="text-center py-16 bg-white border border-gray-100 shadow-sm max-w-md mx-auto">
+        <div className="text-center py-16 bg-white rounded-2xl border border-gray-100 shadow-sm max-w-md mx-auto">
           <p className="text-gray-500 font-medium mb-6 text-sm">
             {t("Your shopping cart is empty.")}
           </p>
           <button
             type="button"
             onClick={handleContinueShopping}
-            className="inline-block bg-[#A1255B] hover:bg-[#881d52] text-white font-bold py-3 px-8 text-xs transition-colors cursor-pointer border-none shadow-md shadow-[#A1255B]/20"
+            className="inline-block rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white font-bold py-3 px-8 text-xs transition-colors cursor-pointer border-none shadow-md shadow-[#A1255B]/20"
           >
             {t("Explore Menu & Add Drinks")}
           </button>
@@ -428,6 +434,18 @@ export function OrderpageView() {
                               }}
                             />
                           )}
+                          {item.selectedExtras && item.selectedExtras.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1">
+                              {item.selectedExtras.map((extra) => (
+                                <span
+                                  key={extra.extraId}
+                                  className="rounded-full text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5"
+                                >
+                                  + {t(extra.name)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -435,7 +453,7 @@ export function OrderpageView() {
                       className="order_page_item_price hidden sm:block font-bold text-gray-900"
                       suppressHydrationWarning
                     >
-                      ${item.unitPrice.toFixed(2)}
+                      ${(item.unitPrice + extrasUnitTotal(item)).toFixed(2)}
                     </div>
                     <div className="order_page_item_quantity">
                       <div className="order_page_quantity_pill">
@@ -462,7 +480,7 @@ export function OrderpageView() {
                       className="order_page_item_total font-extrabold text-[#A1255B]"
                       suppressHydrationWarning
                     >
-                      ${(item.unitPrice * item.quantity).toFixed(2)}
+                      ${((item.unitPrice + extrasUnitTotal(item)) * item.quantity).toFixed(2)}
                     </div>
                   </div>
                 );
@@ -471,10 +489,11 @@ export function OrderpageView() {
           </div>
           <div className="order_page_summary_card">
             {(() => {
-              // Pre-discount total; each line carries its own original unit price.
+              // Pre-discount total; each line carries its own original unit price. Extras are
+              // never discounted, so the same amount applies whether or not a discount is live.
               const fullSubtotal = items.reduce((acc, item) => {
                 const original = item.originalUnitPrice ?? item.unitPrice;
-                return acc + Math.max(original, item.unitPrice) * item.quantity;
+                return acc + (Math.max(original, item.unitPrice) + extrasUnitTotal(item)) * item.quantity;
               }, 0);
 
               const totalDiscount = Math.max(0, fullSubtotal - subtotal);

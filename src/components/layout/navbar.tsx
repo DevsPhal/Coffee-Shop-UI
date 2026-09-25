@@ -25,6 +25,7 @@ import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage, Language } from "@/components/ui/translatetokhmer";
 import { useMounted } from "@/hooks/useMounted";
+import { Skeleton } from "@/components/ui/states";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -52,9 +53,12 @@ export function Navbar() {
   const currentLangCode = mounted ? language : "en";
   const selectedLanguage = languages.find((l) => l.code === currentLangCode) || languages[0];
   const { openCart, totalCount } = useCart();
-  const { isLoggedIn } = useAuth();
+  const { status: authStatus } = useAuth();
 
-  const userIsLoggedIn = mounted ? isLoggedIn : false;
+  const userIsLoggedIn = authStatus === "signedIn";
+  // Until the session is known, the account slot shows a neutral placeholder rather than
+  // guessing — guessing "signed out" is what flashed a Login button at signed-in customers.
+  const isCheckingAuth = authStatus === "checking";
   const displayTotalCount = mounted ? totalCount : 0;
   const displayT = (key: string) => (mounted ? t(key) : key);
 
@@ -85,7 +89,7 @@ export function Navbar() {
     return null;
   }
 
-  const mobileNavItems: { key: string; href: string; icon: LucideIcon }[] = [
+  const mobileNavItems: { key: string; href: string; icon: LucideIcon; pending?: boolean }[] = [
     { key: "Home", href: "/", icon: Home },
     { key: "Menu", href: "/menuphone", icon: UtensilsCrossed },
     { key: "Category", href: "/category", icon: LayoutGrid },
@@ -96,6 +100,7 @@ export function Navbar() {
       key: userIsLoggedIn ? "Profile" : "Login",
       href: userIsLoggedIn ? "/userprofile" : "/login",
       icon: userIsLoggedIn ? User : LogIn,
+      pending: isCheckingAuth,
     },
   ];
 
@@ -125,6 +130,7 @@ export function Navbar() {
               width={66}
               height={48}
               priority
+              className="navbar_logo"
             />
           </Link>
 
@@ -208,7 +214,11 @@ export function Navbar() {
             )}
 
             {/* Login / User Profile Button */}
-            {userIsLoggedIn ? (
+            {isCheckingAuth ? (
+              <span className="nav_desktop_only items-center" aria-hidden>
+                <Skeleton className="h-10 w-24 rounded-full" />
+              </span>
+            ) : userIsLoggedIn ? (
               <Link
                 href="/userprofile"
                 className="nav_desktop_only items-center justify-center p-2 rounded-full hover:bg-gray-100 transition-colors"
@@ -241,6 +251,14 @@ export function Navbar() {
             {mobileNavItems.map((item) => {
               const active = isMobileNavActive(item.href);
               const Icon = item.icon;
+
+              if (item.pending) {
+                return (
+                  <span key="account" className="flex items-center justify-center p-2.5" aria-hidden>
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                  </span>
+                );
+              }
 
               return (
                 <Link

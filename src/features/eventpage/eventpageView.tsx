@@ -3,10 +3,10 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { CalendarDays } from "lucide-react";
+import { EmptyState, ErrorState, EventCardSkeleton, LoadingRegion } from "@/components/ui/states";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { useListEventsQuery } from "@/store/api/catalogApi";
-import { apiErrorMessage } from "@/store/api/baseApi";
 import type { PublicEventResponse } from "@/store/api/types";
 import "@/app/globals.scss";
 
@@ -30,14 +30,25 @@ export function EventpageView() {
           <h1 className="header_title">{t("Events at 590st Cafe")}</h1>
           <p className="header_description">{t("Discover our upcoming events and celebrations.")}</p>
         </div>
-        {isLoading && <p role="status">{t("Loading events...")}</p>}
-        {error && <div role="alert" className="rounded-xl border border-red-200 p-4 text-red-700">
-          <p>{apiErrorMessage(error as never, "Could not load events.")}</p>
-          <button type="button" onClick={() => { void refetch(); }} className="mt-2 underline">{t("Try again")}</button>
-        </div>}
-        {!isLoading && !error && events.length === 0 && <p className="py-10 text-center text-gray-500">
-          {t("No upcoming events yet. Check back soon!")}
-        </p>}
+        {isLoading ? (
+          <LoadingRegion label="Loading events..." className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <EventCardSkeleton key={i} />
+            ))}
+          </LoadingRegion>
+        ) : error && events.length === 0 ? (
+          <ErrorState
+            title="We couldn't load events"
+            error={error}
+            onRetry={() => void refetch()}
+          />
+        ) : events.length === 0 ? (
+          <EmptyState
+            icon={CalendarDays}
+            title="No upcoming events"
+            message="No upcoming events yet. Check back soon!"
+          />
+        ) : (
         <div className="bento_grid">
           {events.map((event) => (
             <button type="button" key={event.id} onClick={() => setSelectedId(event.id)}
@@ -53,6 +64,7 @@ export function EventpageView() {
             </button>
           ))}
         </div>
+        )}
       </div>
       <Modal open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelectedId(null); }}>
         <ModalContent className="max-w-lg overflow-hidden rounded-2xl p-0" aria-label={selected?.title}>

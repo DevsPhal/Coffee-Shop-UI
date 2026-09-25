@@ -17,7 +17,7 @@ export interface CatalogCategory {
 }
 
 export function useCatalog(categoryId?: UUID) {
-  const { data, isLoading, isFetching, error, refetch } = useListProductsQuery({
+  const { data, currentData, isLoading, isFetching, error, refetch } = useListProductsQuery({
     page: 1,
     size: CATALOG_PAGE_SIZE,
     ...(categoryId ? { categoryId } : {}),
@@ -33,7 +33,11 @@ export function useCatalog(categoryId?: UUID) {
   return {
     products,
     total: data?.totalElements ?? 0,
-    isLoading,
+    // Also true while a *new* category is fetched for the first time: RTK Query keeps showing
+    // the previous category's `data` then, so without this the old products would sit under
+    // the new category's heading until the response lands. A background refetch of the same
+    // list (a live catalogue push) keeps `currentData` and does not flash a skeleton.
+    isLoading: isLoading || (isFetching && currentData === undefined),
     isFetching,
     error,
     refetch,
@@ -51,8 +55,14 @@ export function useCategories() {
     data: categoryList,
     isLoading: isLoadingCategories,
     error: categoriesError,
+    refetch: refetchCategories,
   } = useListCategoriesQuery();
-  const { data: productPage, isLoading: isLoadingProducts } = useListProductsQuery({
+  const {
+    data: productPage,
+    isLoading: isLoadingProducts,
+    error: productsError,
+    refetch: refetchProducts,
+  } = useListProductsQuery({
     page: 1,
     size: CATALOG_PAGE_SIZE,
   });
@@ -75,7 +85,11 @@ export function useCategories() {
   return {
     categories,
     isLoading: isLoadingCategories || isLoadingProducts,
-    error: categoriesError,
+    error: categoriesError ?? productsError,
+    refetch: () => {
+      void refetchCategories();
+      void refetchProducts();
+    },
   };
 }
 

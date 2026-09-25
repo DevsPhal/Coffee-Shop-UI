@@ -19,6 +19,14 @@ import type { IceLevel, MilkType, SugarLevel, UUID } from "@/store/api/types";
 
 const LINE_DELIMITER = "|";
 
+/** One add-on (e.g. "Pearl") chosen for a line — a flat amount added per unit, not per line. */
+export const cartExtraSchema = z.object({
+  extraId: z.string().uuid(),
+  name: z.string(),
+  price: z.number().nonnegative(),
+});
+export type CartExtra = z.infer<typeof cartExtraSchema>;
+
 export const cartItemSchema = z.object({
   /** Composite key identifying this exact configuration of a product. */
   lineId: z.string().min(1),
@@ -35,6 +43,8 @@ export const cartItemSchema = z.object({
   sugarLevel: z.enum(["ZERO", "LESS", "NORMAL", "EXTRA"]).optional(),
   iceLevel: z.enum(["NO_ICE", "LESS_ICE", "NORMAL", "EXTRA_ICE"]).optional(),
   milkType: z.enum(["NONE", "LESS", "NORMAL", "EXTRA"]).optional(),
+  /** Extras (e.g. Pearl) chosen for this line — only the ones the product itself offers. */
+  selectedExtras: z.array(cartExtraSchema).optional().default([]),
 });
 
 export type CartItem = z.infer<typeof cartItemSchema>;
@@ -45,20 +55,27 @@ export const addItemInputSchema = cartItemSchema
 
 export type AddItemInput = z.input<typeof addItemInputSchema>;
 
-/** Two lines merge only when the product *and* every chosen option match. */
+/** Two lines merge only when the product *and* every chosen option — extras included — match. */
 export function buildLineId(item: {
   productId: UUID;
   variantId?: UUID | null;
   sugarLevel?: SugarLevel;
   iceLevel?: IceLevel;
   milkType?: MilkType;
+  selectedExtras?: { extraId: UUID }[];
 }): string {
+  // Sorted so the same set of extras always produces the same key regardless of pick order.
+  const extrasKey = (item.selectedExtras ?? [])
+    .map((extra) => extra.extraId)
+    .sort()
+    .join(",");
   return [
     item.productId,
     item.variantId ?? "",
     item.sugarLevel ?? "",
     item.iceLevel ?? "",
     item.milkType ?? "",
+    extrasKey,
   ].join(LINE_DELIMITER);
 }
 
@@ -84,6 +101,7 @@ interface CartStoreState {
   updateIceLevel: (lineId: string, iceLevel: IceLevel) => void;
   updateSugarLevel: (lineId: string, sugarLevel: SugarLevel) => void;
   updateMilkType: (lineId: string, milkType: MilkType) => void;
+  updateExtras: (lineId: string, selectedExtras: CartExtra[]) => void;
   removeItem: (lineId: string) => void;
   clearCart: () => void;
 
@@ -187,23 +205,31 @@ export const useCartStore = create<CartStoreState>()(
       updateMilkType: (lineId, milkType) =>
         set((state) => ({ items: rekey(state.items, lineId, { milkType }) })),
 
+      updateExtras: (lineId, selectedExtras) =>
+        set((state) => ({ items: rekey(state.items, lineId, { selectedExtras }) })),
+
       removeItem: (lineId) =>
         set((state) => ({ items: state.items.filter((i) => i.lineId !== lineId) })),
 
       clearCart: () => set({ items: [] }),
 
       getSubtotal: () =>
-        get().items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+        get().items.reduce((sum, item) => {
+          const extrasPerUnit = (item.selectedExtras ?? []).reduce(
+            (extraSum, extra) => extraSum + extra.price,
+            0
+          );
+          return sum + (item.unitPrice + extrasPerUnit) * item.quantity;
+        }, 0),
 
       getTotalCount: () => get().items.reduce((sum, item) => sum + item.quantity, 0),
     }),
     {
       name: "cart-storage",
-      // Bumped again: sizeOptionId/sizeName renamed to variantId/variantName, and the sugar/
-      // ice/milk enums changed shape entirely (see optionMapping.ts) — an old persisted cart
-      // cannot be checked out against the current API, so it is dropped rather than
-      // half-migrated, same as the v2 bump.
-      version: 3,
+      // Bumped again: extras now factor into buildLineId, so an old persisted lineId (built
+      // without an extras segment) would stop matching a freshly computed one for the same
+      // configuration — same reasoning as the v2/v3 bumps, dropped rather than half-migrated.
+      version: 4,
       migrate: () => ({ items: [], isOpen: false }),
       partialize: (state) => ({ items: state.items }),
     }

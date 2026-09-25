@@ -147,7 +147,6 @@ export const shippingInformationSchema = z.object({
     .refine((val) => !val || /\S+@\S+\.\S+/.test(val), { message: "Please enter a valid Email address." }),
   phone: cambodianPhone,
   capital: z.string().trim().min(1, { message: "Please select your Capital." }),
-  district: z.string().trim().min(1, { message: "Please select your District." }),
   address: z
     .string()
     .trim()
