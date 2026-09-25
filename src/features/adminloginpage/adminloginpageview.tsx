@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { BrandLogo } from "@/components/common/BrandLogo";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -122,12 +123,9 @@ export function AdminloginpageView({ initialViewMode = "login" }: Adminloginpage
               <Heart className="absolute -top-3 left-1/2 -translate-x-1/2 w-3 h-3 text-pink-400 fill-pink-400" />
             </div>
 
-            {/* Logo Title */}
-            <div className="login_brand_title">
-              590<span>St</span>
-            </div>
-            <div className="login_brand_subtitle">
-              CAFE
+            {/* Brand wordmark — links home, same as the navbar and footer logo. */}
+            <div className="relative z-10">
+              <BrandLogo className="h-16" priority />
             </div>
           </div>
 

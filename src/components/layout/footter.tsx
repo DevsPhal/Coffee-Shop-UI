@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { BrandLogo } from "@/components/common/BrandLogo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Mail, Phone, Send } from "lucide-react";
@@ -43,14 +44,9 @@ export function Footer() {
       <div className="footer_container">
         <div className="footer_top_row">
           <div className="footer_address_box">
-            <Link href="/" className="footer_logo_link">
-              <Image
-                src="/images/Logo.svg"
-                alt="590st CAFE"
-                width={66}
-                height={48}
-              />
-            </Link>
+            <span className="footer_logo_link">
+              <BrandLogo className="h-12" />
+            </span>
             <p className="footer_address_text">
               {displayT("30a St 590, Phnom Penh 12101, Khan Toul Kork, Phnom Penh Cambodia.")}
             </p>

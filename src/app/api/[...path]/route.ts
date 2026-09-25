@@ -23,6 +23,9 @@ async function proxy(req: NextRequest, path: string[]): Promise<Response> {
   if (authorization) headers.set("authorization", authorization);
   const contentType = req.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
+  // Harmless against the real API; needed when API_PROXY_TARGET is a free ngrok tunnel (a local
+  // backend under test), which otherwise answers with its HTML warning page instead of JSON.
+  headers.set("ngrok-skip-browser-warning", "true");
 
   const hasBody = !["GET", "HEAD"].includes(req.method);
   // Buffered rather than streamed: every body this app sends is a small JSON payload or a

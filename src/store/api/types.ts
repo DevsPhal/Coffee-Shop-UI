@@ -170,6 +170,11 @@ export interface TelegramWidgetAuthRequest {
  * widget above. The customer opens `deepLink` (a t.me URL), which starts a chat with the bot
  * pre-filled with `code`; the bot completes the link over Telegram's webhook, not this app.
  */
+/** GET /api/auth/telegram/widget-config — the bot the API verifies widget logins against. */
+export interface TelegramWidgetConfigResponse {
+  botUsername: string;
+}
+
 export interface TelegramLinkCodeResponse {
   code: string;
   expiresInSeconds: number;

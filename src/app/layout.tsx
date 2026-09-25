@@ -32,6 +32,17 @@ const notoSansKhmer = Noto_Sans_Khmer({
 export const metadata: Metadata = {
   title: "590st Cafe Shop",
   description: "Customer UI for 590st Cafe",
+  // Same set as the admin app: a white 590st mark on a black tile, so the tab icon stays
+  // readable on both light and dark browser chrome (the old black-on-transparent mark vanished
+  // on a dark tab bar).
+  icons: {
+    icon: [
+      { url: "/logos/icon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/logos/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/logos/icon-32.png",
+    apple: { url: "/logos/apple-icon.png", sizes: "180x180" },
+  },
 };
 
 export default function RootLayout({

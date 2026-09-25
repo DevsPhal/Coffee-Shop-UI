@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { BrandLogo } from "@/components/common/BrandLogo";
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -618,14 +619,8 @@ export function CheckoutpageView() {
               >
                 <div className="checkout_delivery_card_content">
                   <div className="checkout_delivery_logo_container">
-                    <Image
-                      src="/images/Logo.svg"
-                      alt="590st CAFE"
-                      width={48}
-                      height={36}
-                      style={{ width: "auto", height: "auto" }}
-                      className="object-contain"
-                    />
+                    {/* Not a link: it sits inside the pickup option, which selects on click. */}
+                    <BrandLogo href={null} className="h-8 object-contain" />
                   </div>
                   <div>
                     <h3 className="checkout_delivery_title">{t("Pickup at Store")}</h3>

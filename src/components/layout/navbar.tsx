@@ -26,6 +26,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useLanguage, Language } from "@/components/ui/translatetokhmer";
 import { useMounted } from "@/hooks/useMounted";
 import { Skeleton } from "@/components/ui/states";
+import { BrandLogo } from "@/components/common/BrandLogo";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -123,16 +124,7 @@ export function Navbar() {
       {/* Top Header Navbar */}
       <header className="navbar_header fixed top-0 left-0 right-0 z-[99999] w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs">
         <nav className="navbar_container w-full px-3 sm:px-6">
-          <Link href="/" className="shrink-0">
-            <Image
-              src="/images/Logo.svg"
-              alt="590st CAFE"
-              width={66}
-              height={48}
-              priority
-              className="navbar_logo"
-            />
-          </Link>
+          <BrandLogo className="navbar_logo" priority />
 
           <ul className="navbar_links">
             {navLinks.map(({ label, href }) => (

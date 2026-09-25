@@ -10,6 +10,7 @@ import type {
   ResendOtpRequest,
   ResetPasswordRequest,
   TelegramLinkCodeResponse,
+  TelegramWidgetConfigResponse,
   TelegramWidgetAuthRequest,
   UpdateProfileRequest,
   UserResponse,
@@ -63,11 +64,22 @@ export const authApi = baseApi.injectEndpoints({
     }),
 
     /**
+     * Which bot the Login Widget must render for. Read from the API rather than baked into the
+     * bundle, because the widget's `hash` only verifies against the token of the bot the API is
+     * configured with — pointing this frontend at another backend (a local one behind ngrok with
+     * its own test bot) then just works, instead of silently failing every sign-in.
+     */
+    getTelegramWidgetConfig: builder.query<TelegramWidgetConfigResponse, void>({
+      query: () => "/api/auth/telegram/widget-config",
+      transformResponse: unwrap<TelegramWidgetConfigResponse>,
+    }),
+
+    /**
      * Sign-in via the Telegram Login Widget. Unlike email/password, this is a single step —
      * the widget's `hash` already proves the customer owns that Telegram account, so the API
-     * returns tokens directly rather than an OTP challenge. Only works for a Telegram account
-     * already linked to a customer (see `getTelegramLinkCode` below); there is no Telegram
-     * sign-up, so an unlinked account gets a normal error here, not a new account.
+     * returns tokens directly rather than an OTP challenge. Register-or-login: a Telegram
+     * account the API has never seen gets a new customer account on the spot; a linked one
+     * just signs in. Only a staff invite still pending phone verification is refused.
      */
     loginTelegram: builder.mutation<AuthTokenResponse, TelegramWidgetAuthRequest>({
       query: (body) => ({ url: "/api/auth/login/telegram", method: "POST", body }),
@@ -153,6 +165,7 @@ export const {
   useVerifyLoginOtpMutation,
   useResendOtpMutation,
   useLoginTelegramMutation,
+  useGetTelegramWidgetConfigQuery,
   useForgotPasswordMutation,
   useResetPasswordMutation,
   useLogoutMutation,
