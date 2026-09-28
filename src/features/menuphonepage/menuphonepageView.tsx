@@ -23,6 +23,7 @@ import {
 import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidation";
 import SelectSizeModal from "@/components/ui/SelectSizeModal";
 import "@/app/globals.scss";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 export interface PhoneCardProps {
   product: StoreProduct;
@@ -92,7 +93,7 @@ export function PhoneCard({
     <>
       <div
         onClick={onSelect}
-        className={`phone-card ${isSelected ? "selected" : "default"}`}
+        className={`phone-card cursor-pointer ${isSelected ? "selected" : "default"}`}
         suppressHydrationWarning
       >
         {/* Left: Drink Image Container */}
@@ -191,8 +192,8 @@ export function MenupageView() {
   const queryCategory = searchParams.get("category");
   const { openCart, addItem, subtotal, totalCount } = useCart();
   const { t } = useLanguage();
-  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = usePersistentState<string>("menu-phone:selectedCategory", ALL_CATEGORIES);
+  const [searchQuery, setSearchQuery] = usePersistentState<string>("menu-phone:searchQuery", "");
   const [selectedId, setSelectedId] = useState<string>("1");
   const [activeModalProduct, setActiveModalProduct] = useState<StoreProduct | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -220,7 +221,7 @@ export function MenupageView() {
     if (queryCategory) {
       setSelectedCategory(queryCategory);
     }
-  }, [queryCategory]);
+  }, [queryCategory, setSelectedCategory]);
 
   useEffect(() => {
     if (activeModalProduct) {

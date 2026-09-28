@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -15,6 +15,7 @@ import { useLanguage } from "@/components/ui/translatetokhmer";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { EmptyState, ErrorState, LoadingRegion, OrderCardSkeleton } from "@/components/ui/states";
 import "@/app/globals.scss";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 export function OrderhistorypageView() {
   const { t } = useLanguage();
@@ -22,7 +23,7 @@ export function OrderhistorypageView() {
   const pathname = usePathname();
   const { addItem, openCart } = useCart();
 
-  const [filterStatus, setFilterStatus] = useState<string>("All");
+  const [filterStatus, setFilterStatus] = usePersistentState<string>("order-history:filterStatus", "All");
 
   // The API scopes /api/customer/orders to the signed-in customer, so no client-side
   // filtering by user is needed — and there is nothing to show for a guest, so they're sent
@@ -232,7 +233,7 @@ export function OrderhistorypageView() {
                   <span className="shrink-0">
                     {order.fulfillmentMethod === "DELIVERY" ? "Deliver to: " : "Pickup: "}
                   </span>
-                  <strong className="text-gray-900 font-bold">
+                  <strong className="min-w-0 break-words text-gray-900 font-bold">
                     {order.fulfillmentMethod === "DELIVERY"
                       ? order.deliveryAddress || "Address not recorded"
                       : "At the store"}

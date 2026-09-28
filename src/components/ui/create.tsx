@@ -18,8 +18,9 @@ import "@/app/globals.scss";
 
 import { signUpSchema } from "@/lib/authSchema";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
-import { cleanPhoneInput } from "@/lib/phoneUtils";
+import { cleanPhoneInput, phoneInputProps } from "@/lib/phoneUtils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
+import { clearPersistentState, usePersistentState } from "@/hooks/usePersistentState";
 
 
 type FormErrors = {
@@ -35,18 +36,25 @@ interface CreateProps {
   isAdmin?: boolean;
 }
 
-export function Create({ onBackToLogin, isAdmin = false }: CreateProps) {
+export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
+  // Leaving mid-verification ends that step; the typed details stay for a quick return.
+  const onBackToLogin = () => {
+    clearPersistentState("signup:awaitingOtp");
+    leave();
+  };
   const { t } = useLanguage();
   const [register, { isLoading: isRegistering }] = useRegisterMutation();
   const [verifyRegistration, { isLoading: isVerifying }] = useVerifyRegistrationMutation();
   const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
   const [submitError, setSubmitError] = useState("");
-  const [awaitingOtp, setAwaitingOtp] = useState(false);
+  // Kept across a refresh, with the email above, so a reload while waiting for the emailed code
+  // stays on the code step instead of asking to register again.
+  const [awaitingOtp, setAwaitingOtp] = usePersistentState("signup:awaitingOtp", false);
   const [otp, setOtp] = useState("");
-  const [username, setUsername] = useState("");
-  const [gender, setGender] = useState<Gender | "">("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [username, setUsername] = usePersistentState("signup:username", "");
+  const [gender, setGender] = usePersistentState<Gender | "">("signup:gender", "");
+  const [email, setEmail] = usePersistentState("signup:email", "");
+  const [phone, setPhone] = usePersistentState("signup:phone", "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -134,6 +142,7 @@ export function Create({ onBackToLogin, isAdmin = false }: CreateProps) {
     e.preventDefault();
     try {
       await verifyRegistration({ email: email.trim(), otp: otp.trim() }).unwrap();
+      ["username", "gender", "email", "phone", "awaitingOtp"].forEach((field) => clearPersistentState(`signup:${field}`));
       toast.add({
         type: "success",
         description: "Account verified. You can sign in now.",
@@ -325,7 +334,7 @@ export function Create({ onBackToLogin, isAdmin = false }: CreateProps) {
               <Phone className="w-4 h-4 text-gray-400" />
             </span>
             <Input
-              type="tel"
+              {...phoneInputProps}
               value={phone}
               onFocus={() => {
                 setActiveInput("phone");
@@ -336,7 +345,6 @@ export function Create({ onBackToLogin, isAdmin = false }: CreateProps) {
                 setPhone(val);
                 validateField("phone", val);
               }}
-              placeholder="072 345 5674"
               className="login_input_field"
             />
           </div>

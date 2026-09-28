@@ -15,20 +15,28 @@ import {
   useResendOtpMutation,
   useResetPasswordMutation,
 } from "@/store/api/authApi";
+import { clearPersistentState, usePersistentState } from "@/hooks/usePersistentState";
 
 interface ForgotProps {
   onBackToLogin: () => void;
 }
 
-export function Forgot({ onBackToLogin }: ForgotProps) {
+export function Forgot({ onBackToLogin: leave }: ForgotProps) {
+  // Leaving the flow ends it — the next visit starts from the email step again.
+  const onBackToLogin = () => {
+    clearPersistentState("forgot:step");
+    clearPersistentState("forgot:resetEmail");
+    leave();
+  };
   const { t } = useLanguage();
   const [forgotPassword, { isLoading: isRequesting }] = useForgotPasswordMutation();
   const [resetPassword, { isLoading: isResetting }] = useResetPasswordMutation();
   const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = usePersistentState("forgot:email", "");
   const [error, setError] = useState<string | undefined>(undefined);
-  const [step, setStep] = useState<"request" | "reset" | "done">("request");
-  const [resetEmail, setResetEmail] = useState("");
+  // Kept across a refresh so a reload while typing the emailed code stays on that step.
+  const [step, setStep] = usePersistentState<"request" | "reset" | "done">("forgot:step", "request");
+  const [resetEmail, setResetEmail] = usePersistentState("forgot:resetEmail", "");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

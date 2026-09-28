@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/cards/card";
 import { ALL_CATEGORIES, iconFor } from "@/components/ui/CategoryDropdown";
@@ -18,6 +18,7 @@ import {
   Skeleton,
 } from "@/components/ui/states";
 import "@/app/globals.scss";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 /** Client-side pseudo-category: everything currently discounted. */
 const FEATURED = "Featured";
@@ -34,15 +35,15 @@ export function MenupageView() {
   const queryCategory = searchParams.get("category");
   const { t } = useLanguage();
 
-  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [sortBy, setSortBy] = useState<string>("newest");
+  const [selectedCategory, setSelectedCategory] = usePersistentState<string>("menu:selectedCategory", ALL_CATEGORIES);
+  const [searchQuery, setSearchQuery] = usePersistentState<string>("menu:searchQuery", "");
+  const [sortBy, setSortBy] = usePersistentState<string>("menu:sortBy", "newest");
 
   useEffect(() => {
     if (queryCategory) {
       setSelectedCategory(queryCategory);
     }
-  }, [queryCategory]);
+  }, [queryCategory, setSelectedCategory]);
 
   const { categories, isLoading: isLoadingCategories } = useCategories();
 

@@ -101,7 +101,7 @@ export function AboutpageView() {
         <div
           key={item.id}
           onClick={() => setSelectedItem(item)}
-          className={`about-card ${item.colSpan || "span-col-1"}`}
+          className={`about-card cursor-pointer ${item.colSpan || "span-col-1"}`}
           style={{ "--item-index": index } as React.CSSProperties}
         >
           <Image

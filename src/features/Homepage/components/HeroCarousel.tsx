@@ -135,7 +135,7 @@ export default function HeroCarousel() {
               return (
                 <CarouselItem
                   key={slide.id}
-                  className="hero_carousel_item"
+                  className="hero_carousel_item cursor-pointer"
                   onClick={() => api?.scrollTo(index)}
                 >
                   <div className={cn("hero_slide_card", scaleClass)}>

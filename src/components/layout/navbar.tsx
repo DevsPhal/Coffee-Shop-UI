@@ -122,7 +122,7 @@ export function Navbar() {
   return (
     <>
       {/* Top Header Navbar */}
-      <header className="navbar_header fixed top-0 left-0 right-0 z-[99999] w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs">
+      <header className="navbar_header fixed top-0 left-0 right-0 z-[1000] w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs">
         <nav className="navbar_container w-full px-3 sm:px-6">
           <BrandLogo className="navbar_logo" priority />
 

@@ -9,7 +9,7 @@ import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { useContactStore } from "@/store/useContactStore";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/components/ui/translatetokhmer";
-import { cleanPhoneInput } from "@/lib/phoneUtils";
+import { cleanPhoneInput, phoneInputProps } from "@/lib/phoneUtils";
 import "@/app/globals.scss";
 
 const SUBJECT_OPTIONS = [
@@ -164,11 +164,10 @@ export function ContactForm() {
               </div>
               <Input
                 id="contact-phone"
-                type="tel"
+                {...phoneInputProps}
                 name="phone"
                 value={formData.phone || ""}
                 onChange={handleInputChange}
-                placeholder="095 600 676"
                 className="contact_form_input"
                 aria-invalid={!!errors.phone}
               />

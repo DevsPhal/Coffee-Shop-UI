@@ -1,4 +1,5 @@
 import type { AuthTokenResponse } from "@/store/api/types";
+import { clearPersistentState } from "@/hooks/usePersistentState";
 
 /**
  * Token persistence for the storefront session.
@@ -46,6 +47,8 @@ export function setTokens(tokens: AuthTokenResponse): void {
 
 export function clearTokens(): void {
   if (!canUseStorage()) return;
+  // Saved checkout details and drafts belong to the account that entered them.
+  clearPersistentState();
   try {
     window.localStorage.removeItem(ACCESS_TOKEN_KEY);
     window.localStorage.removeItem(REFRESH_TOKEN_KEY);

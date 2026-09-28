@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { shippingInformationSchema } from "@/lib/authSchema";
-import { cleanPhoneInput } from "@/lib/phoneUtils";
+import { cleanPhoneInput, phoneInputProps } from "@/lib/phoneUtils";
 import { AlertCircle, Check, MapPin, Navigation, Compass, Search, Loader2 } from "lucide-react";
 import { isAuthenticated } from "@/lib/authStorage";
 import { apiErrorMessage } from "@/store/api/baseApi";
@@ -27,6 +27,7 @@ import { useCheckout } from "@/store/api/useCheckout";
 import { PaymentMethodModal } from "@/components/ui/PaymentMethodModal";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
+import { clearPersistentState, usePersistentState } from "@/hooks/usePersistentState";
 
 // Leaflet touches `window` on import, which crashes during server rendering — this defers it
 // to the client, same as react-leaflet's own Next.js guidance.
@@ -55,24 +56,24 @@ export function CheckoutpageView() {
 
   const { t } = useLanguage();
   const isMounted = useMounted();
-  const [enteredName, setFullName] = useState<string | null>(null);
-  const [enteredEmail, setEmail] = useState<string | null>(null);
-  const [enteredPhone, setPhone] = useState<string | null>(null);
+  const [enteredName, setFullName] = usePersistentState<string | null>("checkout:enteredName", null);
+  const [enteredEmail, setEmail] = usePersistentState<string | null>("checkout:enteredEmail", null);
+  const [enteredPhone, setPhone] = usePersistentState<string | null>("checkout:enteredPhone", null);
   const fullName = enteredName ?? currentUser?.fullName ?? "";
   const email = enteredEmail ?? currentUser?.email ?? "";
   const phone = enteredPhone ?? cleanPhoneInput(currentUser?.phoneNumber ?? "");
   // Anything the customer wants the barista to know. Optional, and free text — it reaches the
   // person actually making the drink, on the queue board.
-  const [baristaNote, setBaristaNote] = useState("");
-  const [capital, setCapital] = useState("Phnom Penh");
-  const [address, setAddress] = useState("");
-  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "grab">("pickup");
+  const [baristaNote, setBaristaNote] = usePersistentState("checkout:baristaNote", "");
+  const [capital, setCapital] = usePersistentState("checkout:capital", "Phnom Penh");
+  const [address, setAddress] = usePersistentState("checkout:address", "");
+  const [deliveryMethod, setDeliveryMethod] = usePersistentState<"pickup" | "grab">("checkout:deliveryMethod", "pickup");
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   // Location Picker State
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
-  const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number }>({
+  const [mapCoords, setMapCoords] = usePersistentState<{ lat: number; lng: number }>("checkout:mapCoords", {
     lat: 11.5621, // Phnom Penh default lat
     lng: 104.9160, // Phnom Penh default lng
   });
@@ -341,6 +342,8 @@ export function CheckoutpageView() {
       });
       return null;
     }
+    // The note was for this order; contact and address details stay for the next one.
+    clearPersistentState("checkout:baristaNote");
     return { order, isDelivery, deliveryLocation };
   };
 
@@ -504,7 +507,6 @@ export function CheckoutpageView() {
                   <div>
                     <label className="checkout_field_label">{t("Phone Number")}</label>
                     <div className="checkout_phone_input_wrapper">
-                      {/* recently added phone prefix */} 
                       <div className="checkout_phone_prefix">
                         <Image
                           src="/images/cambodia.svg"
@@ -516,14 +518,13 @@ export function CheckoutpageView() {
                         <span className="checkout_phone_code">KH</span>
                       </div>
                       <input
-                        type="tel"
+                        {...phoneInputProps}
                         value={phone}
                         onChange={(e) => {
                           const val = cleanPhoneInput(e.target.value);
                           setPhone(val);
                           validateSingleField("phone", val);
                         }}
-                        placeholder="097 444 5566"
                         className="checkout_phone_field"
                       />
                     </div>
@@ -547,14 +548,13 @@ export function CheckoutpageView() {
                           <span className="checkout_phone_code">KH</span>
                         </div>
                         <input
-                          type="tel"
+                          {...phoneInputProps}
                           value={phone}
                           onChange={(e) => {
                             const val = cleanPhoneInput(e.target.value);
                             setPhone(val);
                             validateSingleField("phone", val);
                           }}
-                          placeholder="097 444 5566"
                           className="checkout_phone_field"
                         />
                       </div>

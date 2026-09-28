@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PHONE_PATTERN } from "@/lib/phoneUtils";
 
 /**
  * Field rules that mirror the API's `ValidationPatterns` exactly.
@@ -12,8 +13,8 @@ export const cambodianPhone = z
   .string()
   .trim()
   .min(1, { message: "Please enter your phone number." })
-  .regex(/^0\d{2}\s?\d{3}\s?\d{3,4}$/, {
-    message: "Please enter your phone number",
+  .regex(PHONE_PATTERN, {
+    message: "Enter a valid phone number, e.g. 012 345 6789.",
   });
 
 export const strongPassword = z

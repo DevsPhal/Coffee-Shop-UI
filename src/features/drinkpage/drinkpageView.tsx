@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Card } from "@/components/cards/card";
 import { CategoryDropdown } from "@/components/ui";
 import { ALL_CATEGORIES } from "@/components/ui/CategoryDropdown";
@@ -9,10 +9,11 @@ import { useCatalog } from "@/store/api/useCatalog";
 import { Search, SearchX } from "lucide-react";
 import { EmptyState, ErrorState, LoadingRegion, ProductCardSkeletons } from "@/components/ui/states";
 import "@/app/globals.scss";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 export function DrinkpageView() {
-  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = usePersistentState<string>("drinks:selectedCategory", ALL_CATEGORIES);
+  const [searchQuery, setSearchQuery] = usePersistentState<string>("drinks:searchQuery", "");
 
   const { products, isLoading, error, refetch } = useCatalog(
     selectedCategory === ALL_CATEGORIES ? undefined : selectedCategory

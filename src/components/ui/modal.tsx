@@ -30,7 +30,7 @@ function ModalBackdrop({
     <DialogPrimitive.Backdrop
       data-slot="modal-backdrop"
       className={cn(
-        "fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-[2px] transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0",
+        "fixed inset-0 z-[2000] bg-slate-950/60 backdrop-blur-[2px] transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0",
         className
       )}
       {...props}
@@ -47,11 +47,11 @@ function ModalContent({
   return (
     <ModalPortal>
       <ModalBackdrop />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+      <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 pointer-events-none">
         <DialogPrimitive.Popup
           data-slot="modal-content"
           className={cn(
-            "modal_sm pointer-events-auto relative w-full max-w-sm gap-4 border border-gray-100 bg-white p-6 shadow-[0_20px_50px_rgba(0,0,0,0.18)] transition-all duration-200 rounded-2xl outline-none data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
+            "modal_sm pointer-events-auto relative w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto gap-4 border border-gray-100 bg-white p-6 shadow-[0_20px_50px_rgba(0,0,0,0.18)] transition-all duration-200 rounded-2xl outline-none data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
             className
           )}
           {...props}

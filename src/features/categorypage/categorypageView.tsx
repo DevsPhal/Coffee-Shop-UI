@@ -11,6 +11,7 @@ import { toTitleCase } from "@/lib/utils";
 import { Search, ChevronRight, ArrowUpRight, Filter, SearchX } from "lucide-react";
 import { CategoryCardSkeleton, EmptyState, ErrorState, LoadingRegion } from "@/components/ui/states";
 import "@/app/globals.scss";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 /**
  * Category browser.
@@ -23,7 +24,7 @@ import "@/app/globals.scss";
 export function CategorypageView() {
   const { t } = useLanguage();
   const [isMobile, setIsMobile] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = usePersistentState("categories:searchQuery", "");
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640);

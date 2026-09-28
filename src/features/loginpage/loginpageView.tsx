@@ -29,15 +29,26 @@ type FormErrors = {
 
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { useLanguage } from "@/components/ui/translatetokhmer";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 interface LoginPageViewProps {
-  initialViewMode?: "login" | "forgot" | "create";
+  /** Which form this route shows — /login, /register and /forgot-password each pass their own. */
+  initialViewMode?: ViewMode;
 }
 
 /**
  * Where to land after signing in. Guards append ?next= when they bounce someone here; only
  * same-origin paths are honoured so a crafted link cannot redirect off-site.
  */
+type ViewMode = "login" | "forgot" | "create";
+
+/** Each view has its own address, so a refresh (or a shared link) lands on the same form. */
+const VIEW_PATHS: Record<ViewMode, string> = {
+  login: "/login",
+  create: "/register",
+  forgot: "/forgot-password",
+};
+
 function nextPath(): string {
   if (typeof window === "undefined") return "/";
   const next = new URLSearchParams(window.location.search).get("next");
@@ -53,11 +64,18 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
   const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
   const [loginTicket, setLoginTicket] = useState<string | null>(null);
   const [otp, setOtp] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = usePersistentState("login:email", "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
-  const [viewMode, setViewMode] = useState<"login" | "forgot" | "create">(initialViewMode);
+  const viewMode = initialViewMode;
+  // Switching forms is a real navigation, not local state: the URL then always matches the
+  // form on screen, so a refresh keeps it and the browser's Back button returns to the last one.
+  // ?next= is carried along so signing in still lands where the customer was headed.
+  const setViewMode = (mode: ViewMode) => {
+    const next = new URLSearchParams(window.location.search).get("next");
+    router.push(next ? `${VIEW_PATHS[mode]}?next=${encodeURIComponent(next)}` : VIEW_PATHS[mode], { scroll: false });
+  };
   const [errors, setErrors] = useState<FormErrors>({});
   const validateField = (field: keyof FormErrors, value: string) => {
     const fieldSchema = userLoginSchema.shape[field];

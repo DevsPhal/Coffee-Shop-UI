@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { z } from "zod";
 import { toast } from "@/components/ui/toast";
 import { getAccessToken, isAuthenticated } from "@/lib/authStorage";
+import { formatPhone, PHONE_PATTERN } from "@/lib/phoneUtils";
 
 /** UI labels (shown in ContactForm's topic pills) mapped to the API's FeedbackTopic enum. */
 const TOPIC_TO_API_ENUM: Record<string, string> = {
@@ -28,8 +29,8 @@ export const contactMessageSchema = z.object({
     .string()
     .trim()
     .optional()
-    .refine((val) => !val || /^[0-9+\s-]{8,15}$/.test(val), {
-      message: "Phone / Telegram must be valid (8-15 digits).",
+    .refine((val) => !val || PHONE_PATTERN.test(val), {
+      message: "Enter a valid phone number, e.g. 012 345 6789.",
     }),
   topic: z.string().trim().min(1, { message: "Please select a topic." }).max(100),
   message: z
@@ -107,7 +108,7 @@ export const useContactStore = create<ContactStoreState>()(
             ...state.formData,
             fullName: state.formData.fullName ? state.formData.fullName : (user.name || ""),
             email: state.formData.email ? state.formData.email : (user.email || ""),
-            phone: state.formData.phone ? state.formData.phone : (user.phone || ""),
+            phone: state.formData.phone ? state.formData.phone : formatPhone(user.phone),
             userId: user.userId || state.formData.userId,
           },
         }));

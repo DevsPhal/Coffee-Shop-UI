@@ -26,7 +26,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
-import { cleanPhoneInput } from "@/lib/phoneUtils";
+import { cleanPhoneInput, formatPhone, phoneInputProps, PHONE_PATTERN, samePhone } from "@/lib/phoneUtils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import {
   ErrorState,
@@ -35,6 +35,7 @@ import {
   ProfileCardSkeleton,
 } from "@/components/ui/states";
 import "@/app/globals.scss";
+import { usePersistentState } from "@/hooks/usePersistentState";
 
 /** The API stores gender as an enum; customers should never be shown the raw MALE/FEMALE/OTHER. */
 const GENDER_LABELS: Record<Gender, string> = {
@@ -138,7 +139,7 @@ export function UserprofilepageView() {
     userId: currentUser?.id || "N/A",
     name: currentUser?.fullName || "Guest",
     email: currentUser?.email || "N/A",
-    phone: currentUser?.phoneNumber || "",
+    phone: formatPhone(currentUser?.phoneNumber),
     gender: currentUser?.gender ?? "",
     avatarUrl:
       currentUser?.avatarUrl ||
@@ -149,7 +150,7 @@ export function UserprofilepageView() {
     address: "",
   };
 
-  const [activeTab, setActiveTab] = useState<"about" | "messages" | "orders">("about");
+  const [activeTab, setActiveTab] = usePersistentState<"about" | "messages" | "orders">("profile:activeTab", "about");
   const [showEmail, setShowEmail] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
 
@@ -173,7 +174,7 @@ export function UserprofilepageView() {
 
   // Modals & Overlay States
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
-  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = usePersistentState("profile:isEditProfileOpen", false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
 
@@ -229,7 +230,7 @@ export function UserprofilepageView() {
   const [passError, setPassError] = useState("");
 
   // Edit profile form state
-  const [editForm, setEditForm] = useState<UserProfileData>({ ...profile });
+  const [editForm, setEditForm] = usePersistentState<UserProfileData>("profile:editForm", { ...profile });
   // The picked file itself, kept alongside the data-URL preview in editForm.avatarUrl: the
   // avatar goes to a separate multipart endpoint, so the preview alone cannot be saved.
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -386,17 +387,17 @@ export function UserprofilepageView() {
     const phone = (editForm.phone ?? "").trim();
     // Mirrors ValidationPatterns.CAMBODIA_PHONE_REGEX so the mistake is caught here rather
     // than coming back as a server error on an otherwise valid save.
-    if (phone && !/^0\d{2}\s?\d{3}\s?\d{3,4}$/.test(phone)) {
+    if (phone && !PHONE_PATTERN.test(phone)) {
       toast.add({
         type: "warning",
-        description: "Enter a valid Cambodian phone number, e.g. 072 345 5674.",
+        description: "Enter a valid phone number, e.g. 012 345 6789.",
       });
       return;
     }
 
     const changes: UpdateProfileRequest = {};
     if (name !== profile.name) changes.fullName = name;
-    if (phone !== (profile.phone ?? "")) changes.phoneNumber = phone;
+    if (!samePhone(phone, profile.phone)) changes.phoneNumber = phone;
     if (editForm.gender && editForm.gender !== profile.gender) changes.gender = editForm.gender;
 
     if (Object.keys(changes).length === 0 && !avatarFile) {
@@ -680,7 +681,7 @@ export function UserprofilepageView() {
                           </p>
                           <div className="message_footer_row">
                             <span>Status: <strong className="message_status_text">{msg.status || "Received"}</strong></span>
-                            <span>{msg.phone ? `Phone: ${msg.phone}` : msg.email}</span>
+                            <span>{msg.phone ? `Phone: ${formatPhone(msg.phone)}` : msg.email}</span>
                           </div>
                         </div>
                       ))}
@@ -955,7 +956,7 @@ export function UserprofilepageView() {
                   title="Click & drag to adjust image position"
                 >
                   <Image
-                    src={editForm.avatarUrl}
+                    src={avatarFile ? editForm.avatarUrl : profile.avatarUrl}
                     alt="Avatar Preview"
                     fill
                     priority
@@ -1029,13 +1030,12 @@ export function UserprofilepageView() {
 
                   <div className="modal_input_group">
                     <label className="modal_input_label">
-                      Phone Number
+                      {t("Phone Number")}
                     </label>
                     <input
-                      type="tel"
+                      {...phoneInputProps}
                       value={editForm.phone || ""}
                       onChange={(e) => setEditForm({ ...editForm, phone: cleanPhoneInput(e.target.value) })}
-                      placeholder="e.g. 12345678"
                       className="modal_input_control"
                     />
                   </div>
