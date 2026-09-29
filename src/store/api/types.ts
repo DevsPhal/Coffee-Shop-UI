@@ -173,6 +173,8 @@ export interface TelegramWidgetAuthRequest {
 /** GET /api/auth/telegram/widget-config — the bot the API verifies widget logins against. */
 export interface TelegramWidgetConfigResponse {
   botUsername: string;
+  /** Domain set with @BotFather's /setdomain; null when the API doesn't check. */
+  loginDomain: string | null;
 }
 
 export interface TelegramLinkCodeResponse {

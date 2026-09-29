@@ -2,6 +2,7 @@ import { Footer } from "@/components/layout/footter";
 import { Navbar } from "@/components/layout/navbar";
 import { CartProvider } from "@/context/CartContext";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { StaffAccountGuard } from "@/components/common/StaffAccountGuard";
 
 export default function SiteLayout({
   children,
@@ -10,6 +11,8 @@ export default function SiteLayout({
 }>) {
   return (
     <CartProvider>
+      {/* Staff (admin, barista) sessions are blocked from every shop page — see the guard. */}
+      <StaffAccountGuard>
       <Navbar />
       {/* justify-center only has any visible effect when a page's content is shorter than the
           space between the nav and footer (an empty cart, "no orders found", a short profile
@@ -23,6 +26,7 @@ export default function SiteLayout({
       <main className="flex-1 min-h-svh pt-(--nav-h) site_main_content flex flex-col justify-center">{children}</main>
       <Footer />
       <CartDrawer />
+      </StaffAccountGuard>
     </CartProvider>
   );
 }

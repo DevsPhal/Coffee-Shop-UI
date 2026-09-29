@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMounted } from "@/hooks/useMounted";
 import { clearTokens, isAuthenticated } from "@/lib/authStorage";
 import { useGetCurrentUserQuery, useLogoutMutation } from "@/store/api/authApi";
-import type { UserResponse } from "@/store/api/types";
+import type { Role, UserResponse } from "@/store/api/types";
 
 /**
  * The signed-in customer, backed by the API.
@@ -27,6 +27,7 @@ export interface AuthUser {
   gender?: string;
   avatarUrl: string;
   telegramLinked: boolean;
+  role: Role;
 }
 
 const DEFAULT_AVATAR =
@@ -41,6 +42,7 @@ function toAuthUser(user: UserResponse): AuthUser {
     gender: user.gender ?? undefined,
     avatarUrl: user.avatarUrl ?? DEFAULT_AVATAR,
     telegramLinked: user.telegramLinked,
+    role: user.role,
   };
 }
 

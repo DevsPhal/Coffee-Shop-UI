@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Info, Loader2, Send } from "lucide-react";
+import { ExternalLink, HelpCircle, Info, Loader2, RotateCcw, Send } from "lucide-react";
 import { useGetTelegramWidgetConfigQuery, useLoginTelegramMutation } from "@/store/api/authApi";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import { toast } from "@/components/ui/toast";
@@ -20,14 +20,25 @@ declare global {
 /** Build-time fallback, used only if the API's widget config can't be fetched. */
 const FALLBACK_BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
 
+/** Tips shown under the widget for when Telegram's confirmation never arrives. */
+const TROUBLESHOOTING_TIPS = [
+  "The confirmation comes from the chat named \"Telegram\" (blue check), not from the 590st Cafe bot. Open it and tap Confirm.",
+  "Choose Cambodia (+855) and type your number without the leading 0, e.g. 12 345 678.",
+  "Use the number of an existing Telegram account, and keep the Telegram app signed in.",
+  "Allow pop-ups for this site. The phone prompt opens in a new window.",
+  "After several tries Telegram pauses confirmations for a while. Wait a few minutes, then try again.",
+];
+
 /**
- * Telegram only renders the widget on the domain set with @BotFather's /setdomain, so on
- * localhost it shows "Bot domain invalid". Local testing goes through a public tunnel (ngrok)
- * whose domain is set on a test bot instead.
+ * Telegram only renders the widget on the domain set with @BotFather's /setdomain, and shows
+ * "Bot domain invalid" anywhere else (www., localhost, ngrok). The API reports that domain;
+ * without it, only localhost is treated as unsupported.
  */
-function isLocalHost() {
+function isUnsupportedHost(loginDomain: string | null | undefined) {
   if (typeof window === "undefined") return false;
-  return ["localhost", "127.0.0.1", "0.0.0.0", "[::1]"].includes(window.location.hostname);
+  const host = window.location.hostname.toLowerCase();
+  if (loginDomain) return host !== loginDomain;
+  return ["localhost", "127.0.0.1", "0.0.0.0", "[::1]"].includes(host);
 }
 
 /**
@@ -40,7 +51,16 @@ function isLocalHost() {
  * own widget test page uses, so frontend and backend can never disagree about which bot's token
  * verifies the login. NEXT_PUBLIC_TELEGRAM_BOT_USERNAME is only a fallback.
  */
-export function TelegramLoginWidget({ onSuccess }: { onSuccess: () => void }) {
+export function TelegramLoginWidget({
+  onSuccess,
+}: {
+  /**
+   * Runs once the API has issued tokens. Resolve false when the caller turned the account away
+   * (a staff account on the storefront) — the widget then drops its "signing in" state instead
+   * of announcing a sign-in that didn't stick.
+   */
+  onSuccess: () => Promise<boolean> | boolean | void;
+}) {
   const { t } = useLanguage();
   const mounted = useMounted();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -51,30 +71,55 @@ export function TelegramLoginWidget({ onSuccess }: { onSuccess: () => void }) {
   // it, the gap between approving in Telegram and the redirect showed nothing at all, so a slow
   // or failed sign-in looked exactly like "nothing happened".
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const onLocalHost = mounted && isLocalHost();
+  // Telegram's script is third-party: it can be slow, or blocked outright (ad blockers, some
+  // networks). "failed" shows a retry instead of an empty gap where the button should be.
+  const [scriptState, setScriptState] = useState<"loading" | "ready" | "failed">("loading");
+  const [attempt, setAttempt] = useState(0);
+  // The widget calls back by global name long after the effect ran; reading these through refs
+  // keeps that callback on the current props instead of the first render's.
+  const onSuccessRef = useRef(onSuccess);
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+  const signingInRef = useRef(false);
+  const loginDomain = config?.loginDomain;
+  const onUnsupportedHost = mounted && !isLoadingConfig && isUnsupportedHost(loginDomain);
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!botUsername || !container || onLocalHost) return;
+    if (!botUsername || !container || isLoadingConfig || onUnsupportedHost) return;
 
-    window.onTelegramAuth = (user) => {
+    window.onTelegramAuth = async (user) => {
+      // Telegram can fire the callback twice (a double-tap on Confirm); one sign-in is enough.
+      if (signingInRef.current) return;
+      signingInRef.current = true;
       setIsSigningIn(true);
-      loginTelegram(user)
-        .unwrap()
-        .then(() => {
-          toast.add({ type: "success", description: "Signed in with Telegram." });
-          onSuccess();
-        })
-        .catch((err) => {
-          // Logged so a failure can be diagnosed from DevTools, not only the toast.
-          console.error("[Telegram login] API rejected the sign-in", err);
-          setIsSigningIn(false);
-          toast.add({
-            type: "error",
-            description: apiErrorMessage(err, "Telegram sign-in failed. Please try again."),
-          });
+      try {
+        await loginTelegram(user).unwrap();
+      } catch (err) {
+        // Logged so a failure can be diagnosed from DevTools, not only the toast.
+        console.error("[Telegram login] API rejected the sign-in", err);
+        signingInRef.current = false;
+        setIsSigningIn(false);
+        toast.add({
+          type: "error",
+          description: apiErrorMessage(
+            err as Parameters<typeof apiErrorMessage>[0],
+            "Telegram sign-in failed. Please try again."
+          ),
         });
+        return;
+      }
+      const accepted = (await onSuccessRef.current()) !== false;
+      if (accepted) {
+        toast.add({ type: "success", description: "Signed in with Telegram." });
+        return;
+      }
+      signingInRef.current = false;
+      setIsSigningIn(false);
     };
+
+    setScriptState("loading");
 
     const script = document.createElement("script");
     script.src = "https://telegram.org/js/telegram-widget.js?22";
@@ -84,6 +129,8 @@ export function TelegramLoginWidget({ onSuccess }: { onSuccess: () => void }) {
     script.setAttribute("data-radius", "10");
     script.setAttribute("data-onauth", "onTelegramAuth(user)");
     script.setAttribute("data-request-access", "write");
+    script.onload = () => setScriptState("ready");
+    script.onerror = () => setScriptState("failed");
     container.appendChild(script);
 
     return () => {
@@ -93,7 +140,7 @@ export function TelegramLoginWidget({ onSuccess }: { onSuccess: () => void }) {
       container.replaceChildren();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [botUsername, onLocalHost]);
+  }, [botUsername, isLoadingConfig, onUnsupportedHost, attempt]);
 
   if (!isLoadingConfig && !botUsername) return null;
 
@@ -108,23 +155,53 @@ export function TelegramLoginWidget({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       <div className="flex flex-col items-center gap-2">
-        {onLocalHost ? (
-          <p className="flex max-w-xs items-start gap-1.5 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-left text-[11px] leading-relaxed text-sky-800">
+        {onUnsupportedHost ? (
+          <div className="flex max-w-xs items-start gap-1.5 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-left text-[11px] leading-relaxed text-sky-800">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            {t(
-              "Telegram login doesn't work on localhost. Open the site through its public domain or an ngrok tunnel whose domain is set on the bot."
+            {loginDomain ? (
+              <span>
+                {t("Telegram login only works on")}{" "}
+                <a
+                  href={`https://${loginDomain}${window.location.pathname}${window.location.search}`}
+                  className="inline-flex items-center gap-0.5 font-semibold underline"
+                >
+                  {loginDomain}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+                . {t("Open the site there, or sign in with email.")}
+              </span>
+            ) : (
+              t(
+                "Telegram login doesn't work on localhost. Open the site through its public domain or an ngrok tunnel whose domain is set on the bot."
+              )
             )}
-          </p>
+          </div>
         ) : (
           <>
             {/* Held at the widget's large size (238×40) until the iframe paints, so the form
                 doesn't jump when Telegram's button appears. */}
             <div className="relative flex min-h-10 min-w-59.5 justify-center">
-              {(isLoadingConfig || !mounted) && (
+              {(isLoadingConfig || !mounted || scriptState === "loading") && (
                 <Skeleton className="absolute inset-0 rounded-[10px]" />
               )}
               <div ref={containerRef} className="relative flex justify-center [&_iframe]:rounded-[10px]!" />
             </div>
+
+            {scriptState === "failed" && (
+              <div role="alert" className="flex max-w-xs flex-col items-center gap-1.5 text-center text-[11px] leading-relaxed text-gray-500">
+                <span>
+                  {t("Telegram login couldn't load. Check your connection or ad blocker, or sign in with email.")}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAttempt((n) => n + 1)}
+                  className="inline-flex items-center gap-1 font-semibold text-[#229ED9] cursor-pointer"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  {t("Try again")}
+                </button>
+              </div>
+            )}
 
             {isSigningIn ? (
               <p role="status" className="flex items-center gap-1.5 text-xs font-semibold text-[#229ED9]">
@@ -132,12 +209,25 @@ export function TelegramLoginWidget({ onSuccess }: { onSuccess: () => void }) {
                 {t("Signing you in with Telegram...")}
               </p>
             ) : (
-              <p className="flex max-w-xs items-start gap-1 text-center text-[11px] leading-relaxed text-gray-400">
-                <Send className="mt-0.5 h-3 w-3 shrink-0" />
-                {t(
-                  "New to 590st Cafe? An account is created for you. Approve the request in your Telegram app to continue."
-                )}
-              </p>
+              <>
+                <p className="flex max-w-xs items-start gap-1 text-center text-[11px] leading-relaxed text-gray-400">
+                  <Send className="mt-0.5 h-3 w-3 shrink-0" />
+                  {t(
+                    "New to 590st Cafe? An account is created for you. After entering your phone number, open the \"Telegram\" chat in your app and tap Confirm."
+                  )}
+                </p>
+                <details className="w-full max-w-xs text-[11px] leading-relaxed text-gray-500">
+                  <summary className="flex cursor-pointer list-none items-center justify-center gap-1 font-semibold text-[#229ED9]">
+                    <HelpCircle className="h-3.5 w-3.5" />
+                    {t("Didn't get the confirmation in Telegram?")}
+                  </summary>
+                  <ul className="mt-2 list-disc space-y-1 rounded-xl border border-gray-100 bg-gray-50 py-2 pl-6 pr-3 text-left">
+                    {TROUBLESHOOTING_TIPS.map((tip) => (
+                      <li key={tip}>{t(tip)}</li>
+                    ))}
+                  </ul>
+                </details>
+              </>
             )}
           </>
         )}

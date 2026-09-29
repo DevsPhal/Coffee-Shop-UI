@@ -8,6 +8,7 @@ import { useLanguage } from "@/components/ui/translatetokhmer";
 import { useMounted } from "@/hooks/useMounted";
 import { isAuthenticated } from "@/lib/authStorage";
 import { consumeWelcomePending, firstName, initials, timeOfDayGreeting } from "@/lib/welcomeToast";
+import { isStaffRole } from "@/lib/staffAccess";
 import { useGetCurrentUserQuery } from "@/store/api/authApi";
 
 const WELCOME_DURATION = 5000;
@@ -26,7 +27,8 @@ export default function LoginWelcome() {
   const { data: user } = useGetCurrentUserQuery(undefined, { skip: !signedIn });
 
   useEffect(() => {
-    if (!user || !consumeWelcomePending()) return;
+    // A staff account is signed straight back out (StaffAccountGuard) — nobody to greet.
+    if (!user || isStaffRole(user.role) || !consumeWelcomePending()) return;
 
     const name = firstName(user.fullName);
     const data: WelcomeToastData = {

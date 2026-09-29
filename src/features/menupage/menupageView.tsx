@@ -3,14 +3,13 @@
 import React, { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/cards/card";
-import { ALL_CATEGORIES, iconFor } from "@/components/ui/CategoryDropdown";
+import { ALL_CATEGORIES, CategoryDropdown } from "@/components/ui/CategoryDropdown";
 import { SortDropdown, type SortOption } from "@/components/ui/SortDropdown";
 import { toStoreProduct } from "@/store/api/productAdapter";
 import { useCatalog, useCategories } from "@/store/api/useCatalog";
 import { useLanguage } from "@/components/ui/translatetokhmer";
-import { Search, Filter, LayoutGrid, SearchX } from "lucide-react";
+import { Search, SearchX } from "lucide-react";
 import {
-  CategoryPillsSkeleton,
   EmptyState,
   ErrorState,
   LoadingRegion,
@@ -45,7 +44,7 @@ export function MenupageView() {
     }
   }, [queryCategory, setSelectedCategory]);
 
-  const { categories, isLoading: isLoadingCategories } = useCategories();
+  const { categories } = useCategories();
 
   // "Featured" is a client-side view over the whole catalogue (everything discounted), not a
   // category the API knows about — so it must not be sent as a categoryId.
@@ -114,8 +113,27 @@ export function MenupageView() {
             )}
           </div>
 
-          {/* Right Toolbar Controls: Search Bar & Sort Dropdown */}
+          {/* Right Toolbar Controls: Category & Sort Dropdowns, Search Bar */}
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            {/* Category Dropdown — the same picker the drinks and phone menu pages use.
+                "Featured" is a client-side view, so it is passed in ahead of "All". */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs sm:text-sm font-semibold text-gray-600">
+                {t("Category:")}
+              </span>
+              <CategoryDropdown
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+                leadingEntries={[
+                  {
+                    id: FEATURED,
+                    name: "Featured Products",
+                    count: products.filter((p) => p.discountActive).length,
+                  },
+                ]}
+              />
+            </div>
+
             {/* Search Input Bar */}
             <form
               onSubmit={(e) => e.preventDefault()}
@@ -158,62 +176,7 @@ export function MenupageView() {
           </div>
         </div>
 
-        {/* Category Filter Row — a horizontal, wrapping row of pills (same component style
-            already used on the phone menu page) rather than a sidebar, so the product grid
-            below gets the full page width. */}
-        <div className="flex items-center gap-1.5 mb-3">
-          <Filter className="w-3.5 h-3.5 text-[#A1255B]" />
-          <span className="text-xs font-black tracking-wider text-[#A1255B] uppercase">
-            {t("CATEGORIES")}
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-8">
-          {isLoadingCategories ? (
-            <CategoryPillsSkeleton count={7} />
-          ) : (
-          <>
-          <button
-            type="button"
-            onClick={() => setSelectedCategory(FEATURED)}
-            className={`category_btn ${selectedCategory === FEATURED ? "active" : ""}`}
-          >
-            <span>{t("Featured Products")}</span>
-            <span className="category_badge">{products.filter((p) => p.discountActive).length}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSelectedCategory(ALL_CATEGORIES)}
-            className={`category_btn ${selectedCategory === ALL_CATEGORIES ? "active" : ""}`}
-          >
-            <LayoutGrid className="category_btn_icon h-4.5 w-4.5" />
-            <span>{t("All Products")}</span>
-            <span className="category_badge">{categories.reduce((sum, c) => sum + c.count, 0)}</span>
-          </button>
-
-          {/* Categories, flat — the API has no parent/child relationship between them. */}
-          {categories.map((category) => {
-            const isSelected = selectedCategory === category.id;
-            const Icon = iconFor(category.name);
-            return (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => setSelectedCategory(category.id)}
-                className={`category_btn ${isSelected ? "active" : ""}`}
-              >
-                <Icon className="category_btn_icon h-4.5 w-4.5" />
-                <span>{t(category.name)}</span>
-                <span className="category_badge">{category.count}</span>
-              </button>
-            );
-          })}
-          </>
-          )}
-        </div>
-
-        {/* Product Card Grid — 4 per row on desktop, now that categories no longer take up a
-            sidebar column. */}
+        {/* Product Card Grid — 4 per row on desktop; categories live in the toolbar dropdown. */}
         {isLoading ? (
           <LoadingRegion
             label="Loading menu..."

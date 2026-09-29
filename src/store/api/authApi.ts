@@ -170,6 +170,7 @@ export const {
   useResetPasswordMutation,
   useLogoutMutation,
   useGetCurrentUserQuery,
+  useLazyGetCurrentUserQuery,
   useUpdateProfileMutation,
   useUploadAvatarMutation,
   useRemoveAvatarMutation,

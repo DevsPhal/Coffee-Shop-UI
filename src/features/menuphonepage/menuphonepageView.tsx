@@ -6,15 +6,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CategoryDropdown } from "@/components/ui";
-import { ALL_CATEGORIES, iconFor } from "@/components/ui/CategoryDropdown";
+import { ALL_CATEGORIES } from "@/components/ui/CategoryDropdown";
 import { resolveProductImage, toStoreProduct, type StoreProduct } from "@/store/api/productAdapter";
-import { useCatalog, useCategories } from "@/store/api/useCatalog";
+import { useCatalog } from "@/store/api/useCatalog";
 import type { SizeSelection } from "@/components/ui/SelectSizeModal";
 import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { ShoppingBag, ChevronRight, ShoppingCart, Plus, Check, Search, Clock, SearchX } from "lucide-react";
 import {
-  CategoryPillsSkeleton,
   EmptyState,
   ErrorState,
   LoadingRegion,
@@ -202,20 +201,9 @@ export function MenupageView() {
     setMounted(true);
   }, []);
 
-  const { categories, isLoading: isLoadingCategories } = useCategories();
   const { products, isLoading, error, refetch } = useCatalog(
     selectedCategory === ALL_CATEGORIES ? undefined : selectedCategory
   );
-
-  // Real categories from the catalogue; "All" is the only client-side entry.
-  const displayCategories = [
-    {
-      id: ALL_CATEGORIES,
-      name: ALL_CATEGORIES,
-      count: categories.reduce((sum, c) => sum + c.count, 0),
-    },
-    ...categories,
-  ];
 
   useEffect(() => {
     if (queryCategory) {
@@ -264,26 +252,11 @@ export function MenupageView() {
 
         {/* Desktop Category Filter & Search Row */}
         <div className="category_desktop_row flex-col sm:flex-row items-center justify-between gap-4 my-6 px-2">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {isLoadingCategories && <CategoryPillsSkeleton count={6} />}
-            {!isLoadingCategories && displayCategories.map((cat) => {
-              const isSelected = selectedCategory === cat.id;
-              const Icon = iconFor(cat.name);
-
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`category_btn ${isSelected ? "active" : ""}`}
-                >
-                  <Icon className="category_btn_icon h-4.5 w-4.5" />
-                  <span>{t(cat.name)}</span>
-                  <span className="category_badge">{cat.count}</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* Same category dropdown as the mobile row and the other menu pages. */}
+          <CategoryDropdown
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+          />
 
           {/* Desktop Search Input Form */}
           <form

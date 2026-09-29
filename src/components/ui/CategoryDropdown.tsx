@@ -52,6 +52,8 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
   coffee: Coffee,
   frappe: IceCreamCone,
   signature: Star,
+  featured: Star,
+  "featured products": Star,
   water: Droplet,
   material: Package,
   tea: Package,
@@ -68,6 +70,8 @@ export interface CategoryDropdownProps {
   /** Selected category id, or ALL_CATEGORIES. */
   selectedCategory: string;
   onSelectCategory: (categoryId: string) => void;
+  /** Client-side views listed ahead of "All" (e.g. the menu's "Featured Products"). */
+  leadingEntries?: CatalogCategory[];
   className?: string;
 }
 
@@ -81,6 +85,7 @@ export interface CategoryDropdownProps {
 export function CategoryDropdown({
   selectedCategory,
   onSelectCategory,
+  leadingEntries = [],
   className = "",
 }: CategoryDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -115,12 +120,14 @@ export function CategoryDropdown({
   const totalCount = categories.reduce((sum, c) => sum + c.count, 0);
 
   const entries: CatalogCategory[] = [
+    ...leadingEntries,
     { id: ALL_CATEGORIES, name: ALL_CATEGORIES, count: totalCount },
     ...categories,
   ];
 
   const current =
-    entries.find((entry) => entry.id === selectedCategory) ?? entries[0];
+    entries.find((entry) => entry.id === selectedCategory) ??
+    entries.find((entry) => entry.id === ALL_CATEGORIES);
 
   const renderCurrentIcon = () => {
     const Icon = iconFor(current?.name ?? ALL_CATEGORIES);

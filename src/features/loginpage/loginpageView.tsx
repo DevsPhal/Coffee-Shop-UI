@@ -30,6 +30,8 @@ type FormErrors = {
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { useCustomerOnlySignIn } from "@/hooks/useCustomerOnlySignIn";
+import { STAFF_ACCOUNT_MESSAGE } from "@/lib/staffAccess";
 
 interface LoginPageViewProps {
   /** Which form this route shows — /login, /register and /forgot-password each pass their own. */
@@ -77,6 +79,22 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
     router.push(next ? `${VIEW_PATHS[mode]}?next=${encodeURIComponent(next)}` : VIEW_PATHS[mode], { scroll: false });
   };
   const [errors, setErrors] = useState<FormErrors>({});
+  const confirmCustomer = useCustomerOnlySignIn();
+
+  /** Every sign-in path ends here: customers continue, staff accounts are signed back out. */
+  const finishSignIn = async (): Promise<boolean> => {
+    if (await confirmCustomer()) {
+      router.push(nextPath());
+      return true;
+    }
+    setLoginTicket(null);
+    setOtp("");
+    setPassword("");
+    setErrors({ email: t(STAFF_ACCOUNT_MESSAGE) });
+    toast.add({ type: "warning", description: t(STAFF_ACCOUNT_MESSAGE) });
+    return false;
+  };
+
   const validateField = (field: keyof FormErrors, value: string) => {
     const fieldSchema = userLoginSchema.shape[field];
     const result = fieldSchema.safeParse(value);
@@ -129,7 +147,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
           description: "We emailed you a 6-digit verification code.",
         });
       } else {
-        router.push(nextPath());
+        await finishSignIn();
       }
     } catch (err) {
       const message = apiErrorMessage(
@@ -146,7 +164,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
     if (!loginTicket) return;
     try {
       await verifyOtp({ loginTicket, otp: otp.trim() }).unwrap();
-      router.push(nextPath());
+      await finishSignIn();
     } catch (err) {
       toast.add({
         type: "warning",
@@ -370,7 +388,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                   {isLoggingIn ? t("Signing in...") : t("Login")}
                 </Button>
 
-                <TelegramLoginWidget onSuccess={() => router.push(nextPath())} />
+                <TelegramLoginWidget onSuccess={finishSignIn} />
 
                 <div className="text-center">
                   <span className="text-sm text-gray-600">
