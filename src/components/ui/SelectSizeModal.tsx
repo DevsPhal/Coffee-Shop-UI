@@ -4,20 +4,18 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { useLanguage } from "@/components/ui/translatetokhmer";
-import { Coffee, ShoppingBag, X, Snowflake, Candy, Milk } from "lucide-react";
+import { Coffee, ShoppingBag, X, Snowflake, Candy, Milk, CupSoda } from "lucide-react";
 
 import {
-  ICE_CHOICES,
-  ICE_LABELS,
-  MILK_CHOICES,
-  MILK_LABELS,
-  SUGAR_CHOICES,
-  SUGAR_LABELS,
-  VARIANT_LABELS,
+  ICE_OPTIONS,
+  MILK_OPTIONS,
+  SUGAR_OPTIONS,
+  variantOptions,
 } from "@/store/api/optionMapping";
 import { getDrinkCustomization, resolveProductImage, type StoreProduct } from "@/store/api/productAdapter";
 import type { IceLevel, MilkType, SugarLevel, UUID } from "@/store/api/types";
 import { ExtrasSelector } from "@/components/ui/ExtrasSelector";
+import { OptionDropdown } from "@/components/ui/OptionDropdown";
 import type { CartExtra } from "@/store/useCartStore";
 
 /** A confirmed configuration, shaped so the caller can hand it straight to the cart. */
@@ -29,61 +27,6 @@ export interface SizeSelection {
   sugarLevel?: SugarLevel;
   milkType?: MilkType;
   selectedExtras: CartExtra[];
-}
-
-/**
- * One row of tappable chips per option. Every choice stays visible, so the customer sees at a
- * glance what they picked and changes it with a single tap instead of opening a dropdown.
- */
-function OptionChips<T extends string>({
-  label,
-  icon,
-  value,
-  choices,
-  labels,
-  onChange,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  value: T;
-  choices: readonly T[];
-  labels: Record<T, string>;
-  onChange: (val: T) => void;
-}) {
-  const { t } = useLanguage();
-
-  return (
-    <div className="mb-4">
-      <div className="flex items-center justify-between mb-2">
-        <label className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-700 uppercase tracking-wider">
-          {icon}
-          {t(label)}
-        </label>
-        <span className="text-[11px] font-medium text-[#A1255B]">{t(labels[value])}</span>
-      </div>
-      <div role="radiogroup" aria-label={t(label)} className="grid grid-cols-4 gap-1.5">
-        {choices.map((choice) => {
-          const isSelected = value === choice;
-          return (
-            <button
-              key={choice}
-              type="button"
-              role="radio"
-              aria-checked={isSelected}
-              onClick={() => onChange(choice)}
-              className={`rounded-full border px-1 py-2 text-[11px] font-semibold leading-tight transition-all cursor-pointer select-none ${
-                isSelected
-                  ? "bg-[#A1255B] border-[#A1255B] text-white shadow-sm"
-                  : "bg-white border-gray-200 text-gray-700 hover:border-[#A1255B]/40 hover:bg-pink-50/60"
-              }`}
-            >
-              {t(labels[choice])}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 export interface SelectSizeModalProps {
@@ -200,67 +143,40 @@ export function SelectSizeModal({
           </div>
         </div>
 
-        {hasSizes && (
-          <div className="mb-4">
-            <label className="block text-[11px] text-gray-700 uppercase tracking-wider mb-2">
-              {t("Size")}:
-            </label>
-            <div
-              className={`grid gap-2 ${
-                variants.length === 2 ? "grid-cols-2" : "grid-cols-3"
-              }`}
-            >
-              {variants.map((variant) => {
-                const isSelected = variantId === variant.id;
-                return (
-                  <button
-                    key={variant.id}
-                    type="button"
-                    onClick={() => setVariantId(variant.id)}
-                    className={`flex flex-col items-center py-1 justify-center rounded-xl transition-all cursor-pointer border ${
-                      isSelected
-                        ? "bg-[#A1255B] border-[#A1255B] text-white shadow-sm scale-[1.02]"
-                        : "bg-white text-gray-700 hover:bg-gray-50 border-gray-200"
-                    }`}
-                  >
-                    <span className="text-sm font-bold">{t(VARIANT_LABELS[variant.name])}</span>
-                    <span className="text-[10px] opacity-80">
-                      ${Number(variant.finalPrice).toFixed(2)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        {/* Every single-choice option is the same dropdown as the product page and the cart. */}
+        {hasSizes && variantId && (
+          <OptionDropdown
+            label="Size"
+            icon={<CupSoda className="w-3.5 h-3.5 text-[#A1255B]" />}
+            value={variantId}
+            options={variantOptions(variants)}
+            onChange={setVariantId}
+          />
         )}
-
         {drinkOptions.ice && (
-          <OptionChips
+          <OptionDropdown
             label="Ice Level"
             icon={<Snowflake className="w-3.5 h-3.5 text-[#A1255B]" />}
             value={iceLevel}
-            choices={ICE_CHOICES}
-            labels={ICE_LABELS}
+            options={ICE_OPTIONS}
             onChange={setIceLevel}
           />
         )}
         {drinkOptions.sugar && (
-          <OptionChips
+          <OptionDropdown
             label="Sugar Level"
             icon={<Candy className="w-3.5 h-3.5 text-[#A1255B]" />}
             value={sugarLevel}
-            choices={SUGAR_CHOICES}
-            labels={SUGAR_LABELS}
+            options={SUGAR_OPTIONS}
             onChange={setSugarLevel}
           />
         )}
         {drinkOptions.milk && (
-          <OptionChips
+          <OptionDropdown
             label="Milk"
             icon={<Milk className="w-3.5 h-3.5 text-[#A1255B]" />}
             value={milkType}
-            choices={MILK_CHOICES}
-            labels={MILK_LABELS}
+            options={MILK_OPTIONS}
             onChange={setMilkType}
           />
         )}

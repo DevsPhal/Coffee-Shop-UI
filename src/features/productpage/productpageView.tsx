@@ -12,100 +12,20 @@ import { toast } from "@/components/ui/toast";
 import { useGetProductQuery } from "@/store/api/catalogApi";
 import { getDrinkCustomization, resolveProductImage, toStoreProduct } from "@/store/api/productAdapter";
 import {
-  ICE_CHOICES,
-  ICE_LABELS,
-  MILK_CHOICES,
-  MILK_LABELS,
-  SUGAR_CHOICES,
-  SUGAR_LABELS,
-  VARIANT_LABELS,
+  ICE_OPTIONS,
+  MILK_OPTIONS,
+  SUGAR_OPTIONS,
+  variantOptions,
 } from "@/store/api/optionMapping";
 import type { IceLevel, MilkType, SugarLevel } from "@/store/api/types";
-import { Clock, ChevronDown, Check, PackageX } from "lucide-react";
+import { Clock, PackageX } from "lucide-react";
 import { EmptyState, ErrorState, ProductDetailSkeleton } from "@/components/ui/states";
 import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidation";
 import { ExtrasSelector } from "@/components/ui/ExtrasSelector";
+import { OptionDropdown } from "@/components/ui/OptionDropdown";
 import type { CartExtra } from "@/store/useCartStore";
 import { useCatalogLiveUpdates } from "@/hooks/useCatalogLiveUpdates";
 import "@/app/globals.scss";
-
-function CustomProductPageOptionDropdown({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  onChange: (val: string) => void;
-}) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-  const { t } = useLanguage();
-
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen]);
-
-  return (
-    <div>
-      <span className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-        {t(label)}
-      </span>
-      <div ref={ref} className="relative max-w-xs text-left">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between bg-pink-50/60 hover:bg-pink-100/60 border border-pink-200 text-[#A1255B] font-bold text-xs rounded-xl py-2 px-3 transition-all cursor-pointer select-none"
-        >
-          <span>{t(value)}</span>
-          <ChevronDown
-            className={`w-4 h-4 text-[#A1255B] shrink-0 transition-transform duration-200 ${
-              isOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-
-        {isOpen && (
-          <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-full bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 space-y-1 animate-in fade-in duration-150">
-            {options.map((opt) => {
-              const isSelected = value === opt;
-              return (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => {
-                    onChange(opt);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border-none text-left select-none ${
-                    isSelected
-                      ? "bg-[#A1255B] text-white"
-                      : "hover:bg-pink-50 text-gray-800"
-                  }`}
-                >
-                  <span>{t(opt)}</span>
-                  {isSelected && <Check className="w-4 h-4 text-white shrink-0 ml-2" />}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export interface ProductpageViewProps {
   /** Product UUID. Falls back to the `id` query param when not passed directly. */
@@ -380,73 +300,43 @@ export function ProductpageView({
             <div className="my-4 space-y-3">
               {/* Size Selector — each variant prices itself outright, so there's nothing to
                   show when there's only the one default variant every product has. */}
-              {variants.length > 1 && (
-                <div>
-                  <span className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                    {t("Size:")}
-                  </span>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {variants.map((variant) => {
-                      const isSel = selectedVariantId === variant.id;
-                      const variantPrice = Number(variant.finalPrice);
-
-                      return (
-                        <button
-                          key={variant.id}
-                          type="button"
-                          onClick={() => setSelectedVariantId(variant.id)}
-                          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border ${
-                            isSel
-                              ? "bg-[#A1255B] border-[#A1255B] text-white shadow-2xs scale-105"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200"
-                          }`}
-                        >
-                          {t(VARIANT_LABELS[variant.name])} (${variantPrice.toFixed(2)})
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Ice/sugar/milk only apply to something made to order, and even then only the
-                  ones that make sense for this particular drink — a hot drink has no ice
-                  level, a plain tea has no milk option. */}
-              {drinkOptions.ice && (
-                <CustomProductPageOptionDropdown
-                  label="Ice Level:"
-                  value={ICE_LABELS[selectedIce]}
-                  options={ICE_CHOICES.map((c) => ICE_LABELS[c])}
-                  onChange={(label) => {
-                    const level = ICE_CHOICES.find((c) => ICE_LABELS[c] === label);
-                    if (level) setSelectedIce(level);
-                  }}
-                />
-              )}
-
-              {drinkOptions.sugar && (
-                <CustomProductPageOptionDropdown
-                  label="Sugar Level:"
-                  value={SUGAR_LABELS[selectedSugar]}
-                  options={SUGAR_CHOICES.map((c) => SUGAR_LABELS[c])}
-                  onChange={(label) => {
-                    const level = SUGAR_CHOICES.find((c) => SUGAR_LABELS[c] === label);
-                    if (level) setSelectedSugar(level);
-                  }}
-                />
-              )}
-
-              {drinkOptions.milk && (
-                <CustomProductPageOptionDropdown
-                  label="Milk Type:"
-                  value={MILK_LABELS[selectedMilk]}
-                  options={MILK_CHOICES.map((c) => MILK_LABELS[c])}
-                  onChange={(label) => {
-                    const kind = MILK_CHOICES.find((c) => MILK_LABELS[c] === label);
-                    if (kind) setSelectedMilk(kind);
-                  }}
-                />
-              )}
+              {/* The same dropdown as the customize modal and the cart. A size only shows when
+                  there's a real choice; ice/sugar/milk only for drinks they apply to — a hot
+                  drink has no ice level, a plain tea has no milk option. */}
+              <div className="max-w-xs">
+                {variants.length > 1 && selectedVariantId && (
+                  <OptionDropdown
+                    label="Size"
+                    value={selectedVariantId}
+                    options={variantOptions(variants)}
+                    onChange={setSelectedVariantId}
+                  />
+                )}
+                {drinkOptions.ice && (
+                  <OptionDropdown
+                    label="Ice Level"
+                    value={selectedIce}
+                    options={ICE_OPTIONS}
+                    onChange={setSelectedIce}
+                  />
+                )}
+                {drinkOptions.sugar && (
+                  <OptionDropdown
+                    label="Sugar Level"
+                    value={selectedSugar}
+                    options={SUGAR_OPTIONS}
+                    onChange={setSelectedSugar}
+                  />
+                )}
+                {drinkOptions.milk && (
+                  <OptionDropdown
+                    label="Milk"
+                    value={selectedMilk}
+                    options={MILK_OPTIONS}
+                    onChange={setSelectedMilk}
+                  />
+                )}
+              </div>
 
               {product && (
                 <ExtrasSelector

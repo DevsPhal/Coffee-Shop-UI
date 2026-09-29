@@ -34,9 +34,25 @@ export const ICE_CHOICES: IceLevel[] = ["NORMAL", "LESS_ICE", "EXTRA_ICE", "NO_I
 export const SUGAR_CHOICES: SugarLevel[] = ["NORMAL", "LESS", "EXTRA", "ZERO"];
 export const MILK_CHOICES: MilkType[] = ["NORMAL", "LESS", "EXTRA", "NONE"];
 
+/** The same choices as {value, label} pairs, ready for OptionDropdown. */
+export const ICE_OPTIONS = ICE_CHOICES.map((value) => ({ value, label: ICE_LABELS[value] }));
+export const SUGAR_OPTIONS = SUGAR_CHOICES.map((value) => ({ value, label: SUGAR_LABELS[value] }));
+export const MILK_OPTIONS = MILK_CHOICES.map((value) => ({ value, label: MILK_LABELS[value] }));
+
 /** A product variant's `name` is one of these three fixed sizes, not free text. */
 export const VARIANT_LABELS: Record<VariantName, string> = {
   MEDIUM: "Medium",
   LARGE: "Large",
   PIECE: "Piece",
 };
+
+/** A product's sizes as dropdown options, each with its own price. */
+export function variantOptions(
+  variants: readonly { id: string; name: VariantName; finalPrice: string | number }[]
+) {
+  return variants.map((variant) => ({
+    value: variant.id,
+    label: VARIANT_LABELS[variant.name],
+    hint: `$${Number(variant.finalPrice).toFixed(2)}`,
+  }));
+}
