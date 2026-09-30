@@ -1,7 +1,11 @@
 /**
- * Banking apps the payment page can open on a phone. Payment still goes to the shop's Bakong
- * account: these apps have no public link that takes a KHQR, so the page opens the app and the
- * customer scans a screenshot (or saved copy) of the order's QR from the gallery inside it.
+ * Banking apps the payment page can open on a phone. Payment always goes to the shop's Bakong
+ * account through the order's KHQR.
+ *
+ * ABA Mobile takes a KHQR in a link — the same `abamobilebank://ababank.com?type=payway&qrcode=`
+ * link ABA PayWay hands out, whose `qrcode` is the URL-encoded KHQR string — so it opens straight
+ * on the payment. Other banks publish no such link: the page opens the app and the customer
+ * scans a screenshot (or saved copy) of the QR from the gallery inside it.
  *
  * ACLEDA publishes no iOS URL scheme or universal link, so on iPhone it opens via its App Store
  * page (whose Open button launches the installed app). Fill in `iosScheme` if ACLEDA confirms one.
@@ -21,6 +25,8 @@ export interface BankApp {
   appStoreUrl: string;
   /** Where the "scan from photo" button is inside the app. */
   galleryHint: string;
+  /** A URL-scheme link that opens the app on the payment for a KHQR string, if the bank has one. */
+  khqrLink?: (khqr: string) => string;
 }
 
 export const BANK_APPS: Record<BankAppId, BankApp> = {
@@ -33,6 +39,8 @@ export const BANK_APPS: Record<BankAppId, BankApp> = {
     iosScheme: "abamobilebank://ababank.com",
     appStoreUrl: "https://apps.apple.com/app/id968860649",
     galleryHint: "tap Scan QR, then the gallery icon",
+    khqrLink: (khqr) =>
+      `abamobilebank://ababank.com?${new URLSearchParams({ type: "payway", qrcode: khqr }).toString()}`,
   },
   acleda: {
     name: "ACLEDA mobile",
@@ -69,4 +77,18 @@ export function bankAppLaunch(app: BankApp): { url: string; storePage: boolean }
     };
   }
   return app.iosScheme ? { url: app.iosScheme, storePage: false } : { url: app.appStoreUrl, storePage: true };
+}
+
+/**
+ * Opens the app directly on this KHQR's payment, for a bank with a `khqrLink`. On Android the
+ * scheme link goes inside an intent pinned to the bank's package, so Chrome falls back to the
+ * Play Store when the app is missing instead of silently doing nothing.
+ */
+export function bankAppPayLaunch(app: BankApp, khqr: string): string | null {
+  if (!app.khqrLink) return null;
+  const link = app.khqrLink(khqr);
+  if (!isAndroid()) return link;
+  const [scheme, rest] = link.split("://");
+  const fallback = encodeURIComponent(storeUrl(app));
+  return `intent://${rest}#Intent;scheme=${scheme};package=${app.androidPackage};S.browser_fallback_url=${fallback};end`;
 }

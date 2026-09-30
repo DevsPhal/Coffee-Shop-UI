@@ -16,7 +16,7 @@ import {
 } from "@/store/api/orderApi";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { useMounted } from "@/hooks/useMounted";
-import { BANK_APPS, bankAppLaunch, storeUrl, type BankApp, type BankAppId } from "@/lib/bankApps";
+import { BANK_APPS, bankAppLaunch, bankAppPayLaunch, storeUrl, type BankApp, type BankAppId } from "@/lib/bankApps";
 import type { Currency, OrderResponse } from "@/store/api/types";
 import "@/app/globals.scss";
 
@@ -91,7 +91,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const router = useRouter();
   const [currency, setCurrency] = useState<Currency>("USD");
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
-  const [qrImage, setQrImage] = useState<{ currency: Currency; dataUrl: string } | null>(null);
+  const [qrImage, setQrImage] = useState<{ currency: Currency; dataUrl: string; khqr: string } | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   /** Only the terminal outcomes are stored; everything else is derived from the query state. */
   const [settled, setSettled] = useState<"paid" | null>(null);
@@ -198,7 +198,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
           color: { dark: "#000000", light: "#ffffff" },
         });
         if (!isActiveRef.current || hasPaidRef.current) return;
-        setQrImage({ currency: issued.currency, dataUrl });
+        setQrImage({ currency: issued.currency, dataUrl, khqr: issued.qrString });
         setSecondsLeft(Math.max(0, Math.floor(issued.expiresInSeconds)));
         setFailure(null);
         setVerificationError(null);
@@ -248,6 +248,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   // The QR is tagged with the currency it was issued for, so a stale code is never shown while
   // a switch to the other currency is still in flight.
   const currentQr = qrImage && qrImage.currency === currency ? qrImage.dataUrl : null;
+  const currentKhqr = qrImage && qrImage.currency === currency ? qrImage.khqr : null;
   const savedForBank = savedFor && savedFor.qr === currentQr ? savedFor.bank : null;
   const savedQrIsStale = savedFor !== null && currentQr !== null && savedFor.qr !== currentQr;
 
@@ -401,20 +402,31 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   // (a second tap, since opening an app needs a fresh tap after the share sheet on iOS).
   const openBankApp = useCallback((bank: BankAppId) => {
     const app = BANK_APPS[bank];
+    // Straight onto this order's payment when the bank takes a KHQR by link (ABA).
+    const payUrl = currentKhqr ? bankAppPayLaunch(app, currentKhqr) : null;
+    if (payUrl) {
+      launchApp(payUrl, app.name, storeUrl(app));
+      return;
+    }
     const { url, storePage } = bankAppLaunch(app);
     if (storePage) {
       window.open(url, "_blank", "noopener");
       return;
     }
     launchApp(url, app.name, storeUrl(app));
-  }, [launchApp]);
+  }, [launchApp, currentKhqr]);
 
-  // Tapping a bank opens its app straight away — no share sheet in between. The customer
-  // screenshots the QR first (the hint above the tiles says so) and picks it from the gallery
-  // inside the app. On Android the QR is also dropped into Downloads on the way, silently.
+  // Tapping a bank opens its app straight away — no share sheet in between. ABA opens on the
+  // payment itself; for the others the customer screenshots the QR first (the hint above the
+  // tiles says so) and picks it from the gallery inside the app. On Android that QR is also
+  // dropped into Downloads on the way, silently.
   const chooseBank = useCallback((bank: BankAppId) => {
     if (!currentQr || !orderId) return;
     setSavedFor({ bank, qr: currentQr });
+    if (BANK_APPS[bank].khqrLink) {
+      openBankApp(bank);
+      return;
+    }
     if (/Android/i.test(navigator.userAgent)) {
       void saveQrImage(currentQr, `590st-cafe-khqr-${orderId.slice(0, 8)}.png`, true).catch(() => undefined);
       // A beat for the download to register before the page hands off to the app.
@@ -571,19 +583,14 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
                   <p className="m-0 text-xs font-bold text-gray-800">Paying on this phone?</p>
                   {savedQrIsStale ? (
                     <p role="status" className="m-0 rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800">
-                      The QR changed. Take a new screenshot before paying.
+                      The QR changed. If you took a screenshot, take a new one before paying.
                     </p>
                   ) : null}
-                  <ol className="m-0 flex list-none flex-col gap-1.5 rounded-xl bg-gray-50 px-3 py-2.5 text-[11px] text-gray-600">
-                    <li className="flex items-start gap-2">
-                      <StepNumber n={1} />
-                      <span><b className="text-gray-900">Screenshot this QR</b></span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <StepNumber n={2} />
-                      <span><b className="text-gray-900">Tap your bank</b> — then scan the screenshot from your gallery in the app</span>
-                    </li>
-                  </ol>
+                  <p className="m-0 rounded-xl bg-gray-50 px-3 py-2.5 text-[11px] leading-snug text-gray-600">
+                    <b className="text-gray-900">ABA</b> opens straight on this payment — just choose your
+                    account and confirm. For <b className="text-gray-900">ACLEDA</b>, screenshot this QR
+                    first, then scan it from your gallery in the app.
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
                     {(Object.keys(BANK_APPS) as BankAppId[]).map((bank) => {
                       const app = BANK_APPS[bank];
@@ -600,7 +607,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
                           <span className="text-sm font-bold text-gray-900">{app.shortName}</span>
                           <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-500">
                             <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                            Open app
+                            {app.khqrLink ? "Opens on payment" : "Open app & scan"}
                           </span>
                         </button>
                       );
@@ -771,11 +778,20 @@ function BankSteps({
   isSaving: boolean;
   onBack: () => void;
 }) {
-  const steps = [
-    { title: "Have the QR in your photos", detail: "A screenshot of this page works, or use Save QR image below." },
-    { title: `Scan it in ${app.name}`, detail: `In the app, ${app.galleryHint}, then pick the QR and pay.` },
-    { title: "Come back here", detail: "This page confirms the payment on its own." },
-  ];
+  const steps = app.khqrLink
+    ? [
+        { title: `Confirm in ${app.name}`, detail: "The payment opens with the amount filled in. Choose your account and confirm." },
+        { title: "Come back here", detail: "This page confirms the payment on its own." },
+        {
+          title: "Payment didn't show up?",
+          detail: `Screenshot this QR, then in the app ${app.galleryHint} and pick it.`,
+        },
+      ]
+    : [
+        { title: "Have the QR in your photos", detail: "A screenshot of this page works, or use Save QR image below." },
+        { title: `Scan it in ${app.name}`, detail: `In the app, ${app.galleryHint}, then pick the QR and pay.` },
+        { title: "Come back here", detail: "This page confirms the payment on its own." },
+      ];
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3.5" role="status" aria-live="polite">
@@ -803,7 +819,7 @@ function BankSteps({
         style={{ backgroundColor: app.color, color: app.ink }}
       >
         <ExternalLink className="h-4 w-4" />
-        Open {app.name}
+        {app.khqrLink ? `Pay in ${app.name}` : `Open ${app.name}`}
       </button>
       <div className="mt-2 flex items-center justify-between">
         <button
