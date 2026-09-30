@@ -43,12 +43,12 @@ const APP_OPEN_TIMEOUT_MS = 2500;
  * gallery inside ABA, ACLEDA or any other KHQR app; falls back to a plain download. Resolves
  * false only when the customer backed out of the share sheet.
  */
-async function saveQrImage(dataUrl: string, fileName: string): Promise<boolean> {
+async function saveQrImage(dataUrl: string, fileName: string, preferDownload = false): Promise<boolean> {
   // Decoded synchronously: Safari drops the tap's user activation across an await, and then
   // refuses to open the share sheet.
   const bytes = Uint8Array.from(atob(dataUrl.split(",")[1]), (c) => c.charCodeAt(0));
   const file = new File([bytes], fileName, { type: "image/png" });
-  if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
+  if (!preferDownload && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file] });
       return true;
@@ -112,6 +112,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const isPollingRef = useRef(false);
   const pollingRequestRef = useRef<Promise<OrderResponse> | null>(null);
   const isRequestingQrRef = useRef(false);
+  const hasAdoptedCurrencyRef = useRef(false);
   const hasPaidRef = useRef(false);
   const isActiveRef = useRef(true);
   /** The last automatic toast, so a retry loop hitting the same problem doesn't stack them. */
@@ -178,7 +179,18 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
           const checkedOrder = await confirmPayment(orderId).unwrap();
           if (handleOrder(checkedOrder)) return;
         }
-        const issued = await generateQr({ id: orderId, currency: chosen }).unwrap();
+        // Reopening the page (a reload, or the phone dropping the tab while the bank app was
+        // open) must show the QR the customer may already be paying, in its own currency — the
+        // API hands that same QR back while it's still valid.
+        let wanted = chosen;
+        if (!hasAdoptedCurrencyRef.current) {
+          hasAdoptedCurrencyRef.current = true;
+          if (existingOrder.bakongMd5Hash && existingOrder.bakongCurrency && existingOrder.bakongCurrency !== chosen) {
+            wanted = existingOrder.bakongCurrency;
+            setCurrency(wanted);
+          }
+        }
+        const issued = await generateQr({ id: orderId, currency: wanted }).unwrap();
         const dataUrl = await QRCode.toDataURL(issued.qrString, {
           errorCorrectionLevel: "M",
           margin: 1,
@@ -387,13 +399,31 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
 
   // ABA and ACLEDA can't be handed a KHQR by link, so: save the QR first, then open the app
   // (a second tap, since opening an app needs a fresh tap after the share sheet on iOS).
+  const openBankApp = useCallback((bank: BankAppId) => {
+    const app = BANK_APPS[bank];
+    const { url, storePage } = bankAppLaunch(app);
+    if (storePage) {
+      window.open(url, "_blank", "noopener");
+      return;
+    }
+    launchApp(url, app.name, storeUrl(app));
+  }, [launchApp]);
+
+  // On Android the QR goes straight to Downloads and the bank app opens in the same tap. iOS
+  // needs the share sheet ("Save Image" puts it in Photos, where the bank app looks), and an app
+  // can only be opened from a fresh tap after that — so there the steps card asks for one.
   const saveQrFor = useCallback(async (bank: BankAppId | null) => {
     if (!currentQr || !orderId) return;
+    const android = /Android/i.test(navigator.userAgent);
     setSavingFor(bank ?? "other");
     try {
-      const saved = await saveQrImage(currentQr, `590st-cafe-khqr-${orderId.slice(0, 8)}.png`);
+      const saved = await saveQrImage(currentQr, `590st-cafe-khqr-${orderId.slice(0, 8)}.png`, android);
       if (!saved) return;
       setSavedFor(bank ? { bank, qr: currentQr } : null);
+      if (bank && android) {
+        // A beat for the download to register before the page hands off to the app.
+        window.setTimeout(() => openBankApp(bank), 400);
+      }
       if (!bank) {
         toast.add({
           type: "success",
@@ -405,18 +435,11 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     } finally {
       setSavingFor(null);
     }
-  }, [currentQr, orderId]);
+  }, [currentQr, orderId, openBankApp]);
 
   const openSavedBankApp = useCallback(() => {
-    if (!savedForBank) return;
-    const app = BANK_APPS[savedForBank];
-    const { url, storePage } = bankAppLaunch(app);
-    if (storePage) {
-      window.open(url, "_blank", "noopener");
-      return;
-    }
-    launchApp(url, app.name, storeUrl(app));
-  }, [savedForBank, launchApp]);
+    if (savedForBank) openBankApp(savedForBank);
+  }, [savedForBank, openBankApp]);
 
   const formattedTime =
     secondsLeft === null
