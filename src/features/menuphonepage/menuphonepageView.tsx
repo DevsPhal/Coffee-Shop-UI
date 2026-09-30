@@ -11,6 +11,7 @@ import { resolveProductImage, toStoreProduct, type StoreProduct } from "@/store/
 import { useCatalog } from "@/store/api/useCatalog";
 import type { SizeSelection } from "@/components/ui/SelectSizeModal";
 import { useCart } from "@/context/CartContext";
+import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { ShoppingBag, ChevronRight, ShoppingCart, Plus, Check, Search, Clock, SearchX } from "lucide-react";
 import {
@@ -38,6 +39,7 @@ export function PhoneCard({
   onOpenInfo,
 }: PhoneCardProps) {
   const { addItem } = useCart();
+  const requireLogin = useRequireLogin();
   const { t } = useLanguage();
   const [added, setAdded] = useState(false);
   const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
@@ -46,6 +48,7 @@ export function PhoneCard({
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!requireLogin()) return;
     setIsSizeModalOpen(true);
   };
 

@@ -45,7 +45,7 @@ export function useCatalog(categoryId?: UUID) {
 }
 
 /**
- * Categories from GET /api/customer/categories, each with how many ACTIVE products it holds.
+ * Categories from GET /api/categories, each with how many ACTIVE products it holds.
  * The count still comes from the product list — the categories endpoint doesn't carry one —
  * so a category with zero products today still shows up here, unlike the old approach that
  * derived categories purely from whatever products happened to reference them.

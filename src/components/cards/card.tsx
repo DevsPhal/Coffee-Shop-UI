@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
+import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { Clock } from "lucide-react";
 import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidation";
@@ -14,7 +15,7 @@ import SelectSizeModal, { type SizeSelection } from "@/components/ui/SelectSizeM
 import "@/app/globals.scss";
 
 export interface CardProps {
-  /** The product straight from /api/customer/products, via toStoreProduct. */
+  /** The product straight from /api/products, via toStoreProduct. */
   product: StoreProduct;
   href?: string;
   variant?: "default" | "phone";
@@ -38,6 +39,7 @@ export function Card({
   const promoDaysLeft = undefined as string | undefined;
   const router = useRouter();
   const { addItem } = useCart();
+  const requireLogin = useRequireLogin();
   const { t } = useLanguage();
   const [added, setAdded] = useState(false);
   const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
@@ -71,6 +73,7 @@ export function Card({
   const handleOpenAddModal = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!requireLogin()) return;
     setModalActionType("cart");
     setIsSizeModalOpen(true);
   };
@@ -78,6 +81,7 @@ export function Card({
   const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!requireLogin()) return;
     setModalActionType("checkout");
     setIsSizeModalOpen(true);
   };

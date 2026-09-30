@@ -17,14 +17,7 @@ interface ProductListQuery extends PageQuery {
 }
 
 /**
- * The public storefront catalogue.
- *
- * Per the live OpenAPI spec (GET /v3/api-docs), `/api/customer/products`,
- * `/api/customer/products/{id}` and `/api/customer/categories` are all declared with
- * `security: [bearerAuth]` — the API currently requires a signed-in customer for these, unlike
- * `/api/banners` and `/api/events` which carry no security requirement and work anonymously.
- * The storefront is meant to be publicly browsable, so this is a backend SecurityConfig gap
- * (permitAll needs adding for these two GET routes) rather than something fixable here.
+ * The public storefront catalogue. Products, categories, banners and events need no login.
  */
 export const catalogApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -52,7 +45,7 @@ export const catalogApi = baseApi.injectEndpoints({
       transformResponse: unwrap<ShopSettingsResponse>,
     }),
     listCategories: builder.query<CustomerCategoryResponse[], void>({
-      query: () => "/api/customer/categories",
+      query: () => "/api/categories",
       transformResponse: unwrap<CustomerCategoryResponse[]>,
       providesTags: ["Category"],
     }),
@@ -61,7 +54,7 @@ export const catalogApi = baseApi.injectEndpoints({
       ProductListQuery | void
     >({
       query: (params) => ({
-        url: "/api/customer/products",
+        url: "/api/products",
         params: params ?? undefined,
       }),
       transformResponse: unwrap<PageResponse<CustomerProductResponse>>,
@@ -75,7 +68,7 @@ export const catalogApi = baseApi.injectEndpoints({
     }),
 
     getProduct: builder.query<CustomerProductResponse, UUID>({
-      query: (id) => `/api/customer/products/${id}`,
+      query: (id) => `/api/products/${id}`,
       transformResponse: unwrap<CustomerProductResponse>,
       providesTags: (_r, _e, id) => [{ type: "Product", id }],
     }),

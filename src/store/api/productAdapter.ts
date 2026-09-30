@@ -6,7 +6,7 @@ import type { CategoryGroup, CustomerProductResponse, ProductExtraResponse, Prod
  *
  * It keeps the field names the components already use (`title`, `image`, `category`) so the
  * UI did not have to be rewritten around the API's naming — but every value comes from
- * `/api/customer/products`. Nothing here is invented; the fields the API does not provide
+ * `/api/products`. Nothing here is invented; the fields the API does not provide
  * simply are not on this type.
  */
 export interface StoreProduct {

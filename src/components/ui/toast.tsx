@@ -189,17 +189,20 @@ function WelcomeToastBody({ data }: { data: WelcomeToastData }) {
   )
 }
 
+// Toasts drop in from the top, so on a phone the natural dismiss is flicking them back up.
+const SWIPE_DIRECTIONS: ToastPrimitive.Root.Props["swipeDirection"] = ["up", "right"]
+
 function ToastList() {
   const { toasts } = ToastPrimitive.useToastManager()
   const activeToasts = toasts.slice(-1)
 
   return activeToasts.map((toastItem) =>
     toastItem.type === "welcome" && toastItem.data ? (
-      <Toast key={toastItem.id} toast={toastItem} data-type="welcome">
+      <Toast key={toastItem.id} toast={toastItem} data-type="welcome" swipeDirection={SWIPE_DIRECTIONS}>
         <WelcomeToastBody data={toastItem.data as WelcomeToastData} />
       </Toast>
     ) : (
-      <Toast key={toastItem.id} toast={toastItem} data-type={toastItem.type}>
+      <Toast key={toastItem.id} toast={toastItem} data-type={toastItem.type} swipeDirection={SWIPE_DIRECTIONS}>
         <ToastContent>
           <ToastIcon type={toastItem.type} />
           <div className="toast_details">

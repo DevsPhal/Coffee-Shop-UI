@@ -1,5 +1,6 @@
 import { baseApi, unwrap } from "./baseApi";
 import type {
+  AbaDeeplinkResponse,
   BakongDeeplinkResponse,
   BakongQrResponse,
   Currency,
@@ -91,7 +92,16 @@ export const orderApi = baseApi.injectEndpoints({
       transformResponse: unwrap<BakongDeeplinkResponse>,
     }),
 
-    /** Verify the transfer with Bakong; unpaid orders remain pending until the bank confirms. */
+    /** Opens ABA Mobile with the amount filled in (ABA PayWay). Needs generateBakongQr first. */
+    generateAbaDeeplink: builder.mutation<AbaDeeplinkResponse, UUID>({
+      query: (id) => ({
+        url: `/api/customer/orders/${id}/pay/aba/deeplink`,
+        method: "POST",
+      }),
+      transformResponse: unwrap<AbaDeeplinkResponse>,
+    }),
+
+    /** Verify the transfer with Bakong (and ABA, if opened); unpaid orders stay pending. */
     confirmBakongPayment: builder.mutation<OrderResponse, UUID>({
       query: (id) => ({
         url: `/api/customer/orders/${id}/pay/bakong/confirm`,
@@ -123,6 +133,7 @@ export const {
   usePayCashOnPickupMutation,
   useGenerateBakongQrMutation,
   useGenerateBakongDeeplinkMutation,
+  useGenerateAbaDeeplinkMutation,
   useConfirmBakongPaymentMutation,
   useCancelMyOrderMutation,
   useCallStaffMutation,

@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { toast } from "@/components/ui/toast";
 import { useGetProductQuery } from "@/store/api/catalogApi";
@@ -35,7 +36,7 @@ export interface ProductpageViewProps {
 }
 
 /**
- * Product detail, fetched by id from `/api/customer/products/{id}`.
+ * Product detail, fetched by id from `/api/products/{id}`.
  *
  * Everything shown — price, discount, description, size options — comes from that response
  * rather than from query-string parameters, so a shared or bookmarked link always reflects
@@ -50,6 +51,7 @@ export function ProductpageView({
   const searchParams = useSearchParams();
   const { addItem } = useCart();
   const { isLoggedIn } = useAuth();
+  const requireLogin = useRequireLogin();
   const { t } = useLanguage();
   const [isMounted, setIsMounted] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
@@ -144,8 +146,7 @@ export function ProductpageView({
   const isPromotion = Boolean(product?.discountActive);
   const showCountdown = isPromotion && promoResult.isValid;
 
-  // Adding to the basket no longer needs an account — the catalogue is public and the cart is
-  // local until checkout, which is where the API requires a signed-in customer.
+  // Guests can view the product, but adding to the basket needs a customer login.
   const addCurrentSelection = () => {
     if (!product) return false;
     addItem({
@@ -166,6 +167,7 @@ export function ProductpageView({
   };
 
   const handleAddToCart = () => {
+    if (!requireLogin()) return;
     if (onAddToCart) {
       onAddToCart();
       return;
@@ -175,6 +177,7 @@ export function ProductpageView({
   };
 
   const handleBuyNowClick = () => {
+    if (!requireLogin()) return;
     if (onBuyNow) {
       onBuyNow();
     } else if (!addCurrentSelection()) {

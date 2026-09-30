@@ -486,7 +486,7 @@ export function CheckoutdonepageView() {
 
             <div className="meta_row">
               <span className="label_muted">{t("Payment type:")}</span>
-              <span className="value_dark">{t(order?.paymentMethod === "BAKONG" ? "Bakong QR" : order?.paymentMethod === "CASH" ? "Cash" : "Not selected")}</span>
+              <span className="value_dark">{t(order?.paymentMethod === "BAKONG" ? "Bakong QR" : order?.paymentMethod === "ABA_PAYWAY" ? "ABA Mobile" : order?.paymentMethod === "CASH" ? "Cash" : "Not selected")}</span>
             </div>
 
             <div className="meta_row">

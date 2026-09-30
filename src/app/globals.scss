@@ -1628,7 +1628,8 @@ input[type="tel"] { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; 
 .password_visibility_toggle:hover { color: #334155; }
 .profile_bottom_actions { padding-top: 24px; margin-top: 12px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: flex-end; }
 //toast styles
-.toast_viewport { pointer-events: none; position: fixed; left: 16px; right: 16px; top: 24px; z-index: 99999; margin-left: auto; margin-right: auto; width: max-content; max-width: calc(100vw - 32px); outline: none; display: flex;flex-direction: column;align-items: center;
+.toast_viewport { pointer-events: none; position: fixed; left: 16px; right: 16px; top: calc(env(safe-area-inset-top, 0px) + 16px); z-index: 99999; margin-left: auto; margin-right: auto; width: max-content; max-width: calc(100vw - 32px); outline: none; display: flex;flex-direction: column;align-items: center;
+  @media (max-width: 639px) { width: auto; align-items: stretch; }
   @media (min-width: 640px) { top: 24px; right: 24px; left: auto; margin-left: 0;  margin-right: 0; align-items: flex-end;}
 }
 .toast { pointer-events: auto;position: relative;width: max-content; max-width: min(calc(100vw - 32px), 540px); z-index: calc(1000 - var(--toast-index)); border-radius: 9999px; border: 1px solid #1e293b; background-color: #0f172a; color: #ffffff; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 4px 10px -4px rgba(0, 0, 0, 0.1); will-change: transform; outline: none;user-select: none;transition: transform 300ms ease, opacity 300ms; overflow: hidden;
@@ -1657,8 +1658,15 @@ input[type="tel"] { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; 
     .toast_icon { color: #0284c7; }
     .toast_close { color: #075985; &:hover { color: #0c4a6e; } }
   }
+  // Follows the finger while swiping to dismiss (Base UI sets these vars on the root).
+  transform: translate(var(--toast-swipe-movement-x, 0px), var(--toast-swipe-movement-y, 0px));
+  &[data-swiping] { transition: none; }
   &[data-starting-style] {transform: translateY(-100%);opacity: 0; }
   &[data-ending-style] { transform: translateY(-100%); opacity: 0; }
+  &[data-ending-style][data-swipe-direction="right"] { transform: translateX(calc(100% + 16px)); }
+  // On a phone a message often wraps to two lines, and a pill that tall clips the text at its
+  // rounded ends — so small screens get a full-width card, desktop keeps the pill.
+  @media (max-width: 639px) { width: 100%; border-radius: 16px; }
 }
 .toast_content {display: flex; align-items: center; gap: 10px;  padding: 10px 18px;  width: 100%;white-space: normal; word-break: break-word;}
 .toast_details { display: flex; flex: 1 1 auto; min-width: 0; flex-direction: column; gap: 2px;}

@@ -12,9 +12,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 /**
  * Thin accessor over the local cart store.
  *
- * Adding to the cart no longer requires being signed in: the catalogue is public, so a guest
- * can fill a basket and is only asked to log in at checkout, where the API needs a customer
- * account to create the order.
+ * The menu is public, but the add-to-cart buttons check login first (useRequireLogin).
  */
 export function useCart() {
   const store = useCartStore();

@@ -4,22 +4,69 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
-import { CheckCircle2, ChevronDown, Loader2, RefreshCw, Smartphone } from "lucide-react";
+import { CheckCircle2, ChevronDown, Download, Loader2, RefreshCw, Smartphone } from "lucide-react";
 
 import { toast } from "@/components/ui/toast";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import {
   useConfirmBakongPaymentMutation,
+  useGenerateAbaDeeplinkMutation,
   useGenerateBakongDeeplinkMutation,
   useGenerateBakongQrMutation,
   useLazyGetMyOrderQuery,
 } from "@/store/api/orderApi";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
+import { useMounted } from "@/hooks/useMounted";
 import type { Currency, OrderResponse } from "@/store/api/types";
 import "@/app/globals.scss";
 
+/**
+ * Bank-app links only work on a phone that has the app installed. iPadOS reports a desktop
+ * Safari user agent, so a touch-capable "Macintosh" is treated as an iPad too.
+ */
+const isPhone = () =>
+  typeof navigator !== "undefined" &&
+  (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
+
 /** How often to ask the API whether the transfer has landed. */
 const POLL_MS = 4000;
+
+/**
+ * If the page is still in front this long after handing off to a bank-app link, the app most
+ * likely isn't installed — Android does nothing at all and iOS only shows its own error.
+ */
+const APP_OPEN_TIMEOUT_MS = 2500;
+
+const BANK_APP_NAMES = { aba: "ABA Mobile", bakong: "Bakong" } as const;
+
+/**
+ * Hands the QR to the phone's share sheet ("Save Image" on iOS) so it can be picked from the
+ * gallery inside ACLEDA, Wing or any other KHQR app; falls back to a plain download. Resolves
+ * false only when the customer backed out of the share sheet.
+ */
+async function saveQrImage(dataUrl: string, fileName: string): Promise<boolean> {
+  // Decoded synchronously: Safari drops the tap's user activation across an await, and then
+  // refuses to open the share sheet.
+  const bytes = Uint8Array.from(atob(dataUrl.split(",")[1]), (c) => c.charCodeAt(0));
+  const file = new File([bytes], fileName, { type: "image/png" });
+  if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+      return true;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return false;
+      // Some browsers expose share but refuse files at call time — fall through to download.
+    }
+  }
+  const link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  return true;
+}
 
 type Phase = "loading" | "awaiting_fee" | "waiting" | "paid" | "expired" | "error";
 
@@ -59,7 +106,10 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const [generateQr, { data: qr, isLoading: isGenerating }] = useGenerateBakongQrMutation();
   const [confirmPayment, { isLoading: isChecking }] = useConfirmBakongPaymentMutation();
   const [getOrder] = useLazyGetMyOrderQuery();
-  const [generateDeeplink, { isLoading: isOpeningApp }] = useGenerateBakongDeeplinkMutation();
+  const [generateDeeplink, { isLoading: isOpeningBakong }] = useGenerateBakongDeeplinkMutation();
+  const [generateAbaDeeplink, { isLoading: isOpeningAba }] = useGenerateAbaDeeplinkMutation();
+  const mounted = useMounted();
+  const onPhone = mounted && isPhone();
 
   // Guards the poll so a slow request cannot overlap the next tick.
   const isPollingRef = useRef(false);
@@ -67,10 +117,19 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const isRequestingQrRef = useRef(false);
   const hasPaidRef = useRef(false);
   const isActiveRef = useRef(true);
+  /** The last automatic toast, so a retry loop hitting the same problem doesn't stack them. */
+  const lastNoticeRef = useRef<string | null>(null);
+  const [isSavingQr, setIsSavingQr] = useState(false);
 
   useEffect(() => {
     isActiveRef.current = true;
     return () => { isActiveRef.current = false; };
+  }, []);
+
+  const notify = useCallback((type: "error" | "warning", description: string) => {
+    if (lastNoticeRef.current === description) return;
+    lastNoticeRef.current = description;
+    toast.add({ type, description });
   }, []);
 
   const handleOrder = useCallback((order: OrderResponse) => {
@@ -127,19 +186,20 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
         setSecondsLeft(Math.max(0, Math.floor(issued.expiresInSeconds)));
         setFailure(null);
         setVerificationError(null);
+        lastNoticeRef.current = null;
       } catch (err) {
         if (!isActiveRef.current || hasPaidRef.current) return;
-        setFailure(
-          apiErrorMessage(
-            err as Parameters<typeof apiErrorMessage>[0],
-            "Could not generate the payment QR."
-          )
+        const message = apiErrorMessage(
+          err as Parameters<typeof apiErrorMessage>[0],
+          "Could not generate the payment QR."
         );
+        setFailure(message);
+        notify("error", message);
       } finally {
         isRequestingQrRef.current = false;
       }
     },
-    [orderId, generateQr, getOrder, confirmPayment, handleOrder]
+    [orderId, generateQr, getOrder, confirmPayment, handleOrder, notify]
   );
 
   useEffect(() => {
@@ -200,14 +260,42 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     return () => clearTimeout(timer);
   }, [effectivePhase, secondsLeft]);
 
-  const checkPayment = useCallback(async () => {
-      if (!orderId || isPollingRef.current || isRequestingQrRef.current || hasPaidRef.current) return;
+  useEffect(() => {
+    if (effectivePhase === "expired") {
+      notify("warning", "This QR has expired. Tap “Get a new QR” — if you already paid, we're still checking.");
+    }
+  }, [effectivePhase, notify]);
+
+  /**
+   * `manual` is the "I've paid" button: the background poll stays quiet, but a customer who
+   * pressed the button always gets an answer, including "nothing has arrived yet".
+   */
+  const checkPayment = useCallback(async (manual = false) => {
+      if (!orderId || isRequestingQrRef.current || hasPaidRef.current) return;
+      const reportNotYetPaid = () => {
+        if (manual && isActiveRef.current && !hasPaidRef.current) {
+          toast.add({
+            type: "info",
+            description: "No payment received yet. If you just paid, give it a moment — this page updates on its own.",
+          });
+        }
+      };
+      if (isPollingRef.current) {
+        // A background check is already in flight; answer the button with its result.
+        if (!manual) return;
+        const order = await pollingRequestRef.current?.catch(() => null);
+        if (order) reportNotYetPaid();
+        return;
+      }
       isPollingRef.current = true;
       try {
         const request = confirmPayment(orderId).unwrap();
         pollingRequestRef.current = request;
         const order = await request;
-        if (!handleOrder(order)) setVerificationError(null);
+        if (!handleOrder(order)) {
+          setVerificationError(null);
+          reportNotYetPaid();
+        }
       } catch {
         // Staff may have confirmed or cancelled the order while a bank lookup failed.
         try {
@@ -216,7 +304,9 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
           // Keep retrying the same transfer when the connection returns.
         }
         if (!isActiveRef.current || hasPaidRef.current) return;
-        setVerificationError("We couldn't verify your payment yet. We'll keep checking automatically.");
+        const message = "We couldn't verify your payment yet. We'll keep checking automatically.";
+        setVerificationError(message);
+        if (manual) toast.add({ type: "warning", description: message });
       } finally {
         isPollingRef.current = false;
         pollingRequestRef.current = null;
@@ -245,24 +335,65 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     };
   }, [effectivePhase, checkPayment]);
 
-  // The QR on this screen is on the same phone the customer would scan it with — physically
-  // impossible. This turns the same KHQR payload into a link that jumps straight into whichever
-  // Bakong-enabled banking app is already installed, no camera involved.
-  const handleOpenInBankApp = useCallback(async () => {
+  // A phone can't scan its own screen, so these open the bank app directly. ABA opens with the
+  // amount filled in (ABA PayWay); "Bakong" opens the Bakong app on the same KHQR. Either way the
+  // poll above picks up the payment when the customer comes back.
+  const openBankApp = useCallback(async (bank: "aba" | "bakong") => {
     if (!orderId) return;
+    let deeplink: string;
     try {
-      const result = await generateDeeplink(orderId).unwrap();
-      window.location.href = result.deeplink;
+      deeplink = (await (bank === "aba" ? generateAbaDeeplink : generateDeeplink)(orderId).unwrap()).deeplink;
     } catch (err) {
       toast.add({
         type: "warning",
         description: apiErrorMessage(
           err as Parameters<typeof apiErrorMessage>[0],
-          "Could not open a banking app. Please scan the QR instead."
+          "Could not open the banking app. Please save the QR and scan it in your bank app instead."
         ),
       });
+      return;
     }
-  }, [orderId, generateDeeplink]);
+
+    // The browser gives no error when an app link goes nowhere, so watch for the page losing
+    // focus instead: if it never does, tell the customer rather than leaving the tap silent.
+    let leftPage = false;
+    const onLeave = () => { leftPage = true; };
+    const onVisibility = () => { if (document.visibilityState === "hidden") leftPage = true; };
+    window.addEventListener("pagehide", onLeave);
+    window.addEventListener("blur", onLeave);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.location.href = deeplink;
+    window.setTimeout(() => {
+      window.removeEventListener("pagehide", onLeave);
+      window.removeEventListener("blur", onLeave);
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (leftPage || !isActiveRef.current || hasPaidRef.current) return;
+      toast.add({
+        type: "warning",
+        title: `${BANK_APP_NAMES[bank]} didn't open`,
+        description: "Check the app is installed, or save the QR and scan it from your bank app.",
+      });
+    }, APP_OPEN_TIMEOUT_MS);
+  }, [orderId, generateAbaDeeplink, generateDeeplink]);
+  const isOpeningApp = isOpeningAba || isOpeningBakong;
+
+  const handleSaveQr = useCallback(async () => {
+    if (!currentQr || !orderId) return;
+    setIsSavingQr(true);
+    try {
+      const saved = await saveQrImage(currentQr, `590st-cafe-khqr-${orderId.slice(0, 8)}.png`);
+      if (saved) {
+        toast.add({
+          type: "success",
+          description: "QR saved. In your bank app, tap Scan, choose the photo from your gallery, then come back here.",
+        });
+      }
+    } catch {
+      toast.add({ type: "error", description: "Couldn't save the QR. Take a screenshot and scan that instead." });
+    } finally {
+      setIsSavingQr(false);
+    }
+  }, [currentQr, orderId]);
 
   const formattedTime =
     secondsLeft === null
@@ -369,25 +500,42 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
             )}
           </div>
 
-          {effectivePhase === "waiting" ? (
-            <button
-              type="button"
-              onClick={() => { void handleOpenInBankApp(); }}
-              disabled={isOpeningApp}
-              className="mb-3 inline-flex w-full items-center justify-center gap-2 rounded-full border-none bg-[#A1255B] px-4 py-3 text-sm font-bold text-white shadow-md shadow-[#A1255B]/20 transition hover:bg-[#881d52] active:scale-98 disabled:opacity-60 cursor-pointer"
-            >
-              {isOpeningApp ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Smartphone className="h-4 w-4" />
-              )}
-              {isOpeningApp ? "Opening..." : "Open in Banking App"}
-            </button>
-          ) : null}
-          {effectivePhase === "waiting" ? (
-            <p className="mb-1 mt-0 text-[11px] text-gray-400">
-              On this phone? Tap above instead of scanning.
-            </p>
+          {effectivePhase === "waiting" && onPhone ? (
+            <div className="mb-3 flex w-full flex-col gap-2">
+              <p className="m-0 text-[11px] text-gray-500">On this phone? Pay in your bank app:</p>
+              <button
+                type="button"
+                onClick={() => { void openBankApp("aba"); }}
+                disabled={isOpeningApp}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border-none bg-[#005D7E] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#004a65] active:scale-98 disabled:opacity-60 cursor-pointer"
+              >
+                {isOpeningAba ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
+                {isOpeningAba ? "Opening ABA..." : "Pay with ABA Mobile"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { void openBankApp("bakong"); }}
+                disabled={isOpeningApp}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-800 transition hover:bg-gray-50 active:scale-98 disabled:opacity-60 cursor-pointer"
+              >
+                {isOpeningBakong ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
+                {isOpeningBakong ? "Opening Bakong..." : "Pay with Bakong"}
+              </button>
+              {/* ACLEDA, Wing and the other KHQR apps have no link that opens them on a given
+                  payment, but they can all scan a QR from the photo gallery. */}
+              <button
+                type="button"
+                onClick={() => { void handleSaveQr(); }}
+                disabled={isSavingQr}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-800 transition hover:bg-gray-50 active:scale-98 disabled:opacity-60 cursor-pointer"
+              >
+                {isSavingQr ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {isSavingQr ? "Saving QR..." : "Save QR for ACLEDA / other banks"}
+              </button>
+              <p className="m-0 text-[11px] text-gray-500">
+                Then open your bank app, tap Scan and pick the QR from your gallery.
+              </p>
+            </div>
           ) : null}
 
           {effectivePhase === "expired" || effectivePhase === "error" ? (
@@ -469,7 +617,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
             <p role="status" className="mt-3 text-xs text-amber-700">{verificationError}</p>
           ) : null}
           {effectivePhase === "waiting" || effectivePhase === "expired" ? (
-            <button type="button" onClick={() => { void checkPayment(); }} disabled={isChecking} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
+            <button type="button" onClick={() => { void checkPayment(true); }} disabled={isChecking} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
               {isChecking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
               {isChecking ? "Checking payment..." : "I've paid — check payment"}
             </button>
