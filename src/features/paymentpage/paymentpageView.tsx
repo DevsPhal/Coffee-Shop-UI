@@ -4,19 +4,19 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
-import { CheckCircle2, ChevronDown, Download, Loader2, RefreshCw, Smartphone } from "lucide-react";
+import { Check, CheckCircle2, ChevronDown, Download, ExternalLink, Loader2, RefreshCw, Smartphone } from "lucide-react";
 
 import { toast } from "@/components/ui/toast";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import {
   useConfirmBakongPaymentMutation,
-  useGenerateAbaDeeplinkMutation,
   useGenerateBakongDeeplinkMutation,
   useGenerateBakongQrMutation,
   useLazyGetMyOrderQuery,
 } from "@/store/api/orderApi";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { useMounted } from "@/hooks/useMounted";
+import { BANK_APPS, bankAppLaunch, storeUrl, type BankApp, type BankAppId } from "@/lib/bankApps";
 import type { Currency, OrderResponse } from "@/store/api/types";
 import "@/app/globals.scss";
 
@@ -38,11 +38,9 @@ const POLL_MS = 4000;
  */
 const APP_OPEN_TIMEOUT_MS = 2500;
 
-const BANK_APP_NAMES = { aba: "ABA Mobile", bakong: "Bakong" } as const;
-
 /**
  * Hands the QR to the phone's share sheet ("Save Image" on iOS) so it can be picked from the
- * gallery inside ACLEDA, Wing or any other KHQR app; falls back to a plain download. Resolves
+ * gallery inside ABA, ACLEDA or any other KHQR app; falls back to a plain download. Resolves
  * false only when the customer backed out of the share sheet.
  */
 async function saveQrImage(dataUrl: string, fileName: string): Promise<boolean> {
@@ -107,7 +105,6 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const [confirmPayment, { isLoading: isChecking }] = useConfirmBakongPaymentMutation();
   const [getOrder] = useLazyGetMyOrderQuery();
   const [generateDeeplink, { isLoading: isOpeningBakong }] = useGenerateBakongDeeplinkMutation();
-  const [generateAbaDeeplink, { isLoading: isOpeningAba }] = useGenerateAbaDeeplinkMutation();
   const mounted = useMounted();
   const onPhone = mounted && isPhone();
 
@@ -119,7 +116,14 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const isActiveRef = useRef(true);
   /** The last automatic toast, so a retry loop hitting the same problem doesn't stack them. */
   const lastNoticeRef = useRef<string | null>(null);
-  const [isSavingQr, setIsSavingQr] = useState(false);
+  /** Which picker button is saving right now ("other" = the plain save link), for its spinner. */
+  const [savingFor, setSavingFor] = useState<BankAppId | "other" | null>(null);
+  /**
+   * The bank the QR was saved for, and which QR. Confirmation only checks the order's current
+   * QR, so once it changes (currency switch, expiry) the saved image is stale and must not be
+   * presented as ready to pay.
+   */
+  const [savedFor, setSavedFor] = useState<{ bank: BankAppId; qr: string } | null>(null);
 
   useEffect(() => {
     isActiveRef.current = true;
@@ -232,6 +236,8 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   // The QR is tagged with the currency it was issued for, so a stale code is never shown while
   // a switch to the other currency is still in flight.
   const currentQr = qrImage && qrImage.currency === currency ? qrImage.dataUrl : null;
+  const savedForBank = savedFor && savedFor.qr === currentQr ? savedFor.bank : null;
+  const savedQrIsStale = savedFor !== null && currentQr !== null && savedFor.qr !== currentQr;
 
   const effectivePhase: Phase = !orderId
     ? "error"
@@ -335,34 +341,16 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     };
   }, [effectivePhase, checkPayment]);
 
-  // A phone can't scan its own screen, so these open the bank app directly. ABA opens with the
-  // amount filled in (ABA PayWay); "Bakong" opens the Bakong app on the same KHQR. Either way the
-  // poll above picks up the payment when the customer comes back.
-  const openBankApp = useCallback(async (bank: "aba" | "bakong") => {
-    if (!orderId) return;
-    let deeplink: string;
-    try {
-      deeplink = (await (bank === "aba" ? generateAbaDeeplink : generateDeeplink)(orderId).unwrap()).deeplink;
-    } catch (err) {
-      toast.add({
-        type: "warning",
-        description: apiErrorMessage(
-          err as Parameters<typeof apiErrorMessage>[0],
-          "Could not open the banking app. Please save the QR and scan it in your bank app instead."
-        ),
-      });
-      return;
-    }
-
-    // The browser gives no error when an app link goes nowhere, so watch for the page losing
-    // focus instead: if it never does, tell the customer rather than leaving the tap silent.
+  // The browser gives no error when an app link goes nowhere, so watch for the page losing
+  // focus instead: if it never does, tell the customer rather than leaving the tap silent.
+  const launchApp = useCallback((url: string, appName: string, installUrl?: string) => {
     let leftPage = false;
     const onLeave = () => { leftPage = true; };
     const onVisibility = () => { if (document.visibilityState === "hidden") leftPage = true; };
     window.addEventListener("pagehide", onLeave);
     window.addEventListener("blur", onLeave);
     document.addEventListener("visibilitychange", onVisibility);
-    window.location.href = deeplink;
+    window.location.href = url;
     window.setTimeout(() => {
       window.removeEventListener("pagehide", onLeave);
       window.removeEventListener("blur", onLeave);
@@ -370,19 +358,43 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
       if (leftPage || !isActiveRef.current || hasPaidRef.current) return;
       toast.add({
         type: "warning",
-        title: `${BANK_APP_NAMES[bank]} didn't open`,
-        description: "Check the app is installed, or save the QR and scan it from your bank app.",
+        title: `${appName} didn't open`,
+        description: "Check the app is installed, or open it yourself and scan the saved QR.",
+        ...(installUrl
+          ? { actionProps: { children: "Get the app", onClick: () => { window.open(installUrl, "_blank", "noopener"); } } }
+          : {}),
       });
     }, APP_OPEN_TIMEOUT_MS);
-  }, [orderId, generateAbaDeeplink, generateDeeplink]);
-  const isOpeningApp = isOpeningAba || isOpeningBakong;
+  }, []);
 
-  const handleSaveQr = useCallback(async () => {
+  // A phone can't scan its own screen. The Bakong app has an official link that opens this
+  // exact payment (and returns here after); the poll above picks up the payment either way.
+  const openBakongApp = useCallback(async () => {
+    if (!orderId) return;
+    try {
+      const { deeplink } = await generateDeeplink(orderId).unwrap();
+      launchApp(deeplink, "Bakong");
+    } catch (err) {
+      toast.add({
+        type: "warning",
+        description: apiErrorMessage(
+          err as Parameters<typeof apiErrorMessage>[0],
+          "Could not open Bakong. Please pay with your bank app instead."
+        ),
+      });
+    }
+  }, [orderId, generateDeeplink, launchApp]);
+
+  // ABA and ACLEDA can't be handed a KHQR by link, so: save the QR first, then open the app
+  // (a second tap, since opening an app needs a fresh tap after the share sheet on iOS).
+  const saveQrFor = useCallback(async (bank: BankAppId | null) => {
     if (!currentQr || !orderId) return;
-    setIsSavingQr(true);
+    setSavingFor(bank ?? "other");
     try {
       const saved = await saveQrImage(currentQr, `590st-cafe-khqr-${orderId.slice(0, 8)}.png`);
-      if (saved) {
+      if (!saved) return;
+      setSavedFor(bank ? { bank, qr: currentQr } : null);
+      if (!bank) {
         toast.add({
           type: "success",
           description: "QR saved. In your bank app, tap Scan, choose the photo from your gallery, then come back here.",
@@ -391,9 +403,20 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     } catch {
       toast.add({ type: "error", description: "Couldn't save the QR. Take a screenshot and scan that instead." });
     } finally {
-      setIsSavingQr(false);
+      setSavingFor(null);
     }
   }, [currentQr, orderId]);
+
+  const openSavedBankApp = useCallback(() => {
+    if (!savedForBank) return;
+    const app = BANK_APPS[savedForBank];
+    const { url, storePage } = bankAppLaunch(app);
+    if (storePage) {
+      window.open(url, "_blank", "noopener");
+      return;
+    }
+    launchApp(url, app.name, storeUrl(app));
+  }, [savedForBank, launchApp]);
 
   const formattedTime =
     secondsLeft === null
@@ -501,40 +524,71 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
           </div>
 
           {effectivePhase === "waiting" && onPhone ? (
-            <div className="mb-3 flex w-full flex-col gap-2">
-              <p className="m-0 text-[11px] text-gray-500">On this phone? Pay in your bank app:</p>
-              <button
-                type="button"
-                onClick={() => { void openBankApp("aba"); }}
-                disabled={isOpeningApp}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full border-none bg-[#005D7E] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#004a65] active:scale-98 disabled:opacity-60 cursor-pointer"
-              >
-                {isOpeningAba ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-                {isOpeningAba ? "Opening ABA..." : "Pay with ABA Mobile"}
-              </button>
-              <button
-                type="button"
-                onClick={() => { void openBankApp("bakong"); }}
-                disabled={isOpeningApp}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-800 transition hover:bg-gray-50 active:scale-98 disabled:opacity-60 cursor-pointer"
-              >
-                {isOpeningBakong ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-                {isOpeningBakong ? "Opening Bakong..." : "Pay with Bakong"}
-              </button>
-              {/* ACLEDA, Wing and the other KHQR apps have no link that opens them on a given
-                  payment, but they can all scan a QR from the photo gallery. */}
-              <button
-                type="button"
-                onClick={() => { void handleSaveQr(); }}
-                disabled={isSavingQr}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-800 transition hover:bg-gray-50 active:scale-98 disabled:opacity-60 cursor-pointer"
-              >
-                {isSavingQr ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                {isSavingQr ? "Saving QR..." : "Save QR for ACLEDA / other banks"}
-              </button>
-              <p className="m-0 text-[11px] text-gray-500">
-                Then open your bank app, tap Scan and pick the QR from your gallery.
-              </p>
+            <div className="mb-3 flex w-full flex-col gap-2.5 text-left">
+              {savedForBank ? (
+                <BankSteps
+                  app={BANK_APPS[savedForBank]}
+                  onOpen={openSavedBankApp}
+                  onSaveAgain={() => { void saveQrFor(savedForBank); }}
+                  isSaving={savingFor === savedForBank}
+                  onBack={() => setSavedFor(null)}
+                />
+              ) : (
+                <>
+                  <p className="m-0 text-xs font-bold text-gray-800">Paying on this phone? Choose your bank</p>
+                  {savedQrIsStale ? (
+                    <p role="status" className="m-0 rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800">
+                      The QR changed since you saved it. Save this one before paying.
+                    </p>
+                  ) : null}
+                  <div className="grid grid-cols-2 gap-2">
+                    {(Object.keys(BANK_APPS) as BankAppId[]).map((bank) => {
+                      const app = BANK_APPS[bank];
+                      const isSaving = savingFor === bank;
+                      return (
+                        <button
+                          key={bank}
+                          type="button"
+                          onClick={() => { void saveQrFor(bank); }}
+                          disabled={savingFor !== null || !currentQr}
+                          aria-label={`Pay with ${app.name}`}
+                          className="flex flex-col items-center gap-1.5 rounded-2xl border border-gray-200 bg-white px-2 py-3 transition hover:border-gray-300 hover:bg-gray-50 active:scale-98 disabled:opacity-60 cursor-pointer"
+                        >
+                          <span
+                            className="flex h-10 w-10 items-center justify-center rounded-xl text-[10px] font-black tracking-wide"
+                            style={{ backgroundColor: app.color, color: app.ink }}
+                            aria-hidden="true"
+                          >
+                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : app.shortName}
+                          </span>
+                          <span className="text-sm font-bold text-gray-900">{app.shortName}</span>
+                          <span className="text-[10px] font-medium text-gray-500">
+                            {isSaving ? "Saving QR..." : "Save QR & open"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { void openBakongApp(); }}
+                    disabled={isOpeningBakong}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-800 transition hover:bg-gray-50 active:scale-98 disabled:opacity-60 cursor-pointer"
+                  >
+                    {isOpeningBakong ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
+                    {isOpeningBakong ? "Opening Bakong..." : "Use the Bakong app instead (amount filled in)"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { void saveQrFor(null); }}
+                    disabled={savingFor !== null || !currentQr}
+                    className="inline-flex w-full items-center justify-center gap-1.5 border-none bg-transparent py-1 text-[11px] font-semibold text-gray-500 underline disabled:opacity-60 cursor-pointer"
+                  >
+                    {savingFor === "other" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                    Another bank? Save the QR and scan it from your gallery
+                  </button>
+                </>
+              )}
             </div>
           ) : null}
 
@@ -632,6 +686,93 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
         <p className="m-0 leading-tight flex-1 truncate">
           Powered by Bakong · National Bank of Cambodia
         </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * After the QR is saved for ABA or ACLEDA: what to do next, in order, with the one button that
+ * matters (open the app) in the bank's own colour.
+ */
+function BankSteps({
+  app,
+  onOpen,
+  onSaveAgain,
+  isSaving,
+  onBack,
+}: {
+  app: BankApp;
+  onOpen: () => void;
+  onSaveAgain: () => void;
+  isSaving: boolean;
+  onBack: () => void;
+}) {
+  const steps = [
+    { title: "QR saved", detail: "It's in your photos or downloads.", done: true },
+    { title: `Open ${app.name}`, detail: "Use the button below.", done: false },
+    { title: "Scan from your gallery", detail: `In the app, ${app.galleryHint}, then pick the saved QR and pay.`, done: false },
+    { title: "Come back here", detail: "This page confirms the payment on its own.", done: false },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3.5" role="status" aria-live="polite">
+      <div className="mb-3 flex items-center gap-2.5">
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[9px] font-black tracking-wide"
+          style={{ backgroundColor: app.color, color: app.ink }}
+          aria-hidden="true"
+        >
+          {app.shortName}
+        </span>
+        <p className="m-0 text-sm font-extrabold text-gray-900">Pay with {app.name}</p>
+      </div>
+
+      <ol className="m-0 mb-3.5 flex list-none flex-col gap-2.5 p-0">
+        {steps.map((step, index) => (
+          <li key={step.title} className="flex items-start gap-2.5">
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                step.done ? "bg-green-600 text-white" : "border border-gray-300 bg-white text-gray-600"
+              }`}
+              aria-hidden="true"
+            >
+              {step.done ? <Check className="h-3 w-3" /> : index + 1}
+            </span>
+            <div className="min-w-0">
+              <p className="m-0 text-xs font-bold text-gray-900">{step.title}</p>
+              <p className="m-0 text-[11px] leading-snug text-gray-500">{step.detail}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <button
+        type="button"
+        onClick={onOpen}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-full border-none px-4 py-3 text-sm font-bold shadow-md transition hover:opacity-90 active:scale-98 cursor-pointer"
+        style={{ backgroundColor: app.color, color: app.ink }}
+      >
+        <ExternalLink className="h-4 w-4" />
+        Open {app.name}
+      </button>
+      <div className="mt-2 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onBack}
+          className="border-none bg-transparent p-1 text-[11px] font-semibold text-gray-500 underline cursor-pointer"
+        >
+          Choose another bank
+        </button>
+        <button
+          type="button"
+          onClick={onSaveAgain}
+          disabled={isSaving}
+          className="inline-flex items-center gap-1 border-none bg-transparent p-1 text-[11px] font-semibold text-gray-500 underline disabled:opacity-60 cursor-pointer"
+        >
+          {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+          Save QR again
+        </button>
       </div>
     </div>
   );

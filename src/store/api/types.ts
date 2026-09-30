@@ -70,7 +70,7 @@ export type OrderStatus =
   | "COMPLETED"
   | "DELIVERED"
   | "CANCELLED";
-export type PaymentMethod = "CASH" | "BAKONG" | "ABA_PAYWAY";
+export type PaymentMethod = "CASH" | "BAKONG";
 export type DiscountType = "PERCENTAGE" | "FIXED";
 export type Currency = "USD" | "KHR";
 
@@ -437,8 +437,6 @@ export type OrderAuditAction =
   | "DELIVERY_FEE_SET"
   | "CASH_SELECTED"
   | "BAKONG_QR_GENERATED"
-  | "ABA_LINK_GENERATED"
-  | "ABA_CONFIRMED"
   | "PREPARING"
   | "OUT_FOR_DELIVERY"
   | "DELIVERED"
@@ -513,12 +511,6 @@ export interface BakongQrResponse {
 /** A link that opens whichever Bakong-enabled banking app the customer already has installed —
  *  for viewing the QR on the same phone that would otherwise need to scan it. */
 export interface BakongDeeplinkResponse {
-  orderId: UUID;
-  deeplink: string;
-}
-
-/** An abamobilebank:// link that opens ABA Mobile on the order's payment. */
-export interface AbaDeeplinkResponse {
   orderId: UUID;
   deeplink: string;
 }
