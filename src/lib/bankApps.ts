@@ -1,7 +1,10 @@
 /**
  * Banking apps the payment page can open on a phone. Payment still goes to the shop's Bakong
- * account: these apps have no public link that takes a KHQR, so the page saves the order's QR
- * first and the customer picks it from the gallery inside the app.
+ * account: these apps have no public link that takes a KHQR, so the page opens the app and the
+ * customer scans a screenshot (or saved copy) of the order's QR from the gallery inside it.
+ *
+ * ACLEDA publishes no iOS URL scheme or universal link, so on iPhone it opens via its App Store
+ * page (whose Open button launches the installed app). Fill in `iosScheme` if ACLEDA confirms one.
  */
 export type BankAppId = "aba" | "acleda";
 

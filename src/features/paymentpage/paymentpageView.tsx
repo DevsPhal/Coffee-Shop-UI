@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
-import { Check, CheckCircle2, ChevronDown, Download, ExternalLink, Loader2, RefreshCw, Smartphone } from "lucide-react";
+import { CheckCircle2, ChevronDown, Download, ExternalLink, Loader2, RefreshCw, Smartphone } from "lucide-react";
 
 import { toast } from "@/components/ui/toast";
 import { apiErrorMessage } from "@/store/api/baseApi";
@@ -409,22 +409,32 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     launchApp(url, app.name, storeUrl(app));
   }, [launchApp]);
 
-  // On Android the QR goes straight to Downloads and the bank app opens in the same tap. iOS
-  // needs the share sheet ("Save Image" puts it in Photos, where the bank app looks), and an app
-  // can only be opened from a fresh tap after that — so there the steps card asks for one.
+  // Tapping a bank opens its app straight away — no share sheet in between. The customer
+  // screenshots the QR first (the hint above the tiles says so) and picks it from the gallery
+  // inside the app. On Android the QR is also dropped into Downloads on the way, silently.
+  const chooseBank = useCallback((bank: BankAppId) => {
+    if (!currentQr || !orderId) return;
+    setSavedFor({ bank, qr: currentQr });
+    if (/Android/i.test(navigator.userAgent)) {
+      void saveQrImage(currentQr, `590st-cafe-khqr-${orderId.slice(0, 8)}.png`, true).catch(() => undefined);
+      // A beat for the download to register before the page hands off to the app.
+      window.setTimeout(() => openBankApp(bank), 400);
+      return;
+    }
+    openBankApp(bank);
+  }, [currentQr, orderId, openBankApp]);
+
+  /** The optional "Save QR image" link: the share sheet on iPhone, a download on Android. */
   const saveQrFor = useCallback(async (bank: BankAppId | null) => {
     if (!currentQr || !orderId) return;
-    const android = /Android/i.test(navigator.userAgent);
     setSavingFor(bank ?? "other");
     try {
-      const saved = await saveQrImage(currentQr, `590st-cafe-khqr-${orderId.slice(0, 8)}.png`, android);
-      if (!saved) return;
-      setSavedFor(bank ? { bank, qr: currentQr } : null);
-      if (bank && android) {
-        // A beat for the download to register before the page hands off to the app.
-        window.setTimeout(() => openBankApp(bank), 400);
-      }
-      if (!bank) {
+      const saved = await saveQrImage(
+        currentQr,
+        `590st-cafe-khqr-${orderId.slice(0, 8)}.png`,
+        /Android/i.test(navigator.userAgent)
+      );
+      if (saved) {
         toast.add({
           type: "success",
           description: "QR saved. In your bank app, tap Scan, choose the photo from your gallery, then come back here.",
@@ -435,7 +445,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     } finally {
       setSavingFor(null);
     }
-  }, [currentQr, orderId, openBankApp]);
+  }, [currentQr, orderId]);
 
   const openSavedBankApp = useCallback(() => {
     if (savedForBank) openBankApp(savedForBank);
@@ -552,41 +562,45 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
                 <BankSteps
                   app={BANK_APPS[savedForBank]}
                   onOpen={openSavedBankApp}
-                  onSaveAgain={() => { void saveQrFor(savedForBank); }}
+                  onSaveQr={() => { void saveQrFor(savedForBank); }}
                   isSaving={savingFor === savedForBank}
                   onBack={() => setSavedFor(null)}
                 />
               ) : (
                 <>
-                  <p className="m-0 text-xs font-bold text-gray-800">Paying on this phone? Choose your bank</p>
+                  <p className="m-0 text-xs font-bold text-gray-800">Paying on this phone?</p>
                   {savedQrIsStale ? (
                     <p role="status" className="m-0 rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800">
-                      The QR changed since you saved it. Save this one before paying.
+                      The QR changed. Take a new screenshot before paying.
                     </p>
                   ) : null}
+                  <ol className="m-0 flex list-none flex-col gap-1.5 rounded-xl bg-gray-50 px-3 py-2.5 text-[11px] text-gray-600">
+                    <li className="flex items-start gap-2">
+                      <StepNumber n={1} />
+                      <span><b className="text-gray-900">Screenshot this QR</b></span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <StepNumber n={2} />
+                      <span><b className="text-gray-900">Tap your bank</b> — then scan the screenshot from your gallery in the app</span>
+                    </li>
+                  </ol>
                   <div className="grid grid-cols-2 gap-2">
                     {(Object.keys(BANK_APPS) as BankAppId[]).map((bank) => {
                       const app = BANK_APPS[bank];
-                      const isSaving = savingFor === bank;
                       return (
                         <button
                           key={bank}
                           type="button"
-                          onClick={() => { void saveQrFor(bank); }}
-                          disabled={savingFor !== null || !currentQr}
-                          aria-label={`Pay with ${app.name}`}
+                          onClick={() => chooseBank(bank)}
+                          disabled={!currentQr}
+                          aria-label={`Open ${app.name}`}
                           className="flex flex-col items-center gap-1.5 rounded-2xl border border-gray-200 bg-white px-2 py-3 transition hover:border-gray-300 hover:bg-gray-50 active:scale-98 disabled:opacity-60 cursor-pointer"
                         >
-                          <span
-                            className="flex h-10 w-10 items-center justify-center rounded-xl text-[10px] font-black tracking-wide"
-                            style={{ backgroundColor: app.color, color: app.ink }}
-                            aria-hidden="true"
-                          >
-                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : app.shortName}
-                          </span>
+                          <BankBadge app={app} />
                           <span className="text-sm font-bold text-gray-900">{app.shortName}</span>
-                          <span className="text-[10px] font-medium text-gray-500">
-                            {isSaving ? "Saving QR..." : "Save QR & open"}
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-500">
+                            <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                            Open app
                           </span>
                         </button>
                       );
@@ -599,7 +613,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
                     className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-800 transition hover:bg-gray-50 active:scale-98 disabled:opacity-60 cursor-pointer"
                   >
                     {isOpeningBakong ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-                    {isOpeningBakong ? "Opening Bakong..." : "Use the Bakong app instead (amount filled in)"}
+                    {isOpeningBakong ? "Opening Bakong..." : "Bakong app — no screenshot needed"}
                   </button>
                   <button
                     type="button"
@@ -608,7 +622,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
                     className="inline-flex w-full items-center justify-center gap-1.5 border-none bg-transparent py-1 text-[11px] font-semibold text-gray-500 underline disabled:opacity-60 cursor-pointer"
                   >
                     {savingFor === "other" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                    Another bank? Save the QR and scan it from your gallery
+                    Save QR image instead of a screenshot
                   </button>
                 </>
               )}
@@ -714,54 +728,66 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   );
 }
 
+function StepNumber({ n }: { n: number }) {
+  return (
+    <span
+      className="mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-[9px] font-bold text-gray-600"
+      aria-hidden="true"
+    >
+      {n}
+    </span>
+  );
+}
+
+/** The bank's name on its brand colour; widens for longer names like ACLEDA. */
+function BankBadge({ app, small = false }: { app: BankApp; small?: boolean }) {
+  return (
+    <span
+      className={`flex shrink-0 items-center justify-center whitespace-nowrap font-black tracking-wide ${
+        small ? "h-8 min-w-8 rounded-lg px-1.5 text-[9px]" : "h-10 min-w-10 rounded-xl px-2.5 text-[10px]"
+      }`}
+      style={{ backgroundColor: app.color, color: app.ink }}
+      aria-hidden="true"
+    >
+      {app.shortName}
+    </span>
+  );
+}
+
 /**
- * After the QR is saved for ABA or ACLEDA: what to do next, in order, with the one button that
- * matters (open the app) in the bank's own colour.
+ * Shown once the customer has picked a bank (and the app has been opened): what to do in the
+ * app, and a way back into it if they came back here before paying.
  */
 function BankSteps({
   app,
   onOpen,
-  onSaveAgain,
+  onSaveQr,
   isSaving,
   onBack,
 }: {
   app: BankApp;
   onOpen: () => void;
-  onSaveAgain: () => void;
+  onSaveQr: () => void;
   isSaving: boolean;
   onBack: () => void;
 }) {
   const steps = [
-    { title: "QR saved", detail: "It's in your photos or downloads.", done: true },
-    { title: `Open ${app.name}`, detail: "Use the button below.", done: false },
-    { title: "Scan from your gallery", detail: `In the app, ${app.galleryHint}, then pick the saved QR and pay.`, done: false },
-    { title: "Come back here", detail: "This page confirms the payment on its own.", done: false },
+    { title: "Have the QR in your photos", detail: "A screenshot of this page works, or use Save QR image below." },
+    { title: `Scan it in ${app.name}`, detail: `In the app, ${app.galleryHint}, then pick the QR and pay.` },
+    { title: "Come back here", detail: "This page confirms the payment on its own." },
   ];
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3.5" role="status" aria-live="polite">
       <div className="mb-3 flex items-center gap-2.5">
-        <span
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[9px] font-black tracking-wide"
-          style={{ backgroundColor: app.color, color: app.ink }}
-          aria-hidden="true"
-        >
-          {app.shortName}
-        </span>
+        <BankBadge app={app} small />
         <p className="m-0 text-sm font-extrabold text-gray-900">Pay with {app.name}</p>
       </div>
 
       <ol className="m-0 mb-3.5 flex list-none flex-col gap-2.5 p-0">
         {steps.map((step, index) => (
           <li key={step.title} className="flex items-start gap-2.5">
-            <span
-              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                step.done ? "bg-green-600 text-white" : "border border-gray-300 bg-white text-gray-600"
-              }`}
-              aria-hidden="true"
-            >
-              {step.done ? <Check className="h-3 w-3" /> : index + 1}
-            </span>
+            <StepNumber n={index + 1} />
             <div className="min-w-0">
               <p className="m-0 text-xs font-bold text-gray-900">{step.title}</p>
               <p className="m-0 text-[11px] leading-snug text-gray-500">{step.detail}</p>
@@ -789,12 +815,12 @@ function BankSteps({
         </button>
         <button
           type="button"
-          onClick={onSaveAgain}
+          onClick={onSaveQr}
           disabled={isSaving}
           className="inline-flex items-center gap-1 border-none bg-transparent p-1 text-[11px] font-semibold text-gray-500 underline disabled:opacity-60 cursor-pointer"
         >
           {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
-          Save QR again
+          Save QR image
         </button>
       </div>
     </div>
