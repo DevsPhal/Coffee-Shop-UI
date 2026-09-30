@@ -34,7 +34,7 @@ function CustomDrawerSizeDropdown({
 }: {
   value: string;
   options?: string[];
-  onChange: (newSize: any) => void;
+  onChange: (newSize: string) => void;
 }) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);

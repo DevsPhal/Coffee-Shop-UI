@@ -46,6 +46,8 @@ function useCarousel() {
   return context;
 }
 
+const EMPTY_SNAPSHOT = "0|0|0|0";
+
 function Carousel({
   orientation = "horizontal",
   opts,
@@ -64,17 +66,34 @@ function Carousel({
     },
     plugins
   );
-  const [canScrollPrev, setCanScrollPrev] = React.useState(false);
-  const [canScrollNext, setCanScrollNext] = React.useState(false);
-  const [selectedIndex, setSelectedIndex] = React.useState(0);
-  const [scrollSnaps, setScrollSnaps] = React.useState<number[]>([]);
-
-  const onSelect = React.useCallback((api: CarouselApi) => {
-    if (!api) return;
-    setSelectedIndex(api.selectedScrollSnap());
-    setCanScrollPrev(api.canScrollPrev());
-    setCanScrollNext(api.canScrollNext());
-  }, []);
+  // Embla is an external store: read its position through useSyncExternalStore so every
+  // listener is removed on cleanup and nothing is copied into state from an effect. The
+  // snapshot is a string so it stays referentially stable between renders.
+  const subscribe = React.useCallback(
+    (onChange: () => void) => {
+      if (!api) return () => {};
+      api.on("select", onChange);
+      api.on("reInit", onChange);
+      return () => {
+        api.off("select", onChange);
+        api.off("reInit", onChange);
+      };
+    },
+    [api]
+  );
+  const snapshot = React.useSyncExternalStore(
+    subscribe,
+    () =>
+      api
+        ? `${api.selectedScrollSnap()}|${Number(api.canScrollPrev())}|${Number(api.canScrollNext())}|${api.scrollSnapList().length}`
+        : EMPTY_SNAPSHOT,
+    () => EMPTY_SNAPSHOT
+  );
+  const [selectedIndex, prevFlag, nextFlag, snapCount] = snapshot.split("|").map(Number);
+  const canScrollPrev = prevFlag === 1;
+  const canScrollNext = nextFlag === 1;
+  // Consumers only need how many snaps there are (dots) and their order.
+  const scrollSnaps = React.useMemo(() => Array.from({ length: snapCount }, (_, i) => i), [snapCount]);
 
   const scrollPrev = React.useCallback(() => {
     api?.scrollPrev();
@@ -109,20 +128,6 @@ function Carousel({
     setApi(api);
   }, [api, setApi]);
 
-  React.useEffect(() => {
-    if (!api) return;
-    setScrollSnaps(api.scrollSnapList());
-    onSelect(api);
-    api.on("reInit", () => {
-      setScrollSnaps(api.scrollSnapList());
-      onSelect(api);
-    });
-    api.on("select", onSelect);
-
-    return () => {
-      api?.off("select", onSelect);
-    };
-  }, [api, onSelect]);
 
   return (
     <CarouselContext.Provider

@@ -24,6 +24,7 @@ import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidati
 import SelectSizeModal from "@/components/ui/SelectSizeModal";
 import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { useMounted } from "@/hooks/useMounted";
 
 export interface PhoneCardProps {
   product: StoreProduct;
@@ -198,11 +199,7 @@ export function MenupageView() {
   const [searchQuery, setSearchQuery] = usePersistentState<string>("menu-phone:searchQuery", "");
   const [selectedId, setSelectedId] = useState<string>("1");
   const [activeModalProduct, setActiveModalProduct] = useState<StoreProduct | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   const { products, isLoading, error, refetch } = useCatalog(
     selectedCategory === ALL_CATEGORIES ? undefined : selectedCategory
@@ -249,7 +246,7 @@ export function MenupageView() {
             {t("Our Full Menu")}
           </h1>
           <p className="menu-subtitle">
-            {t("Sleek horizontal coffee cards customized for mobile phone screens.")}
+            {t("Handcrafted beverages & bites, made to order just for you.")}
           </p>
         </div>
 

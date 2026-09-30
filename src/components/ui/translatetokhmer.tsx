@@ -1,14 +1,6 @@
 "use client";
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  ReactNode,
-} from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode, useSyncExternalStore } from "react";
 
 export type Language = "en" | "km";
 
@@ -172,6 +164,7 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "Show More": "បង្ហាញបន្ថែម",
     "Show Less": "បង្ហាញតិចជាង",
     items: "មុខ",
+    "Category:": "ប្រភេទ:",
     "Sort by:": "តម្រៀបតាម:",
     Newest: "ថ្មីៗ",
     "Price: Low to High": "តម្លៃ: ទាប ទៅ ខ្ពស់",
@@ -386,30 +379,56 @@ export const translations = staticTranslations;
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+// The chosen language lives in localStorage and is read through useSyncExternalStore: the
+// server and the hydrating render both see "en", then the saved choice takes over — and a
+// change in another tab (the `storage` event) follows along here too.
+const LANGUAGE_KEY = "app_language";
+const languageListeners = new Set<() => void>();
+
+function subscribeLanguage(onChange: () => void) {
+  languageListeners.add(onChange);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === LANGUAGE_KEY) onChange();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    languageListeners.delete(onChange);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+function readLanguage(): Language {
+  try {
+    return localStorage.getItem(LANGUAGE_KEY) === "km" ? "km" : "en";
+  } catch {
+    return "en";
+  }
+}
+
+// Only consulted in Khmer, which never applies during hydration (see above), so reading the
+// cache on the first client render can't make it disagree with the server.
+function readCachedTranslations(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem("auto_translations_km") ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("en");
-  const [autoTranslations, setAutoTranslations] = useState<Record<string, string>>({});
+  const language = useSyncExternalStore(subscribeLanguage, readLanguage, () => "en" as Language);
+  const [autoTranslations, setAutoTranslations] = useState<Record<string, string>>(readCachedTranslations);
   const pendingQueue = useRef<Set<string>>(new Set());
   const isBatchProcessing = useRef<boolean>(false);
 
-  useEffect(() => {
-    const savedLang = localStorage.getItem("app_language") as Language;
-    if (savedLang === "en" || savedLang === "km") {
-      setLanguageState(savedLang);
-    }
-    try {
-      const cached = localStorage.getItem("auto_translations_km");
-      if (cached) {
-        setAutoTranslations(JSON.parse(cached));
-      }
-    } catch (e) {}
-  }, []);
-
   const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("app_language", lang);
+    try {
+      localStorage.setItem(LANGUAGE_KEY, lang);
+    } catch {
+      // Private mode: the choice just won't survive a reload.
     }
+    languageListeners.forEach((notify) => notify());
   };
 
   const processBatchQueue = useCallback(async () => {

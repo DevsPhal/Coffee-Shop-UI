@@ -56,7 +56,8 @@ export default function HeroCarousel() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const plugin = React.useRef(
+  // Created once; state rather than a ref so render never reads `.current`.
+  const [plugin] = useState(() =>
     Autoplay({
       delay: 3000,
       stopOnInteraction: false,
@@ -69,13 +70,14 @@ export default function HeroCarousel() {
     setSelectedIndex(api.selectedScrollSnap());
   }, [api]);
 
+  // Embla starts on slide 0 (the initial state), so only changes need listening to.
   useEffect(() => {
     if (!api) return;
-    onSelect();
     api.on("select", onSelect);
     api.on("reInit", onSelect);
     return () => {
       api.off("select", onSelect);
+      api.off("reInit", onSelect);
     };
   }, [api, onSelect]);
 
@@ -83,7 +85,7 @@ export default function HeroCarousel() {
 
   const getSlideDistance = (index: number) => {
     if (count === 0) return 0;
-    let diff = Math.abs(index - selectedIndex);
+    const diff = Math.abs(index - selectedIndex);
     const loopDiff = count - diff;
     return Math.min(diff, loopDiff);
   };
@@ -113,7 +115,7 @@ export default function HeroCarousel() {
       <div className="hero_container">
         <Carousel
           setApi={setApi}
-          plugins={[plugin.current]}
+          plugins={[plugin]}
           opts={{
             align: "center",
             loop: true,

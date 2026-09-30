@@ -12,6 +12,7 @@ import { toTitleCase } from "@/lib/utils";
 import { VARIANT_LABELS } from "@/store/api/optionMapping";
 import { useContactStore } from "@/store/useContactStore";
 import { isAuthenticated } from "@/lib/authStorage";
+import { useMounted } from "@/hooks/useMounted";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import {
   useForgotPasswordMutation,
@@ -100,16 +101,19 @@ export function UserprofilepageView() {
     : [];
 
   // Orders come from the API, scoped to the signed-in customer by the server.
-  const signedIn = isAuthenticated();
+  // Read after mount: the server has no localStorage, so reading it during the first render
+  // made the server (signed out → nothing) and the browser (signed in → the page) disagree.
+  const mounted = useMounted();
+  const signedIn = mounted && isAuthenticated();
 
   // This page shows real account data (email, phone, order history) — nothing here makes
   // sense for a logged-out visitor, so it sends them to log in instead of rendering a
   // "Guest" account shell with buttons that have nothing to act on.
   useEffect(() => {
-    if (!signedIn) {
+    if (mounted && !signedIn) {
       router.push(`/login?next=${encodeURIComponent(pathname)}`);
     }
-  }, [signedIn, router, pathname]);
+  }, [mounted, signedIn, router, pathname]);
 
   const {
     data: currentUser,
@@ -677,7 +681,7 @@ export function UserprofilepageView() {
                             </span>
                           </div>
                           <p className="message_bubble_content">
-                            "{msg.message}"
+                            &ldquo;{msg.message}&rdquo;
                           </p>
                           <div className="message_footer_row">
                             <span>Status: <strong className="message_status_text">{msg.status || "Received"}</strong></span>

@@ -8,6 +8,7 @@ import { ShoppingBag, Clock, MapPin, ChevronRight, RefreshCw, CheckCircle2, Truc
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
 import { isAuthenticated } from "@/lib/authStorage";
+import { useMounted } from "@/hooks/useMounted";
 import { useListMyOrdersQuery } from "@/store/api/orderApi";
 import { toTitleCase } from "@/lib/utils";
 import type { OrderResponse, OrderStatus } from "@/store/api/types";
@@ -28,12 +29,15 @@ export function OrderhistorypageView() {
   // The API scopes /api/customer/orders to the signed-in customer, so no client-side
   // filtering by user is needed — and there is nothing to show for a guest, so they're sent
   // to log in instead of seeing an empty order list that looks like an account with no history.
-  const signedIn = isAuthenticated();
+  // Read after mount: the server has no localStorage, so reading it during the first render
+  // made the server (signed out → nothing) and the browser (signed in → the page) disagree.
+  const mounted = useMounted();
+  const signedIn = mounted && isAuthenticated();
   useEffect(() => {
-    if (!signedIn) {
+    if (mounted && !signedIn) {
       router.push(`/login?next=${encodeURIComponent(pathname)}`);
     }
-  }, [signedIn, router, pathname]);
+  }, [mounted, signedIn, router, pathname]);
 
   const { data, currentData, isFetching, error, refetch } = useListMyOrdersQuery(
     {

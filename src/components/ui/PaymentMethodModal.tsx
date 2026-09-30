@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { QrCode, Banknote, CreditCard, X, Check, Loader2 } from "lucide-react";
 import { useLanguage } from "@/components/ui/translatetokhmer";
@@ -23,11 +23,10 @@ export function PaymentMethodModal({
   const [selectedMethod, setSelectedMethod] = useState<"QR Scan" | "Cash">("QR Scan");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!open) {
-      setIsSubmitting(false);
-    }
-  }, [open]);
+  // A closed modal is never mid-submit; reset during render so reopening starts clean.
+  if (!open && isSubmitting) {
+    setIsSubmitting(false);
+  }
 
   /**
    * Placing the order is a real request now (server cart -> checkout -> payment), so the

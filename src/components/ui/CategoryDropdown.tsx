@@ -22,6 +22,8 @@ import {
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { useCategories, type CatalogCategory } from "@/store/api/useCatalog";
 import "@/app/globals.scss";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { useMounted } from "@/hooks/useMounted";
 
 /**
  * Icon per category name. Purely presentational — the API has no icon field — and every
@@ -89,21 +91,13 @@ export function CategoryDropdown({
   className = "",
 }: CategoryDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const isMobile = useIsMobile();
+  const mounted = useMounted();
   const [touchActiveCat, setTouchActiveCat] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
 
   const { categories, isLoading } = useCategories();
-
-  useEffect(() => {
-    setMounted(true);
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

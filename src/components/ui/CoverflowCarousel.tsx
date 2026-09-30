@@ -33,7 +33,8 @@ export function CoverflowCarousel({
   const [api, setApi] = useState<CarouselApi>();
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const plugin = React.useRef(
+  // Created once; state rather than a ref so render never reads `.current`.
+  const [plugin] = useState(() =>
     Autoplay({ delay: 4000, stopOnInteraction: true })
   );
 
@@ -42,13 +43,14 @@ export function CoverflowCarousel({
     setSelectedIndex(api.selectedScrollSnap());
   }, [api]);
 
+  // Embla starts on slide 0 (the initial state), so only changes need listening to.
   useEffect(() => {
     if (!api) return;
-    onSelect();
     api.on("select", onSelect);
     api.on("reInit", onSelect);
     return () => {
       api.off("select", onSelect);
+      api.off("reInit", onSelect);
     };
   }, [api, onSelect]);
 
@@ -56,7 +58,7 @@ export function CoverflowCarousel({
 
   const getSlideDistance = (index: number) => {
     if (count === 0) return 0;
-    let diff = Math.abs(index - selectedIndex);
+    const diff = Math.abs(index - selectedIndex);
     const loopDiff = count - diff;
     return Math.min(diff, loopDiff);
   };
@@ -65,15 +67,15 @@ export function CoverflowCarousel({
     <div className={cn("w-full max-w-(--page-max) mx-auto py-4 overflow-hidden", className)}>
       <Carousel
         setApi={setApi}
-        plugins={autoplay ? [plugin.current] : []}
+        plugins={autoplay ? [plugin] : []}
         opts={{
           align: "center",
           loop: true,
           skipSnaps: false,
         }}
         className="w-full relative"
-        onMouseEnter={() => autoplay && plugin.current.stop()}
-        onMouseLeave={() => autoplay && plugin.current.reset()}
+        onMouseEnter={() => autoplay && plugin.stop()}
+        onMouseLeave={() => autoplay && plugin.reset()}
       >
         {/* Negative margins & spacing to create card overlap */}
         <CarouselContent className="-ml-12 sm:-ml-24 md:-ml-32 lg:-ml-40 items-center py-6">

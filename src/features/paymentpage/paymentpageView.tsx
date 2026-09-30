@@ -29,6 +29,9 @@ const isPhone = () =>
   (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
     (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
 
+/** Anything past PENDING means the money is in (cancelled is handled separately). */
+const PAID_STATUSES: OrderResponse["status"][] = ["PAID", "PREPARING", "OUT_FOR_DELIVERY", "COMPLETED", "DELIVERED"];
+
 /** How often to ask the API whether the transfer has landed. */
 const POLL_MS = 4000;
 
@@ -65,6 +68,10 @@ async function saveQrImage(dataUrl: string, fileName: string, preferDownload = f
   link.remove();
   return true;
 }
+
+type CheckOutcome =
+  | { kind: "settled" | "unpaid" | "skipped" }
+  | { kind: "failed"; message: string };
 
 type Phase = "loading" | "awaiting_fee" | "waiting" | "paid" | "expired" | "error";
 
@@ -109,7 +116,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const onPhone = mounted && isPhone();
 
   // Guards the poll so a slow request cannot overlap the next tick.
-  const isPollingRef = useRef(false);
+  const checkInFlightRef = useRef<Promise<CheckOutcome> | null>(null);
   const pollingRequestRef = useRef<Promise<OrderResponse> | null>(null);
   const isRequestingQrRef = useRef(false);
   const hasAdoptedCurrencyRef = useRef(false);
@@ -143,7 +150,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
       setFailure("This order was cancelled.");
       return true;
     }
-    if (order.paidAt != null || ["PAID", "PREPARING", "COMPLETED"].includes(order.status)) {
+    if (order.paidAt != null || PAID_STATUSES.includes(order.status)) {
       hasPaidRef.current = true;
       setSettled("paid");
       setFailure(null);
@@ -176,8 +183,9 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
         }
         setAwaitingFee(false);
         if (existingOrder.bakongMd5Hash) {
-          const checkedOrder = await confirmPayment(orderId).unwrap();
-          if (handleOrder(checkedOrder)) return;
+          // A failed check mustn't hide the QR — the poll keeps retrying and reports the problem.
+          const checkedOrder = await confirmPayment(orderId).unwrap().catch(() => null);
+          if (checkedOrder && handleOrder(checkedOrder)) return;
         }
         // Reopening the page (a reload, or the phone dropping the tab while the bank app was
         // open) must show the QR the customer may already be paying, in its own currency — the
@@ -286,51 +294,63 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   }, [effectivePhase, notify]);
 
   /**
+   * One check against the bank, settled to a single outcome so a tap on "I've paid" that lands
+   * while the background poll is mid-check can wait for that same check and report it.
+   */
+  const runCheck = useCallback(async (): Promise<CheckOutcome> => {
+    if (!orderId) return { kind: "skipped" };
+    try {
+      const request = confirmPayment(orderId).unwrap();
+      pollingRequestRef.current = request;
+      const order = await request;
+      if (handleOrder(order)) return { kind: "settled" };
+      setVerificationError(null);
+      return { kind: "unpaid" };
+    } catch (err) {
+      // Staff may have confirmed or cancelled the order while a bank lookup failed.
+      try {
+        if (handleOrder(await getOrder(orderId, false).unwrap())) return { kind: "settled" };
+      } catch {
+        // Keep retrying the same transfer when the connection returns.
+      }
+      // 502: the API reached us but couldn't ask the bank at all, so automatic confirmation
+      // is down — tell the customer how to get served rather than to keep waiting.
+      const bankUnreachable = (err as { status?: unknown } | null)?.status === 502;
+      const message = bankUnreachable
+        ? "We can't confirm payments automatically right now. If you've paid, show your bank receipt at the counter — we'll keep checking too."
+        : "We couldn't verify your payment yet. We'll keep checking automatically.";
+      if (isActiveRef.current && !hasPaidRef.current) setVerificationError(message);
+      return { kind: "failed", message };
+    } finally {
+      pollingRequestRef.current = null;
+    }
+  }, [orderId, confirmPayment, getOrder, handleOrder]);
+
+  /**
    * `manual` is the "I've paid" button: the background poll stays quiet, but a customer who
-   * pressed the button always gets an answer, including "nothing has arrived yet".
+   * pressed the button always gets an answer — "nothing has arrived yet" or why we can't tell.
    */
   const checkPayment = useCallback(async (manual = false) => {
-      if (!orderId || isRequestingQrRef.current || hasPaidRef.current) return;
-      const reportNotYetPaid = () => {
-        if (manual && isActiveRef.current && !hasPaidRef.current) {
-          toast.add({
-            type: "info",
-            description: "No payment received yet. If you just paid, give it a moment — this page updates on its own.",
-          });
-        }
-      };
-      if (isPollingRef.current) {
-        // A background check is already in flight; answer the button with its result.
-        if (!manual) return;
-        const order = await pollingRequestRef.current?.catch(() => null);
-        if (order) reportNotYetPaid();
-        return;
+    if (!orderId || isRequestingQrRef.current || hasPaidRef.current) return;
+    const inFlight = checkInFlightRef.current;
+    if (inFlight && !manual) return;
+    const check = inFlight ?? runCheck();
+    if (!inFlight) checkInFlightRef.current = check;
+    try {
+      const outcome = await check;
+      if (!manual || !isActiveRef.current || hasPaidRef.current) return;
+      if (outcome.kind === "unpaid") {
+        toast.add({
+          type: "info",
+          description: "No payment received yet. If you just paid, give it a moment — this page updates on its own.",
+        });
+      } else if (outcome.kind === "failed") {
+        toast.add({ type: "warning", description: outcome.message });
       }
-      isPollingRef.current = true;
-      try {
-        const request = confirmPayment(orderId).unwrap();
-        pollingRequestRef.current = request;
-        const order = await request;
-        if (!handleOrder(order)) {
-          setVerificationError(null);
-          reportNotYetPaid();
-        }
-      } catch {
-        // Staff may have confirmed or cancelled the order while a bank lookup failed.
-        try {
-          if (handleOrder(await getOrder(orderId, false).unwrap())) return;
-        } catch {
-          // Keep retrying the same transfer when the connection returns.
-        }
-        if (!isActiveRef.current || hasPaidRef.current) return;
-        const message = "We couldn't verify your payment yet. We'll keep checking automatically.";
-        setVerificationError(message);
-        if (manual) toast.add({ type: "warning", description: message });
-      } finally {
-        isPollingRef.current = false;
-        pollingRequestRef.current = null;
-      }
-  }, [orderId, confirmPayment, getOrder, handleOrder]);
+    } finally {
+      if (!inFlight) checkInFlightRef.current = null;
+    }
+  }, [orderId, runCheck]);
 
   // Keep checking after QR expiry: a transfer sent just before the deadline may arrive later.
   // Returning from a banking app or reconnecting also triggers an immediate check.

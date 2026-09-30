@@ -76,16 +76,18 @@ export function SelectSizeModal({
   const [milkType, setMilkType] = useState<MilkType>("NORMAL");
   const [selectedExtras, setSelectedExtras] = useState<CartExtra[]>([]);
 
-  React.useEffect(() => {
-    if (!product) return;
+  // Re-seed the choices each time the sheet opens (or opens on a different product). Done during
+  // render rather than in an effect, so the first frame already shows the right defaults.
+  const seedKey = product ? `${product.id}|${open}` : null;
+  const [seededFor, setSeededFor] = useState<string | null>(null);
+  if (product && seedKey !== seededFor) {
+    setSeededFor(seedKey);
     setVariantId(initialVariantId ?? (variants.length > 0 ? variants[0].id : null));
     setIceLevel(initialIce ?? "NORMAL");
     setSugarLevel(initialSugar ?? "NORMAL");
     setMilkType(initialMilk ?? "NORMAL");
     setSelectedExtras([]);
-    // Re-seed only when the modal opens on a different product.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product?.id, open]);
+  }
 
   if (!product) return null;
 

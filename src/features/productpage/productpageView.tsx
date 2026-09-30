@@ -27,6 +27,8 @@ import { OptionDropdown } from "@/components/ui/OptionDropdown";
 import type { CartExtra } from "@/store/useCartStore";
 import { useCatalogLiveUpdates } from "@/hooks/useCatalogLiveUpdates";
 import "@/app/globals.scss";
+import { useMounted } from "@/hooks/useMounted";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 export interface ProductpageViewProps {
   /** Product UUID. Falls back to the `id` query param when not passed directly. */
@@ -53,18 +55,8 @@ export function ProductpageView({
   const { isLoggedIn } = useAuth();
   const requireLogin = useRequireLogin();
   const { t } = useLanguage();
-  const [isMounted, setIsMounted] = React.useState(false);
-  const [isMobile, setIsMobile] = React.useState(false);
-
-  React.useEffect(() => {
-    setIsMounted(true);
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  const isMounted = useMounted();
+  const isMobile = useIsMobile();
 
   const menuBaseUrl = isMobile ? "/menuphone" : "/menu";
   const productId = propId || searchParams.get("id") || "";
@@ -106,25 +98,25 @@ export function ProductpageView({
     : { ice: false, sugar: false, milk: false };
   const hasCustomization = drinkOptions.ice || drinkOptions.sugar || drinkOptions.milk;
 
-  const [selectedVariantId, setSelectedVariantId] = React.useState<string | null>(null);
+  // What the customer picked; until they pick (or if the pick isn't offered) the first variant
+  // is the selection — derived, so there's no render with nothing selected.
+  const [chosenVariantId, setSelectedVariantId] = React.useState<string | null>(null);
   const [selectedIce, setSelectedIce] = React.useState<IceLevel>("NORMAL");
   const [selectedSugar, setSelectedSugar] = React.useState<SugarLevel>("NORMAL");
   const [selectedMilk, setSelectedMilk] = React.useState<MilkType>("NORMAL");
   const [selectedExtras, setSelectedExtras] = React.useState<CartExtra[]>([]);
 
-  // Default to the first variant once the product arrives.
-  React.useEffect(() => {
-    if (variants.length > 0 && !variants.some((v) => v.id === selectedVariantId)) {
-      setSelectedVariantId(variants[0].id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product?.id, variants.length]);
+  const selectedVariantId = variants.some((v) => v.id === chosenVariantId)
+    ? chosenVariantId
+    : variants[0]?.id ?? null;
 
   // A different product offers different extras — carrying a selection across would attach an
-  // add-on that product never listed.
-  React.useEffect(() => {
+  // add-on that product never listed. Reset while rendering the new product, not after.
+  const [extrasFor, setExtrasFor] = React.useState(product?.id);
+  if (extrasFor !== product?.id) {
+    setExtrasFor(product?.id);
     setSelectedExtras([]);
-  }, [product?.id]);
+  }
 
   const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? null;
   // Each variant prices itself outright now — no product-level price to add a delta to — but
