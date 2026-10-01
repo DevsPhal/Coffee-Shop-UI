@@ -8,17 +8,6 @@ import { clearTokens, isAuthenticated } from "@/lib/authStorage";
 import { useGetCurrentUserQuery, useLogoutMutation } from "@/store/api/authApi";
 import type { Role, UserResponse } from "@/store/api/types";
 
-/**
- * The signed-in customer, backed by the API.
- *
- * This used to wrap a zustand store that kept a fabricated user list in the browser. It now
- * reads `/api/users/me` through RTK Query, so `user` is the real account or null.
- *
- * Sign-in and sign-up are no longer exposed here: both are two-step OTP flows that the login
- * and registration screens drive against the API directly, and a one-shot `login()` could not
- * represent the challenge step.
- */
-
 export interface AuthUser {
   userId: string;
   name: string;
@@ -50,12 +39,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/**
- * Where the session stands right now. "checking" covers both the server render / first client
- * render (localStorage is unreadable on the server) and a stored token whose `/me` lookup is
- * still in flight — the two moments the UI must not guess, or a signed-in customer sees a
- * "Login" button flash on every reload.
- */
 export type AuthStatus = "checking" | "signedIn" | "signedOut";
 
 export function useAuth() {
@@ -80,7 +63,6 @@ export function useAuth() {
     try {
       await logoutMutation().unwrap();
     } catch {
-      // The session is cleared locally either way.
       clearTokens();
     }
     router.push("/");

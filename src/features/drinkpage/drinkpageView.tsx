@@ -19,7 +19,6 @@ export function DrinkpageView() {
     selectedCategory === ALL_CATEGORIES ? undefined : selectedCategory
   );
 
-  // The API filters by category server-side; the free-text search narrows that page here.
   const filteredProducts = products
     .filter((product) => {
       const term = searchQuery.trim().toLowerCase();
@@ -34,7 +33,6 @@ export function DrinkpageView() {
   return (
     <div className="menu_page_wrapper font-sans">
       <div className="menu_page_container">
-        {/* Header Section */}
         <div className="menu_page_header">
           <h1 className="menu_page_title">
             Our Drinks Today
@@ -44,9 +42,7 @@ export function DrinkpageView() {
           </p>
         </div>
 
-        {/* Category Dropdown & Search Form Row */}
         <div className="flex items-center justify-center gap-2 sm:gap-3 max-w-xl mx-auto my-6 px-2 w-full">
-          {/* Left: Category Dropdown Pill */}
           <div className="shrink-0">
             <CategoryDropdown
               selectedCategory={selectedCategory}
@@ -54,7 +50,6 @@ export function DrinkpageView() {
             />
           </div>
 
-          {/* Right: Search Input Form Pill */}
           <form
             onSubmit={(e) => e.preventDefault()}
             className="flex items-center flex-1 min-w-0 bg-white border border-gray-200 focus-within:border-[#A1255B] focus-within:ring-1 focus-within:ring-[#A1255B] rounded-full p-1 pl-3.5 shadow-2xs transition-all"
@@ -87,7 +82,6 @@ export function DrinkpageView() {
           </form>
         </div>
 
-        {/* Menu Cards Grid */}
         {isLoading ? (
           <LoadingRegion label="Loading drinks..." className="menu_page_grid">
             <ProductCardSkeletons count={8} />

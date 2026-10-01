@@ -8,18 +8,11 @@ import type { ProductExtraResponse } from "@/store/api/types";
 import type { CartExtra } from "@/store/useCartStore";
 
 export interface ExtrasSelectorProps {
-  /** Only the extras this specific product offers — the API's own product/extra relationship,
-   *  not a global add-on list the customer picks from independently of what they're ordering. */
   extras: ProductExtraResponse[];
   selected: CartExtra[];
   onChange: (selected: CartExtra[]) => void;
 }
 
-/**
- * Shared by every place a product gets customized before going into the cart, so "which extras
- * a product offers" and "how they're shown" can't drift apart between them the way the ice/
- * sugar/milk dropdowns did across this codebase. Renders nothing when the product has none.
- */
 export function ExtrasSelector({ extras, selected, onChange }: ExtrasSelectorProps) {
   const { t } = useLanguage();
 

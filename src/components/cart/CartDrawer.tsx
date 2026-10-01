@@ -22,7 +22,6 @@ import type { CartItem } from "@/store/useCartStore";
 import { ChevronDown, Check } from "lucide-react";
 import "@/app/globals.scss";
 
-/** Extras add a flat amount per unit, on top of whatever the variant itself prices at. */
 function extrasUnitTotal(item: Pick<CartItem, "selectedExtras">): number {
   return (item.selectedExtras ?? []).reduce((sum, extra) => sum + extra.price, 0);
 }
@@ -200,8 +199,6 @@ export function CartDrawer() {
     subtotal,
   } = useCart();
 
-  // Shared with the rest of the storefront through RTK Query's cache — this does not fire a
-  // second request. It supplies the size options a cart line can be switched between.
   const { products } = useCatalog();
 
   useEffect(() => {
@@ -230,18 +227,14 @@ export function CartDrawer() {
 
   return (
     <div className="cart_drawer_wrapper">
-      {/* Backdrop overlay - clicking closes the cart and returns to page */}
       <div
         className="cart_drawer_backdrop"
         onClick={closeCart}
         aria-hidden="true"
       />
 
-      {/* Drawer Panel Container - clicking padding closes cart */}
       <div className="cart_drawer_panel_container" onClick={closeCart}>
-        {/* Drawer Panel - prevent clicks inside from closing */}
         <div className="cart_drawer_panel" onClick={(e) => e.stopPropagation()}>
-          {/* Header */}
           <div className="cart_drawer_header">
             <h2 className="cart_drawer_title">{t("Shopping Cart")}</h2>
             <button
@@ -267,7 +260,6 @@ export function CartDrawer() {
             </button>
           </div>
 
-          {/* Cart Item List */}
           <div className="cart_drawer_body">
             {items.length === 0 ? (
               <div className="cart_drawer_empty">
@@ -291,9 +283,6 @@ export function CartDrawer() {
             ) : (
               <div className="cart_drawer_items_list">
                 {items.map((item) => {
-                  // The catalogue is already cached by RTK Query, so this lookup costs no
-                  // extra request — and it is where the real size options and their price
-                  // deltas come from.
                   const product = products.find((p) => p.id === item.productId);
                   const variants = product?.variants ?? [];
                   const drinkOptions = product
@@ -302,7 +291,6 @@ export function CartDrawer() {
 
                   return (
                     <div key={item.lineId} className="cart_item">
-                      {/* Thumbnail */}
                       <div className="cart_item_thumbnail">
                         <Image
                           src={resolveProductImage(item.image)}
@@ -313,7 +301,6 @@ export function CartDrawer() {
                         />
                       </div>
 
-                      {/* Details */}
                       <div className="cart_item_details">
                         <h3 className="cart_item_title">{t(toTitleCase(item.title))}</h3>
 
@@ -396,7 +383,6 @@ export function CartDrawer() {
                           ))}
                         </div>
 
-                        {/* Quantity Pill */}
                         <div className="cart_quantity_pill">
                           <button
                             type="button"
@@ -431,12 +417,8 @@ export function CartDrawer() {
             )}
           </div>
 
-          {/* Footer */}
           <div className="cart_drawer_footer">
             {(() => {
-              // Pre-discount total, so the drawer can show what the customer saved. The
-              // line already carries its own original unit price from the API. Extras are
-              // never discounted, so the same amount applies either way.
               const fullSubtotal = items.reduce((acc, item) => {
                 const original = item.originalUnitPrice ?? item.unitPrice;
                 return acc + (Math.max(original, item.unitPrice) + extrasUnitTotal(item)) * item.quantity;

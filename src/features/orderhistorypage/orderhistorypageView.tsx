@@ -26,11 +26,6 @@ export function OrderhistorypageView() {
 
   const [filterStatus, setFilterStatus] = usePersistentState<string>("order-history:filterStatus", "All");
 
-  // The API scopes /api/customer/orders to the signed-in customer, so no client-side
-  // filtering by user is needed — and there is nothing to show for a guest, so they're sent
-  // to log in instead of seeing an empty order list that looks like an account with no history.
-  // Read after mount: the server has no localStorage, so reading it during the first render
-  // made the server (signed out → nothing) and the browser (signed in → the page) disagree.
   const mounted = useMounted();
   const signedIn = mounted && isAuthenticated();
   useEffect(() => {
@@ -48,18 +43,11 @@ export function OrderhistorypageView() {
     { skip: !signedIn }
   );
 
-  // A barista moving one of these orders along reaches this list the instant the API pushes
-  // it, rather than the customer needing to leave and come back to see the new status.
   useOrderLiveUpdates(() => refetch());
 
   const filteredOrders = data?.content ?? [];
-  // Switching status tabs is a new request: show the skeleton until that tab's own result
-  // lands, rather than the previous tab's orders under the new tab's highlight. A live refetch
-  // of the same tab keeps its `currentData`, so it never flashes.
   const isLoadingOrders = isFetching && currentData === undefined;
 
-  // Re-adds the order's lines to the local cart. Prices come from the order as it was
-  // charged; the cart re-prices against the live catalogue at checkout.
   const handleReorder = (order: OrderResponse) => {
     order.items.forEach((item) => {
       addItem(
@@ -87,14 +75,11 @@ export function OrderhistorypageView() {
     switch (status) {
       case "PENDING":
         return "bg-amber-100 text-amber-800 border-amber-200";
-      // Paid for and on its way: the drink is owed but not handed over yet.
       case "PAID":
       case "PREPARING":
         return "bg-blue-100 text-blue-800 border-blue-200";
-      // Out of the shop with a courier — moving, but not arrived.
       case "OUT_FOR_DELIVERY":
         return "bg-cyan-100 text-cyan-800 border-cyan-200";
-      // DELIVERED is the delivery counterpart of COMPLETED: the customer has it either way.
       case "COMPLETED":
       case "DELIVERED":
         return "bg-emerald-100 text-emerald-800 border-emerald-200";
@@ -105,8 +90,6 @@ export function OrderhistorypageView() {
     }
   };
 
-  // PENDING is shown as "Unpaid" — from the customer's side the interesting thing about that
-  // order is that they still owe for it, not that the API calls it pending.
   const STATUS_FILTERS: { value: string; label: string }[] = [
     { value: "All", label: "All" },
     { value: "PENDING", label: "Unpaid" },
@@ -118,13 +101,10 @@ export function OrderhistorypageView() {
     { value: "CANCELLED", label: "Cancelled" },
   ];
 
-  // Redirecting (see the effect above) — render nothing rather than flash an empty order
-  // list for a frame first.
   if (!signedIn) return null;
 
   return (
     <div className="contact_page_container font-sans min-h-screen">
-      {/* Top Header & Breadcrumbs */}
       <div className="product_detail_header mb-6">
         <h1 className="product_detail_title">Order History</h1>
 
@@ -141,7 +121,6 @@ export function OrderhistorypageView() {
         </nav>
       </div>
 
-      {/* Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
         {STATUS_FILTERS.map(({ value, label }) => (
           <button
@@ -159,7 +138,6 @@ export function OrderhistorypageView() {
         ))}
       </div>
 
-      {/* Orders List */}
       {isLoadingOrders ? (
         <LoadingRegion label="Loading your orders..." className="space-y-4 max-w-3xl mx-auto">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -188,7 +166,6 @@ export function OrderhistorypageView() {
               key={order.id}
               className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
             >
-              {/* Order Top Bar: ID + Status + Date */}
               <div className="flex items-center justify-between gap-2 flex-wrap pb-3 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                   <span className="font-extrabold text-sm text-gray-900">
@@ -212,7 +189,6 @@ export function OrderhistorypageView() {
                 </span>
               </div>
 
-              {/* Order Meta info: Customer & Delivery */}
               <div className="py-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs border-b border-gray-100">
                 <div className="flex items-center gap-1.5 text-gray-600">
                   <User className="w-3.5 h-3.5 text-[#A1255B]" />
@@ -245,7 +221,6 @@ export function OrderhistorypageView() {
                 </div>
               </div>
 
-              {/* Items List */}
               <div className="py-3 space-y-2">
                 {order.items.map((item, idx) => (
                   <div
@@ -267,7 +242,6 @@ export function OrderhistorypageView() {
                 ))}
               </div>
 
-              {/* Order Footer: Grand Total + Action Buttons */}
               <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-3 flex-wrap">
                 <div className="text-left">
                   {Number(order.deliveryFee ?? 0) > 0 && (

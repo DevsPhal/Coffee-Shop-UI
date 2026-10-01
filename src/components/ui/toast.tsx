@@ -5,8 +5,7 @@ import Image from "next/image"
 import { Toast as ToastPrimitive } from "@base-ui/react/toast"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { XIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
+import { BellIcon, XIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 import "@/app/globals.scss"
 
 const toast = ToastPrimitive.createToastManager()
@@ -74,7 +73,7 @@ function ToastDescription({
 
 function ToastAction({
   className,
-  render = <Button variant="outline" size="sm" />,
+  render = <button type="button" />,
   ...props
 }: ToastPrimitive.Action.Props) {
   return (
@@ -90,13 +89,13 @@ function ToastAction({
 function ToastClose({
   className,
   children,
-  render = <Button variant="ghost" size="icon-sm" />,
+  render = <button type="button" />,
   ...props
 }: ToastPrimitive.Close.Props) {
   return (
     <ToastPrimitive.Close
       data-slot="toast-close"
-      aria-label="Close toast"
+      aria-label="Dismiss notification"
       render={render}
       className={cn("toast_close", className)}
       {...props}
@@ -108,54 +107,23 @@ function ToastClose({
   )
 }
 
+const TOAST_ICONS: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
+  success: CircleCheckIcon,
+  info: InfoIcon,
+  warning: TriangleAlertIcon,
+  error: OctagonXIcon,
+  loading: Loader2Icon,
+}
+
 function ToastIcon({ type }: { type: string | undefined }) {
-  let icon: React.ReactNode = null
-
-  if (type === "success") {
-    icon = (
-      <CircleCheckIcon aria-hidden="true" />
-    )
-  }
-
-  if (type === "info") {
-    icon = (
-      <InfoIcon aria-hidden="true" />
-    )
-  }
-
-  if (type === "warning") {
-    icon = (
-      <TriangleAlertIcon aria-hidden="true" />
-    )
-  }
-
-  if (type === "error") {
-    icon = (
-      <OctagonXIcon className="text_destructive" aria-hidden="true" />
-    )
-  }
-
-  if (type === "loading") {
-    icon = (
-      <Loader2Icon className="animate_spin" aria-hidden="true" />
-    )
-  }
-
-  if (!icon) {
-    return null
-  }
-
+  const Icon = TOAST_ICONS[type ?? ""] ?? BellIcon
   return (
-    <span
-      data-slot="toast-icon"
-      className="toast_icon"
-    >
-      {icon}
+    <span data-slot="toast-icon" className="toast_icon">
+      <Icon className={type === "loading" ? "animate_spin" : undefined} aria-hidden="true" />
     </span>
   )
 }
 
-/** Extra fields a `type: "welcome"` toast carries in `data` (see LoginWelcome). */
 export interface WelcomeToastData {
   greeting: string
   initials: string
@@ -163,11 +131,6 @@ export interface WelcomeToastData {
   duration: number
 }
 
-/**
- * The post-login greeting: a card rather than the pill every other toast uses, with the
- * customer's avatar (or initials) and a bar that drains while the toast is on screen.
- * Mirrors the admin dashboard's WelcomeToast so both apps greet people the same way.
- */
 function WelcomeToastBody({ data }: { data: WelcomeToastData }) {
   return (
     <ToastContent className="welcome_toast">
@@ -189,12 +152,19 @@ function WelcomeToastBody({ data }: { data: WelcomeToastData }) {
   )
 }
 
-// Toasts drop in from the top, so on a phone the natural dismiss is flicking them back up.
 const SWIPE_DIRECTIONS: ToastPrimitive.Root.Props["swipeDirection"] = ["up", "right"]
+const DEFAULT_TIMEOUT = 5000
+const MAX_VISIBLE = 3
+
+function ToastProgress({ timeout }: { timeout: number | undefined }) {
+  const duration = timeout ?? DEFAULT_TIMEOUT
+  if (duration <= 0) return null
+  return <span className="toast_progress" aria-hidden="true" style={{ animationDuration: `${duration}ms` }} />
+}
 
 function ToastList() {
   const { toasts } = ToastPrimitive.useToastManager()
-  const activeToasts = toasts.slice(-1)
+  const activeToasts = toasts.slice(-MAX_VISIBLE)
 
   return activeToasts.map((toastItem) =>
     toastItem.type === "welcome" && toastItem.data ? (
@@ -202,15 +172,16 @@ function ToastList() {
         <WelcomeToastBody data={toastItem.data as WelcomeToastData} />
       </Toast>
     ) : (
-      <Toast key={toastItem.id} toast={toastItem} data-type={toastItem.type} swipeDirection={SWIPE_DIRECTIONS}>
+      <Toast key={toastItem.id} toast={toastItem} data-type={toastItem.type ?? "default"} swipeDirection={SWIPE_DIRECTIONS}>
         <ToastContent>
           <ToastIcon type={toastItem.type} />
           <div className="toast_details">
             <ToastTitle />
             <ToastDescription />
+            <ToastAction />
           </div>
-          <ToastAction />
           <ToastClose />
+          {toastItem.type !== "loading" && <ToastProgress timeout={toastItem.timeout} />}
         </ToastContent>
       </Toast>
     )

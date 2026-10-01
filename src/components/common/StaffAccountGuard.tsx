@@ -9,14 +9,6 @@ import { useLanguage } from "@/components/ui/translatetokhmer";
 import { useAuth } from "@/context/AuthContext";
 import { adminLoginUrl, isStaffRole, STAFF_ACCOUNT_MESSAGE } from "@/lib/staffAccess";
 
-/**
- * Keeps staff sessions out of the storefront. The login screen already signs a staff account
- * straight back out; this catches the rest — a session restored from storage, or one whose role
- * changed after sign-in — and blocks every shop page until they sign out.
- *
- * While the session is still being checked the page renders normally, so customers and guests
- * never wait on `/me` just to see the menu.
- */
 export function StaffAccountGuard({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const { t } = useLanguage();

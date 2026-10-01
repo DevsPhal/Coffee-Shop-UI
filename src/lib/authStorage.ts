@@ -1,15 +1,6 @@
 import type { AuthTokenResponse } from "@/store/api/types";
 import { clearPersistentState } from "@/hooks/usePersistentState";
 
-/**
- * Token persistence for the storefront session.
- *
- * localStorage rather than cookies because the API is a separate origin and authenticates
- * with an `Authorization: Bearer` header, not a session cookie — so there is nothing for the
- * browser to attach automatically. Every accessor tolerates being called during SSR, where
- * `window` does not exist.
- */
-
 const ACCESS_TOKEN_KEY = "authToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 
@@ -41,19 +32,16 @@ export function setTokens(tokens: AuthTokenResponse): void {
     window.localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
     window.localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
   } catch {
-    // Private mode / storage disabled — the session simply will not survive a reload.
   }
 }
 
 export function clearTokens(): void {
   if (!canUseStorage()) return;
-  // Saved checkout details and drafts belong to the account that entered them.
   clearPersistentState();
   try {
     window.localStorage.removeItem(ACCESS_TOKEN_KEY);
     window.localStorage.removeItem(REFRESH_TOKEN_KEY);
   } catch {
-    // Nothing to clear.
   }
 }
 

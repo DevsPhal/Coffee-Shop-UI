@@ -1,25 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
 
-/** Intrinsic size of the /public/logos wordmarks (shared with the admin app). */
 const LOGO_WIDTH = 800;
 const LOGO_HEIGHT = 539;
 
 export interface BrandLogoProps {
-  /** "black" on light surfaces, "white" on dark ones — same pair the admin app uses. */
   tone?: "black" | "white";
-  /** Sizing is by height (the width follows the wordmark's aspect ratio), e.g. "h-10". */
   className?: string;
-  /** Link target; pass `null` where the logo sits inside another control and must not navigate. */
   href?: string | null;
   priority?: boolean;
 }
 
-/**
- * The 590st CAFE wordmark. Everywhere it appears as navigation (navbar, footer, login screens)
- * it links home, so customers can always get back with one click — the one convention every
- * shop site shares.
- */
 export function BrandLogo({ tone = "black", className = "h-10", href = "/", priority = false }: BrandLogoProps) {
   const image = (
     <Image

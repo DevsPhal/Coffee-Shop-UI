@@ -18,18 +18,12 @@ import type {
   VerifyRegistrationRequest,
 } from "./types";
 
-/**
- * Customer authentication. Both registration and login are two-step: the API emails a 6-digit
- * code and the second call exchanges it. The `local` Spring profile also logs the code;
- * SMTP delivery uses the configured MAIL_* credentials in both profiles.
- */
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     register: builder.mutation<void, RegisterRequest>({
       query: (body) => ({ url: "/api/auth/register", method: "POST", body }),
     }),
 
-    /** Second half of sign-up; the account stays PENDING_VERIFICATION until this succeeds. */
     verifyRegistration: builder.mutation<void, VerifyRegistrationRequest>({
       query: (body) => ({ url: "/api/auth/verify-registration", method: "POST", body }),
     }),
@@ -38,7 +32,6 @@ export const authApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/api/auth/login", method: "POST", body }),
       transformResponse: (response: ApiEnvelope<LoginResponse>) => {
         const result = unwrap(response);
-        // Customers always get an OTP challenge, but handle the direct-token branch too.
         if (result.tokens) {
           setTokens(result.tokens);
           markWelcomePending();
@@ -63,24 +56,11 @@ export const authApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/api/auth/resend-otp", method: "POST", body }),
     }),
 
-    /**
-     * Which bot the Login Widget must render for. Read from the API rather than baked into the
-     * bundle, because the widget's `hash` only verifies against the token of the bot the API is
-     * configured with — pointing this frontend at another backend (a local one behind ngrok with
-     * its own test bot) then just works, instead of silently failing every sign-in.
-     */
     getTelegramWidgetConfig: builder.query<TelegramWidgetConfigResponse, void>({
       query: () => "/api/auth/telegram/widget-config",
       transformResponse: unwrap<TelegramWidgetConfigResponse>,
     }),
 
-    /**
-     * Sign-in via the Telegram Login Widget. Unlike email/password, this is a single step —
-     * the widget's `hash` already proves the customer owns that Telegram account, so the API
-     * returns tokens directly rather than an OTP challenge. Register-or-login: a Telegram
-     * account the API has never seen gets a new customer account on the spot; a linked one
-     * just signs in. Only a staff invite still pending phone verification is refused.
-     */
     loginTelegram: builder.mutation<AuthTokenResponse, TelegramWidgetAuthRequest>({
       query: (body) => ({ url: "/api/auth/login/telegram", method: "POST", body }),
       transformResponse: (response: ApiEnvelope<AuthTokenResponse>) => {
@@ -102,7 +82,6 @@ export const authApi = baseApi.injectEndpoints({
 
     logout: builder.mutation<void, void>({
       query: () => ({ url: "/api/auth/logout", method: "POST" }),
-      // Drop the session locally whether or not the server call succeeded.
       async onQueryStarted(_arg, { queryFulfilled, dispatch }) {
         try {
           await queryFulfilled;
@@ -119,11 +98,6 @@ export const authApi = baseApi.injectEndpoints({
       providesTags: ["Auth"],
     }),
 
-    /**
-     * Self-service edit of name, phone and gender. The API applies a partial update, so send
-     * only what the customer actually changed — and note that `phoneNumber: ""` is a real
-     * instruction to clear it, not the same as leaving the field out.
-     */
     updateProfile: builder.mutation<UserResponse, UpdateProfileRequest>({
       query: (body) => ({ url: "/api/users/me", method: "PATCH", body }),
       transformResponse: unwrap<UserResponse>,
@@ -134,7 +108,6 @@ export const authApi = baseApi.injectEndpoints({
       query: (file) => {
         const formData = new FormData();
         formData.append("file", file);
-        // No explicit Content-Type: the browser sets the multipart boundary.
         return { url: "/api/users/me/avatar", method: "POST", body: formData };
       },
       transformResponse: unwrap<UserResponse>,
@@ -147,10 +120,6 @@ export const authApi = baseApi.injectEndpoints({
       invalidatesTags: ["Auth"],
     }),
 
-    /**
-     * A mutation, not a query: each call issues a fresh short-lived code, so caching or
-     * refetching it the way a query would could hand out an already-expired one.
-     */
     getTelegramLinkCode: builder.mutation<TelegramLinkCodeResponse, void>({
       query: () => ({ url: "/api/users/me/telegram/link-code", method: "POST" }),
       transformResponse: unwrap<TelegramLinkCodeResponse>,

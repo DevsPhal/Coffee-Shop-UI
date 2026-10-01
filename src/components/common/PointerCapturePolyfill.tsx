@@ -13,7 +13,6 @@ export default function PointerCapturePolyfill() {
           originalRelease.call(this, pointerId);
         }
       } catch (e) {
-        // Safely suppress NotFoundError on mobile pointer/touch release
       }
     };
 
@@ -23,7 +22,6 @@ export default function PointerCapturePolyfill() {
         try {
           originalSet.call(this, pointerId);
         } catch (e) {
-          // Safely suppress setPointerCapture error on inactive pointer
         }
       };
     }

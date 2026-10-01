@@ -29,8 +29,6 @@ import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 import { clearPersistentState, usePersistentState } from "@/hooks/usePersistentState";
 
-// Leaflet touches `window` on import, which crashes during server rendering — this defers it
-// to the client, same as react-leaflet's own Next.js guidance.
 const DeliveryMapPicker = dynamic(() => import("@/components/ui/DeliveryMapPicker"), {
   ssr: false,
   loading: () => (
@@ -62,8 +60,6 @@ export function CheckoutpageView() {
   const fullName = enteredName ?? currentUser?.fullName ?? "";
   const email = enteredEmail ?? currentUser?.email ?? "";
   const phone = enteredPhone ?? cleanPhoneInput(currentUser?.phoneNumber ?? "");
-  // Anything the customer wants the barista to know. Optional, and free text — it reaches the
-  // person actually making the drink, on the queue board.
   const [baristaNote, setBaristaNote] = usePersistentState("checkout:baristaNote", "");
   const [capital, setCapital] = usePersistentState("checkout:capital", "Phnom Penh");
   const [address, setAddress] = usePersistentState("checkout:address", "");
@@ -71,11 +67,10 @@ export function CheckoutpageView() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  // Location Picker State
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [mapCoords, setMapCoords] = usePersistentState<{ lat: number; lng: number }>("checkout:mapCoords", {
-    lat: 11.5621, // Phnom Penh default lat
-    lng: 104.9160, // Phnom Penh default lng
+    lat: 11.5621,
+    lng: 104.9160,
   });
   const [tempAddress, setTempAddress] = useState("");
   const [isLocating, setIsLocating] = useState(false);
@@ -89,7 +84,6 @@ export function CheckoutpageView() {
     address?: string;
   }>({});
 
-  // Location Picker Helper Functions
   const handleOpenMapModal = () => {
     setIsMapModalOpen(true);
     setTempAddress(address || capital);
@@ -98,8 +92,6 @@ export function CheckoutpageView() {
     }
   };
 
-  // Shared by "Locate Me" and by dragging/clicking the pin on the map itself — whichever set
-  // the coordinates, the address line should update to match.
   const reverseGeocodeToAddress = async (lat: number, lng: number) => {
     try {
       const res = await fetch(
@@ -117,8 +109,6 @@ export function CheckoutpageView() {
     }
   };
 
-  // Dragging or clicking the pin directly on the map — the map component only reports
-  // coordinates, so this is where they turn into an address.
   const handlePickOnMap = (lat: number, lng: number) => {
     setMapCoords({ lat, lng });
     reverseGeocodeToAddress(lat, lng);
@@ -193,10 +183,6 @@ export function CheckoutpageView() {
       description: "Delivery address updated from map!",
     });
   };
-  // Delivery fee is a manual figure the shop sets once it can see the pinned address — there's
-  // no auto-pricing by distance, and no order exists yet at this point on the page, so this is
-  // always just the cart subtotal. The fee (and the real, server-computed grand total) only
-  // exist from /checkoutdone onward, once the order has actually been placed.
   const grandTotal = subtotal;
 
   const validateSingleField = (
@@ -238,7 +224,6 @@ export function CheckoutpageView() {
       return;
     }
 
-    // Validate Shipping Information with Zod Schema
     const schemaToValidate =
       deliveryMethod === "pickup"
         ? shippingInformationSchema.pick({ fullName: true, email: true, phone: true })
@@ -285,10 +270,6 @@ export function CheckoutpageView() {
 
     setErrors({});
 
-    // Delivery has no Cash/QR choice to make yet — the shop hasn't set a fee for it (there's
-    // no auto-pricing by distance, a person sets it by hand once the pin is visible), so
-    // there's nothing to charge either method for. Pickup has a fixed price up front, so it
-    // still asks right here.
     if (deliveryMethod === "grab") {
       void handleSubmitDeliveryOrder();
     } else {
@@ -296,17 +277,6 @@ export function CheckoutpageView() {
     }
   };
 
-  /**
-   * Creates the order for real — the cart is local until this point. Shared by both the
-   * pickup (pay-now) and delivery (pay-later) paths below; what happens after the order exists
-   * is where they diverge.
-   *
-   * The fulfillment method, contact details and (for delivery) the address are sent with the
-   * order — along with the map pin's coordinates, which is what lets the shop see where the
-   * order needs to go and set a delivery fee by hand (there's no auto-pricing by distance).
-   * There is no `paymentMethod` field on checkout itself: that's a separate step once the
-   * order exists, which is why this doesn't send one.
-   */
   const submitOrder = async () => {
     if (!isAuthenticated()) {
       toast.add({
@@ -342,7 +312,6 @@ export function CheckoutpageView() {
       });
       return null;
     }
-    // The note was for this order; contact and address details stay for the next one.
     clearPersistentState("checkout:baristaNote");
     return { order, isDelivery, deliveryLocation };
   };
@@ -359,8 +328,6 @@ export function CheckoutpageView() {
         JSON.stringify({
           orderId: order.id,
           method: deliveryMethod,
-          // The real fee the shop set — not a client-side guess. Still null here for a fresh
-          // delivery order; /checkoutdone picks up the real value once staff set it.
           fee: Number(order.deliveryFee ?? 0),
           customerName:
             (fullName || "").trim() || currentUser?.fullName || "Customer",
@@ -370,14 +337,9 @@ export function CheckoutpageView() {
         })
       );
     } catch {
-      // Storage unavailable — the confirmation screen falls back to the order itself.
     }
   };
 
-  /**
-   * Pickup only: price is fixed up front, so Cash-on-pickup is confirmed right here with its
-   * own call, and Bakong hands off to /payment, which generates the QR against the order id.
-   */
   const handleConfirmPaymentMethod = async (chosenMethod: "QR Scan" | "Cash") => {
     const result = await submitOrder();
     if (!result) return;
@@ -388,9 +350,6 @@ export function CheckoutpageView() {
       try {
         order = await payCashOnPickup(order.id).unwrap();
       } catch (err) {
-        // The order already exists at this point — staff can still collect cash and mark it
-        // paid at the counter, so a failed confirmation call here shouldn't block the customer
-        // from seeing their order.
         toast.add({
           type: "warning",
           description: apiErrorMessage(
@@ -409,11 +368,6 @@ export function CheckoutpageView() {
     }
   };
 
-  /**
-   * Delivery: the order goes in as a hold, visible to staff immediately over the realtime
-   * order feed so they can price it from the pinned location. No payment method is chosen yet
-   * — /checkoutdone offers that choice itself once the fee lands.
-   */
   const handleSubmitDeliveryOrder = async () => {
     const result = await submitOrder();
     if (!result) return;
@@ -438,7 +392,6 @@ export function CheckoutpageView() {
 
   return (
     <div className="checkout_page_container font-sans">
-      {/* Header & Breadcrumb */}
       <div className="checkout_page_header">
         <h1 className="checkout_page_title">
           Checkout
@@ -463,9 +416,7 @@ export function CheckoutpageView() {
       </div>
 
       <div className="checkout_page_grid">
-        {/* Left Column: Shipping & Delivery Form */}
         <div className="checkout_page_form_section">
-          {/* Shipping Information Section */}
           <div>
             <h2 className="checkout_section_title">{t("Shipping Information")}</h2>
 
@@ -605,12 +556,10 @@ export function CheckoutpageView() {
             </div>
           </div>
 
-          {/* Delivery Methods Section */}
           <div>
             <h2 className="checkout_section_title">{t("Delivery Method")}</h2>
 
             <div className="checkout_delivery_options">
-              {/* Store Pickup Option */}
               <div
                 onClick={() => handleSelectDeliveryMethod("pickup")}
                 className={`checkout_delivery_card ${
@@ -619,7 +568,6 @@ export function CheckoutpageView() {
               >
                 <div className="checkout_delivery_card_content">
                   <div className="checkout_delivery_logo_container">
-                    {/* Not a link: it sits inside the pickup option, which selects on click. */}
                     <BrandLogo href={null} className="h-8 object-contain" />
                   </div>
                   <div>
@@ -635,7 +583,6 @@ export function CheckoutpageView() {
                 />
               </div>
 
-              {/* Grab Express Option */}
               <div
                 onClick={() => handleSelectDeliveryMethod("grab")}
                 className={`checkout_delivery_card ${
@@ -655,9 +602,6 @@ export function CheckoutpageView() {
                   </div>
                   <div>
                     <h3 className="checkout_delivery_title">{t("Home Delivery")}</h3>
-                    {/* Was a hardcoded "$0.50" — the shop sets the real fee by hand once it can
-                        see the pinned address, so a fixed number here would just be wrong most
-                        of the time rather than an estimate. */}
                     <p className="checkout_delivery_price text-xs">{t("Fee set by the shop")}</p>
                   </div>
                 </div>
@@ -672,11 +616,9 @@ export function CheckoutpageView() {
           </div>
         </div>
 
-        {/* Right Column: Order Summary Card */}
         <div className="checkout_summary_card">
           <h2 className="checkout_summary_title">{t("Order Summary")}</h2>
 
-          {/* Purchased Items List */}
           <div className="checkout_summary_items_list" suppressHydrationWarning>
             {items.length === 0 ? (
               <p className="checkout_summary_empty" suppressHydrationWarning>{t("Your cart is empty")}</p>
@@ -742,11 +684,8 @@ export function CheckoutpageView() {
             )}
           </div>
 
-          {/* Pricing Breakdown */}
           <div className="checkout_summary_breakdown" suppressHydrationWarning>
             {(() => {
-              // Pre-discount total; each line carries its own original unit price. Extras are
-              // never discounted, so the same amount applies either way.
               const fullSubtotal = items.reduce((acc, item) => {
                 const original = item.originalUnitPrice ?? item.unitPrice;
                 const extrasTotal = (item.selectedExtras ?? []).reduce(
@@ -795,7 +734,6 @@ export function CheckoutpageView() {
             </div>
           </div>
 
-          {/* Goes straight to whoever makes the drink, on the barista queue board. */}
           <div className="w-full mt-3">
             <label
               htmlFor="barista-note"
@@ -818,7 +756,6 @@ export function CheckoutpageView() {
           </div>
 
           <div className="flex flex-col gap-1.5 w-full mt-1">
-            {/* Place Order Button */}
             <button
               type="button"
               onClick={handlePlaceOrderNow}
@@ -827,7 +764,6 @@ export function CheckoutpageView() {
               {t("Place Order")}
             </button>
 
-            {/* Cancel Button Under Place Order Now */}
             <button
               type="button"
               onClick={handleCancelOrder}
@@ -839,15 +775,12 @@ export function CheckoutpageView() {
         </div>
       </div>
 
-      {/* CANCEL CONFIRMATION ALERT MODAL */}
       <Modal open={showCancelModal} onOpenChange={setShowCancelModal}>
         <ModalContent className="max-w-sm p-6 text-center rounded-2xl border border-gray-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)]" showCloseButton={false}>
-          {/* Refined Top Warning Badge */}
           <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3.5 shadow-2xs">
             <AlertCircle className="w-6 h-6 stroke-[2.2]" />
           </div>
 
-          {/* Question & Description */}
           <h3 className="text-lg font-semibold text-gray-900 tracking-tight mb-1">
             Are you sure to cancel?
           </h3>
@@ -855,7 +788,6 @@ export function CheckoutpageView() {
             Your order information will be lost.
           </p>
 
-          {/* Professional Action Buttons */}
           <div className="grid grid-cols-2 gap-2.5">
             <button
               type="button"
@@ -876,7 +808,6 @@ export function CheckoutpageView() {
         </ModalContent>
       </Modal>
 
-      {/* PAYMENT METHOD SELECTION MODAL (Cash vs QR Scan) */}
       <PaymentMethodModal
         open={isPaymentModalOpen}
         onOpenChange={setIsPaymentModalOpen}
@@ -885,10 +816,8 @@ export function CheckoutpageView() {
       />
       {checkoutError && <p role="alert" className="mt-3 text-center text-sm text-red-600">{checkoutError}</p>}
 
-      {/* INTERACTIVE DYNAMIC GOOGLE MAP LOCATION PICKER MODAL */}
       <Modal open={isMapModalOpen} onOpenChange={setIsMapModalOpen}>
         <ModalContent className="max-w-xl p-0 overflow-hidden rounded-2xl border border-gray-100 shadow-2xl">
-          {/* Header */}
           <div className="bg-[#A1255B] text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-amber-300" />
@@ -899,7 +828,6 @@ export function CheckoutpageView() {
             </div>
           </div>
 
-          {/* Search & Action Bar */}
           <div className="p-3 bg-gray-50 border-b border-gray-100 flex flex-wrap sm:flex-nowrap gap-2 items-center">
             <div className="relative flex-1">
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -934,7 +862,6 @@ export function CheckoutpageView() {
             </button>
           </div>
 
-          {/* Interactive Map — drag the marker or click anywhere to move it */}
           <div className="relative w-full h-72 sm:h-80 bg-gray-100">
             {isMapModalOpen && (
               <DeliveryMapPicker
@@ -944,7 +871,6 @@ export function CheckoutpageView() {
               />
             )}
 
-            {/* Pin Overlay Badge */}
             <div className="absolute top-3 left-3 z-1000 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-md text-xs font-medium text-gray-800 flex items-center gap-1.5 border border-white pointer-events-none">
               <Compass className="w-4 h-4 text-[#A1255B] animate-spin" style={{ animationDuration: '8s' }} />
               <span>
@@ -953,7 +879,6 @@ export function CheckoutpageView() {
             </div>
           </div>
 
-          {/* Address Confirmation Panel */}
           <div className="p-4 bg-white space-y-3">
             <div>
               <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-1">

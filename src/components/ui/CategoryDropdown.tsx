@@ -25,10 +25,6 @@ import "@/app/globals.scss";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useMounted } from "@/hooks/useMounted";
 
-/**
- * Icon per category name. Purely presentational — the API has no icon field — and every
- * unknown name falls back, so a category the café adds later still renders.
- */
 export const CATEGORY_ICONS: Record<string, LucideIcon> = {
   all: LayoutGrid,
   category: LayoutGrid,
@@ -65,25 +61,15 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
 export const iconFor = (name: string): LucideIcon =>
   CATEGORY_ICONS[name.toLowerCase()] || Coffee;
 
-/** "All" is a client-side pseudo-category, not something the API returns. */
 export const ALL_CATEGORIES = "All";
 
 export interface CategoryDropdownProps {
-  /** Selected category id, or ALL_CATEGORIES. */
   selectedCategory: string;
   onSelectCategory: (categoryId: string) => void;
-  /** Client-side views listed ahead of "All" (e.g. the menu's "Featured Products"). */
   leadingEntries?: CatalogCategory[];
   className?: string;
 }
 
-/**
- * Category picker driven by the live catalogue.
- *
- * The API models categories as a flat list — there is no parent/child relationship on a
- * category — so this is a single-level list rather than the accordion it used to be, and the
- * counts are real product counts rather than a hardcoded table.
- */
 export function CategoryDropdown({
   selectedCategory,
   onSelectCategory,

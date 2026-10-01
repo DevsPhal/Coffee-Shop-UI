@@ -15,7 +15,6 @@ import SelectSizeModal, { type SizeSelection } from "@/components/ui/SelectSizeM
 import "@/app/globals.scss";
 
 export interface CardProps {
-  /** The product straight from /api/products, via toStoreProduct. */
   product: StoreProduct;
   href?: string;
   variant?: "default" | "phone";
@@ -47,15 +46,10 @@ export function Card({
 
   const imgSrc = resolveProductImage(product.image);
 
-  // Format discount badge text (e.g. "-25% OFF" or "-$0.50 OFF")
   const discountInfo = formatDiscountBadge(price, originalPrice, discountType, discountAmount);
 
-  // Zod Date Validation & Remaining Days calculation
   const promoResult = calculatePromoTimeLeft(promoEndDate, promoDaysLeft);
 
-  // A discount does not have to be time-boxed — an admin can set "Coca 10% off" with no end
-  // date at all, and that is the common case. So the badge and the struck-through price follow
-  // the discount itself; only the countdown needs a valid end date to show.
   const isPromotion =
     discountInfo.hasDiscount || (originalPrice !== undefined && originalPrice > price);
   const showCountdown = isPromotion && promoResult.isValid;
@@ -63,13 +57,8 @@ export function Card({
   const displayPromoTime = promoResult.displayText;
   const promoStatus = promoResult.status;
 
-  // The product page fetches by id, so there is no need to smuggle every field through the
-  // query string any more — and a stale link can no longer show stale prices.
   const targetHref = href || `/product?id=${encodeURIComponent(id)}`;
 
-  // Both actions open the customization modal. The old shortcut for "products with no
-  // options" relied on a hardcoded table of which items were drinks; the API carries no such
-  // flag, and ice/sugar/milk are accepted for any product, so the modal always applies.
   const handleOpenAddModal = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -115,7 +104,6 @@ export function Card({
     }
   };
 
-  // Phone screen horizontal card design
   if (variant === "phone") {
     return (
       <>
@@ -127,7 +115,6 @@ export function Card({
               : "border border-[#F3E8EC] hover:border-[#931B42]/40 shadow-sm default"
           }`}
         >
-          {/* Left Image */}
           <Link href={targetHref} className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden shrink-0 bg-gray-100 block image-container">
             <Image
               src={imgSrc}
@@ -154,7 +141,6 @@ export function Card({
             )}
           </Link>
 
-          {/* Middle Details */}
           <div className="flex-1 min-w-0 px-3 sm:px-4 overflow-hidden card-info">
             <div className="flex items-center gap-1.5 min-w-0 w-full flex-wrap title-row">
               <Link
@@ -198,7 +184,6 @@ export function Card({
             </div>
           </div>
 
-          {/* Right "+ ADD" Button Opens Customization Modal Popup */}
           <button
             type="button"
             onClick={handleOpenAddModal}
@@ -212,7 +197,6 @@ export function Card({
           </button>
         </div>
 
-        {/* Customization Modal Popup for Phone Card */}
         <SelectSizeModal
           open={isSizeModalOpen}
           onOpenChange={setIsSizeModalOpen}
@@ -224,7 +208,6 @@ export function Card({
     );
   }
 
-  // Default Grid Card
   return (
     <div className="card_item relative w-full min-w-0 max-w-full overflow-hidden" suppressHydrationWarning>
       <Link href={targetHref} className="block cursor-pointer group w-full min-w-0">
@@ -237,14 +220,12 @@ export function Card({
             className="card_image object-cover"
           />
 
-          {/* Discount Badge ONLY shown if discount is present and valid promotion */}
           {discountInfo.hasDiscount && discountInfo.badgeText && isPromotion && (
             <span className="discount_badge">
               {discountInfo.badgeText}
             </span>
           )}
 
-          {/* Clock Icon ONLY on Promotion - Top Right */}
           {showCountdown && (
             <div
               className={`promo_clock_badge promo_clock_${promoStatus}`}
@@ -262,7 +243,6 @@ export function Card({
             {t(title)}
           </h3>
 
-          {/* Discount Price & Strikethrough Original Price using globals.scss classes */}
           <div className="price_container shrink-0">
             {originalPrice && originalPrice > price && isPromotion && (
               <span className="price_original">
@@ -294,7 +274,6 @@ export function Card({
         </Button>
       </div>
 
-      {/* Select Size Modal Popup */}
       <SelectSizeModal
         open={isSizeModalOpen}
         onOpenChange={setIsSizeModalOpen}

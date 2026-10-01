@@ -41,26 +41,21 @@ export function ReadyToOrderSection({
 
   return (
     <section className={`ready_to_order_section ${className}`}>
-      {/* Heading */}
       <h2 className="ready_to_order_title">
         {t(title)}
       </h2>
 
-      {/* Subtitle / Description */}
       <p className="ready_to_order_desc">
         {t(description)}
       </p>
 
-      {/* Action Buttons */}
       <div className="ready_to_order_actions">
-        {/* Primary Button */}
         <Link href={targetPrimaryHref}>
           <Button className="button_pill_primary">
             {t(primaryBtnText)}
           </Button>
         </Link>
 
-        {/* Secondary Button */}
         <Link href={secondaryBtnHref}>
           <Button className="button_pill_secondary">
             {t(secondaryBtnText)}

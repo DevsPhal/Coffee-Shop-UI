@@ -5,21 +5,8 @@ import { z } from "zod";
 import { toast } from "@/components/ui/toast";
 import type { IceLevel, MilkType, SugarLevel, UUID } from "@/store/api/types";
 
-/**
- * The guest cart.
- *
- * It stays local so a visitor can shop before signing in — the API's cart requires a customer
- * account. At checkout the lines are pushed to `/api/customer/cart` and turned into an order
- * (see `useCheckout`), so every field here is shaped to be sent as-is: product and size are
- * UUIDs, and the customization levels are the API's enum values, not display labels.
- *
- * Lines are keyed by `lineId`, a "|"-joined composite. The delimiter matters: UUIDs contain
- * hyphens, so the previous "-"-joined key could not be split back apart.
- */
-
 const LINE_DELIMITER = "|";
 
-/** One add-on (e.g. "Pearl") chosen for a line — a flat amount added per unit, not per line. */
 export const cartExtraSchema = z.object({
   extraId: z.string().uuid(),
   name: z.string(),
@@ -28,14 +15,11 @@ export const cartExtraSchema = z.object({
 export type CartExtra = z.infer<typeof cartExtraSchema>;
 
 export const cartItemSchema = z.object({
-  /** Composite key identifying this exact configuration of a product. */
   lineId: z.string().min(1),
   productId: z.string().uuid({ message: "Product id must be a UUID from the API." }),
   title: z.string().trim().min(1, { message: "Item title is required." }),
   image: z.string().nullable().optional(),
-  /** The chosen variant's finalPrice, as the API will charge it. */
   unitPrice: z.number().nonnegative({ message: "Price cannot be negative." }),
-  /** Pre-discount unit price, present only while a discount is running. */
   originalUnitPrice: z.number().nonnegative().optional(),
   quantity: z.number().int().positive({ message: "Quantity must be at least 1." }),
   variantId: z.string().uuid().nullable().optional(),
@@ -43,7 +27,6 @@ export const cartItemSchema = z.object({
   sugarLevel: z.enum(["ZERO", "LESS", "NORMAL", "EXTRA"]).optional(),
   iceLevel: z.enum(["NO_ICE", "LESS_ICE", "NORMAL", "EXTRA_ICE"]).optional(),
   milkType: z.enum(["NONE", "LESS", "NORMAL", "EXTRA"]).optional(),
-  /** Extras (e.g. Pearl) chosen for this line — only the ones the product itself offers. */
   selectedExtras: z.array(cartExtraSchema).optional().default([]),
 });
 
@@ -55,7 +38,6 @@ export const addItemInputSchema = cartItemSchema
 
 export type AddItemInput = z.input<typeof addItemInputSchema>;
 
-/** Two lines merge only when the product *and* every chosen option — extras included — match. */
 export function buildLineId(item: {
   productId: UUID;
   variantId?: UUID | null;
@@ -64,7 +46,6 @@ export function buildLineId(item: {
   milkType?: MilkType;
   selectedExtras?: { extraId: UUID }[];
 }): string {
-  // Sorted so the same set of extras always produces the same key regardless of pick order.
   const extrasKey = (item.selectedExtras ?? [])
     .map((extra) => extra.extraId)
     .sort()
@@ -109,7 +90,6 @@ interface CartStoreState {
   getTotalCount: () => number;
 }
 
-/** Re-key a line after one of its options changed, merging into a twin if one now exists. */
 function rekey(items: CartItem[], lineId: string, patch: Partial<CartItem>): CartItem[] {
   const index = items.findIndex((item) => item.lineId === lineId);
   if (index === -1) return items;
@@ -226,9 +206,6 @@ export const useCartStore = create<CartStoreState>()(
     }),
     {
       name: "cart-storage",
-      // Bumped again: extras now factor into buildLineId, so an old persisted lineId (built
-      // without an extras segment) would stop matching a freshly computed one for the same
-      // configuration — same reasoning as the v2/v3 bumps, dropped rather than half-migrated.
       version: 4,
       migrate: () => ({ items: [], isOpen: false }),
       partialize: (state) => ({ items: state.items }),

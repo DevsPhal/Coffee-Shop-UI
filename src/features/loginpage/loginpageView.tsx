@@ -34,17 +34,11 @@ import { useCustomerOnlySignIn } from "@/hooks/useCustomerOnlySignIn";
 import { STAFF_ACCOUNT_MESSAGE } from "@/lib/staffAccess";
 
 interface LoginPageViewProps {
-  /** Which form this route shows — /login, /register and /forgot-password each pass their own. */
   initialViewMode?: ViewMode;
 }
 
-/**
- * Where to land after signing in. Guards append ?next= when they bounce someone here; only
- * same-origin paths are honoured so a crafted link cannot redirect off-site.
- */
 type ViewMode = "login" | "forgot" | "create";
 
-/** Each view has its own address, so a refresh (or a shared link) lands on the same form. */
 const VIEW_PATHS: Record<ViewMode, string> = {
   login: "/login",
   create: "/register",
@@ -71,9 +65,6 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
   const [showPassword, setShowPassword] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const viewMode = initialViewMode;
-  // Switching forms is a real navigation, not local state: the URL then always matches the
-  // form on screen, so a refresh keeps it and the browser's Back button returns to the last one.
-  // ?next= is carried along so signing in still lands where the customer was headed.
   const setViewMode = (mode: ViewMode) => {
     const next = new URLSearchParams(window.location.search).get("next");
     router.push(next ? `${VIEW_PATHS[mode]}?next=${encodeURIComponent(next)}` : VIEW_PATHS[mode], { scroll: false });
@@ -81,7 +72,6 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
   const [errors, setErrors] = useState<FormErrors>({});
   const confirmCustomer = useCustomerOnlySignIn();
 
-  /** Every sign-in path ends here: customers continue, staff accounts are signed back out. */
   const finishSignIn = async (): Promise<boolean> => {
     if (await confirmCustomer()) {
       router.push(nextPath());
@@ -115,7 +105,6 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Full form validation using Zod Schema
     const validationResult = userLoginSchema.safeParse({ email, password });
 
     if (!validationResult.success) {
@@ -135,8 +124,6 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
     setErrors({});
     setEmail(validationResult.data.email);
 
-    // The API authenticates by email and answers with either tokens (rare) or an OTP
-    // challenge the customer completes below.
     try {
       const result = await login(validationResult.data).unwrap();
 
@@ -200,14 +187,12 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
               <Heart className="absolute -top-3 left-1/2 -translate-x-1/2 w-3 h-3 text-pink-400 fill-pink-400" />
             </div>
 
-            {/* Brand wordmark — links home, same as the navbar and footer logo. */}
             <div className="relative z-10">
               <BrandLogo className="h-16" priority />
             </div>
           </div>
 
           {loginTicket ? (
-            /* Step two of login: the 6-digit code the API emails to the verified address. */
             <form onSubmit={handleVerifyOtp} className="w-full">
               <div className="login_avatar_circle">
                 <Check className="w-10 h-10 stroke-[1.5]" />

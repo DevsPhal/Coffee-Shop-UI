@@ -4,14 +4,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/toast";
 import { isAuthenticated } from "@/lib/authStorage";
 
-/** One sign-in prompt at a time, so tapping several "Add" buttons doesn't queue a pile of them. */
 let signInToastId: string | null = null;
 
-/**
- * Guests can browse the menu, but adding to cart and ordering need a customer login.
- * Returns true when signed in; otherwise suggests signing in with a toast whose button goes to
- * login and comes back here after — the guest stays on the menu until they choose to go.
- */
 export function useRequireLogin() {
   const router = useRouter();
 

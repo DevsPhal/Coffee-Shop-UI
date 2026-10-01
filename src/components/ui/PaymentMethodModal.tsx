@@ -9,7 +9,6 @@ export interface PaymentMethodModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   grandTotal: number;
-  /** May be async — the modal awaits it and shows a spinner for its real duration. */
   onConfirm: (paymentMethod: "QR Scan" | "Cash") => void | Promise<void>;
 }
 
@@ -23,17 +22,10 @@ export function PaymentMethodModal({
   const [selectedMethod, setSelectedMethod] = useState<"QR Scan" | "Cash">("QR Scan");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // A closed modal is never mid-submit; reset during render so reopening starts clean.
   if (!open && isSubmitting) {
     setIsSubmitting(false);
   }
 
-  /**
-   * Placing the order is a real request now (server cart -> checkout -> payment), so the
-   * spinner tracks that call rather than a timer. This used to sit on a hardcoded 30-second
-   * setTimeout from the mock era, which left every cash customer watching "Processing..."
-   * long after the order had actually been created.
-   */
   const handleConfirmClick = async () => {
     if (isSubmitting) return;
 
@@ -49,7 +41,6 @@ export function PaymentMethodModal({
   return (
     <Modal open={open} onOpenChange={(val) => !isSubmitting && onOpenChange(val)}>
       <ModalContent className="max-w-sm p-6 rounded-3xl border border-gray-100 shadow-2xl bg-white" showCloseButton={false}>
-        {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-pink-50 text-[#f0383e] flex items-center justify-center font-bold">
@@ -70,7 +61,6 @@ export function PaymentMethodModal({
           )}
         </div>
 
-        {/* Total Price Banner */}
         <div className="flex items-center justify-between p-3.5 rounded-2xl bg-pink-50/60 border border-pink-100 mb-5">
           <span className="text-xs font-semibold text-gray-600">{t("Total:")}</span>
           <span className="text-base font-black text-[#A1255B]" suppressHydrationWarning>
@@ -78,9 +68,7 @@ export function PaymentMethodModal({
           </span>
         </div>
 
-        {/* Payment Options Stack */}
         <div className="space-y-3 mb-6">
-          {/* QR Code Option */}
           <div
             onClick={() => !isSubmitting && setSelectedMethod("QR Scan")}
             className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none ${
@@ -120,7 +108,6 @@ export function PaymentMethodModal({
             </div>
           </div>
 
-          {/* Cash Option */}
           <div
             onClick={() => !isSubmitting && setSelectedMethod("Cash")}
             className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none ${
@@ -161,7 +148,6 @@ export function PaymentMethodModal({
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="space-y-2">
           <button
             type="button"

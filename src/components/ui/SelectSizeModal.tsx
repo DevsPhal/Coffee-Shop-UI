@@ -18,7 +18,6 @@ import { ExtrasSelector } from "@/components/ui/ExtrasSelector";
 import { OptionDropdown } from "@/components/ui/OptionDropdown";
 import type { CartExtra } from "@/store/useCartStore";
 
-/** A confirmed configuration, shaped so the caller can hand it straight to the cart. */
 export interface SizeSelection {
   variantId: UUID | null;
   variantName: string | null;
@@ -41,14 +40,6 @@ export interface SelectSizeModalProps {
   onConfirm: (selection: SizeSelection) => void;
 }
 
-/**
- * Product customization.
- *
- * Sizes come from the product's own `variants` — each one prices itself outright now rather
- * than adding a delta on top of a product-level price. Ice, sugar and milk are the API's enum
- * values; every one of them is optional on the cart request, so a product with a single variant
- * still gets the drink controls and the customer can simply leave them at default.
- */
 export function SelectSizeModal({
   open,
   onOpenChange,
@@ -64,8 +55,6 @@ export function SelectSizeModal({
 
   const variants = product?.variants ?? [];
   const hasSizes = variants.length > 1;
-  // A canned/bottled drink or a snack isn't made to order, so it gets no ice/sugar/milk step;
-  // a fresh drink only gets the ones that actually apply to it.
   const drinkOptions = product
     ? getDrinkCustomization(product)
     : { ice: false, sugar: false, milk: false };
@@ -76,8 +65,6 @@ export function SelectSizeModal({
   const [milkType, setMilkType] = useState<MilkType>("NORMAL");
   const [selectedExtras, setSelectedExtras] = useState<CartExtra[]>([]);
 
-  // Re-seed the choices each time the sheet opens (or opens on a different product). Done during
-  // render rather than in an effect, so the first frame already shows the right defaults.
   const seedKey = product ? `${product.id}|${open}` : null;
   const [seededFor, setSeededFor] = useState<string | null>(null);
   if (product && seedKey !== seededFor) {
@@ -145,7 +132,6 @@ export function SelectSizeModal({
           </div>
         </div>
 
-        {/* Every single-choice option is the same dropdown as the product page and the cart. */}
         {hasSizes && variantId && (
           <OptionDropdown
             label="Size"

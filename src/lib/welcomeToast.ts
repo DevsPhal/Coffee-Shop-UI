@@ -1,13 +1,3 @@
-/**
- * One-shot "welcome back" toast after a real sign-in.
- *
- * The auth mutations mark the welcome as pending at the moment they store fresh tokens, and
- * <LoginWelcome /> consumes the mark once `/api/users/me` has loaded — so the toast greets the
- * customer by name exactly once per login, and never on a plain reload of an existing session.
- * sessionStorage rather than state because the login screen and the page it lands on are
- * separate routes.
- */
-
 const WELCOME_KEY = "welcomePending";
 
 export function markWelcomePending(): void {
@@ -15,11 +5,9 @@ export function markWelcomePending(): void {
   try {
     window.sessionStorage.setItem(WELCOME_KEY, "1");
   } catch {
-    // Storage blocked — the customer simply isn't greeted.
   }
 }
 
-/** True once per pending welcome; clears the mark as it reads it. */
 export function consumeWelcomePending(): boolean {
   if (typeof window === "undefined") return false;
   try {

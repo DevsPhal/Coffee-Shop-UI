@@ -19,7 +19,6 @@ import {
 import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
-/** Client-side pseudo-category: everything currently discounted. */
 const FEATURED = "Featured";
 
 const SORT_OPTIONS: SortOption[] = [
@@ -46,8 +45,6 @@ export function MenupageView() {
 
   const { categories } = useCategories();
 
-  // "Featured" is a client-side view over the whole catalogue (everything discounted), not a
-  // category the API knows about — so it must not be sent as a categoryId.
   const isFeatured = selectedCategory === FEATURED;
   const { products, isLoading, error, refetch } = useCatalog(
     selectedCategory === ALL_CATEGORIES || isFeatured ? undefined : selectedCategory
@@ -65,21 +62,16 @@ export function MenupageView() {
     })
     .map(toStoreProduct);
 
-  // Apply sorting
   const sortedProducts = [...rawFilteredProducts].sort((a, b) => {
     if (sortBy === "price-asc") return a.price - b.price;
     if (sortBy === "price-desc") return b.price - a.price;
     if (sortBy === "name-asc") return a.title.localeCompare(b.title);
-    return 0; // newest/default
+    return 0;
   });
 
   const getPageTitle = () => {
     if (selectedCategory === ALL_CATEGORIES) return t("All Products");
     if (selectedCategory === FEATURED) return t("Featured Products");
-    // `selectedCategory` holds the category's id once a specific one is picked (that's what
-    // gets compared against `category.id` for the sidebar highlight below and sent as the
-    // catalogue filter above) — the id itself is never something to show a customer, so this
-    // looks its name up rather than rendering the raw UUID.
     const matched = categories.find((category) => category.id === selectedCategory);
     return matched ? t(matched.name) : t("Menu");
   };
@@ -88,7 +80,6 @@ export function MenupageView() {
     <div className="menu_page_wrapper font-sans min-h-screen pb-16 bg-[#F9FAFC]">
       <div className="menu_page_container max-w-7xl mx-auto px-4 sm:px-6 pt-4">
         
-        {/* Centered Menu Page Header */}
         <div className="menu_page_header text-center my-4 sm:my-6">
           <h1 className="menu_page_title text-2xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
             {t("Our Full Menu")}
@@ -98,7 +89,6 @@ export function MenupageView() {
           </p>
         </div>
 
-        {/* Category Title & Search / Sort Control Toolbar Row */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <h2 className="text-xl sm:text-2xl font-extrabold text-[#A1255B] tracking-tight">
@@ -113,10 +103,7 @@ export function MenupageView() {
             )}
           </div>
 
-          {/* Right Toolbar Controls: Category & Sort Dropdowns, Search Bar */}
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            {/* Category Dropdown — the same picker the drinks and phone menu pages use.
-                "Featured" is a client-side view, so it is passed in ahead of "All". */}
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-xs sm:text-sm font-semibold text-gray-600">
                 {t("Category:")}
@@ -134,7 +121,6 @@ export function MenupageView() {
               />
             </div>
 
-            {/* Search Input Bar */}
             <form
               onSubmit={(e) => e.preventDefault()}
               className="flex items-center rounded-full bg-white border border-gray-200 focus-within:border-[#A1255B] focus-within:ring-1 focus-within:ring-[#A1255B] p-1 pl-3.5 shadow-2xs transition-all flex-1 sm:flex-none sm:w-64"
@@ -166,7 +152,6 @@ export function MenupageView() {
               </button>
             </form>
 
-            {/* Sort By Dropdown Control */}
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-xs sm:text-sm font-semibold text-gray-600">
                 {t("Sort by:")}
@@ -176,7 +161,6 @@ export function MenupageView() {
           </div>
         </div>
 
-        {/* Product Card Grid — 4 per row on desktop; categories live in the toolbar dropdown. */}
         {isLoading ? (
           <LoadingRegion
             label="Loading menu..."

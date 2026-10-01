@@ -70,7 +70,6 @@ export function CategoryCarousel({
 
   return (
     <div className={`w-full py-4 sm:py-6 ${className}`}>
-      {/* Optional Header */}
       {title && (
         <div className="mb-4 sm:mb-6 flex items-end justify-between px-1">
           <div>
@@ -86,7 +85,6 @@ export function CategoryCarousel({
         </div>
       )}
 
-      {/* Horizontally Scrollable Cards Container */}
       <div
         ref={scrollRef}
         className="flex items-center gap-3 sm:gap-5 overflow-x-auto scrollbar-none py-2 px-1 scroll-smooth snap-x snap-mandatory"
@@ -102,9 +100,7 @@ export function CategoryCarousel({
         ))}
       </div>
 
-      {/* Bottom Progress Bar & Navigation Controls */}
       <div className="flex items-center gap-4 mt-5 sm:mt-8 px-1">
-        {/* Progress Line Bar */}
         <div className="relative flex-1 h-[2px] bg-gray-200/80 rounded-full overflow-hidden">
           <div
             className="absolute top-0 bottom-0 bg-gray-900 transition-all duration-200 rounded-full"
@@ -115,7 +111,6 @@ export function CategoryCarousel({
           />
         </div>
 
-        {/* Navigation Arrow Buttons */}
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"

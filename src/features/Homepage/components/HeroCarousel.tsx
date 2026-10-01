@@ -33,13 +33,9 @@ export default function HeroCarousel() {
   const { data: banners, isLoading } = useListBannersQuery();
 
   const activeBanners = (banners ?? []).filter((b) => b.status === "ACTIVE");
-  // A banner's own linkUrl is only used when it looks like a real destination — seed/test data
-  // can carry a placeholder string, and following that would send customers nowhere useful.
   const bannerHref = (linkUrl: string | null) =>
     linkUrl && (linkUrl.startsWith("/") || linkUrl.startsWith("http")) ? linkUrl : "/menu";
 
-  // Entirely from /api/banners now — no hardcoded poster images standing in while the real
-  // request is in flight or if the shop hasn't configured any banners yet.
   const slides: HeroSlide[] = activeBanners.map((banner) => ({
     id: banner.id,
     image: banner.imageUrl || "/images/590st cafe.jpg",
@@ -56,7 +52,6 @@ export default function HeroCarousel() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Created once; state rather than a ref so render never reads `.current`.
   const [plugin] = useState(() =>
     Autoplay({
       delay: 3000,
@@ -70,7 +65,6 @@ export default function HeroCarousel() {
     setSelectedIndex(api.selectedScrollSnap());
   }, [api]);
 
-  // Embla starts on slide 0 (the initial state), so only changes need listening to.
   useEffect(() => {
     if (!api) return;
     api.on("select", onSelect);
@@ -90,8 +84,6 @@ export default function HeroCarousel() {
     return Math.min(diff, loopDiff);
   };
 
-  // While the real banners are in flight, a skeleton matching the slide's own size — not
-  // hardcoded poster images pretending to be content.
   if (isLoading) {
     return (
       <section className="hero_section">
@@ -104,8 +96,6 @@ export default function HeroCarousel() {
     );
   }
 
-  // No banners configured is a real, valid state — nothing to show rather than standing in
-  // with content that isn't actually the shop's.
   if (slides.length === 0) {
     return null;
   }
@@ -149,7 +139,6 @@ export default function HeroCarousel() {
                       className="hero_slide_image"
                     />
 
-                    {/* Overlay with Title, Description, and Buy Now Button */}
                     <div className="hero_slide_overlay">
                       <div className="hero_slide_text_wrapper">
                         <h3 className="hero_slide_title">
@@ -163,7 +152,6 @@ export default function HeroCarousel() {
                         )}
                       </div>
 
-                      {/* Buy Now Button */}
                       <Link
                         href={isMobile && slide.href === "/menu" ? "/menuphone" : slide.href}
                         onClick={(e) => e.stopPropagation()}
@@ -179,7 +167,6 @@ export default function HeroCarousel() {
             })}
           </CarouselContent>
 
-          {/* Bottom Controls */}
           <CarouselControls className="hero_controls_margin" />
         </Carousel>
       </div>

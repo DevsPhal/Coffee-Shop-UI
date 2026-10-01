@@ -8,7 +8,6 @@ import { toStoreProduct } from "@/store/api/productAdapter";
 import { useCatalog } from "@/store/api/useCatalog";
 import "@/app/globals.scss";
 
-/** Kept in step with the "Crafted with Passion" grid, which the homepage renders at the same size. */
 export const HOMEPAGE_SECTION_LIMIT = 6;
 
 export interface SpecialTodaySectionProps {
@@ -16,11 +15,6 @@ export interface SpecialTodaySectionProps {
   subtitle?: string;
 }
 
-/**
- * Today's specials — the products the admin has an active discount on. This used to be a
- * hardcoded list of three product ids; now it is whatever the API reports as discounted, so
- * running a promotion in the admin surfaces it here with no code change.
- */
 export function SpecialTodaySection({
   title = "Special Today",
   subtitle = "Handcrafted daily specials picked fresh for you",
@@ -28,18 +22,12 @@ export function SpecialTodaySection({
   const { t } = useLanguage();
   const { products, isLoading, error } = useCatalog();
 
-  // The homepage splits the catalogue in two: everything on discount belongs here, everything
-  // else to "Crafted with Passion". The cap matches that section's so a shop running several
-  // promotions at once does not lose products off the bottom of either one.
   const specials = products
     .filter((product) => product.discountActive)
     .slice(0, HOMEPAGE_SECTION_LIMIT)
     .map(toStoreProduct);
 
-  // Nothing on promotion is a normal state, not an error — the section just stands down.
   if (!isLoading && specials.length === 0) return null;
-  // The "Crafted with Passion" section below reads the same request and shows the one error
-  // (with a retry) for both, so this section just steps aside.
   if (error && !isLoading) return null;
 
   return (

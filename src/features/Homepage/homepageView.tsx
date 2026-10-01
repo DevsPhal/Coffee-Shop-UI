@@ -17,9 +17,6 @@ export function HomepageView() {
   const { t } = useLanguage();
   const { products, isLoading, error, refetch } = useCatalog();
 
-  // The two homepage grids partition the catalogue rather than overlap: anything on an active
-  // discount is shown by SpecialTodaySection, so this one carries the rest. Without the split a
-  // discounted product appeared twice, once at full price and once marked down.
   const craftedProducts = products
     .filter((product) => !product.discountActive)
     .slice(0, HOMEPAGE_SECTION_LIMIT)
@@ -33,8 +30,6 @@ export function HomepageView() {
         title="Special Today"
         subtitle="Handcrafted daily specials picked fresh for you"
       />
-      {/* Nothing left at full price is a normal state — every item is on promotion — so the
-          section stands down rather than showing an empty grid under its heading. */}
       {(isLoading || error || craftedProducts.length > 0) && (
         <section className="homepage_crafted_section">
           <div className="homepage_section_header">
@@ -50,8 +45,6 @@ export function HomepageView() {
               <ProductCardSkeletons count={HOMEPAGE_SECTION_LIMIT} />
             </LoadingRegion>
           ) : error ? (
-            // One error for the whole catalogue: Special Today reads the same request and
-            // stands down on failure, so the page shows this once rather than twice.
             <ErrorState
               title="We couldn't load our menu"
               error={error}

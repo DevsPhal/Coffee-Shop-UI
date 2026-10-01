@@ -53,13 +53,10 @@ export function ContactForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // The feedback endpoint requires a signed-in customer — send them to log in rather than
-    // let the request fail with a 401 they can't do anything about.
     if (!user) {
       router.push(`/login?next=${encodeURIComponent("/contact")}`);
       return;
     }
-    // Keep the contact details on this message, independently of the customer's profile.
     await submitMessage(user);
   };
 
@@ -105,7 +102,6 @@ export function ContactForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="contact_form_stack">
-        {/* Full Name Input */}
         <div>
           <label htmlFor="contact-fullName" className="contact_form_label">
             {t("Full Name")} <span className="contact_form_required">*</span>
@@ -128,9 +124,7 @@ export function ContactForm() {
           {errors.fullName && <TooltipAlert message={t(errors.fullName)} />}
         </div>
 
-        {/* Email & Phone Row */}
         <div className="contact_form_row">
-          {/* Email Address */}
           <div>
             <label htmlFor="contact-email" className="contact_form_label">
               {t("Email Address")} <span className="contact_form_required">*</span>
@@ -153,7 +147,6 @@ export function ContactForm() {
             {errors.email && <TooltipAlert message={t(errors.email)} />}
           </div>
 
-          {/* Phone / Telegram */}
           <div>
             <label htmlFor="contact-phone" className="contact_form_label">
               {t("Phone / Telegram")} <span className="contact_form_optional">({t("Optional")})</span>
@@ -176,7 +169,6 @@ export function ContactForm() {
           </div>
         </div>
 
-        {/* Select Topic Pills */}
         <div>
           <label className="contact_form_label">
             {t("Select Topic")}
@@ -199,7 +191,6 @@ export function ContactForm() {
           {errors.topic && <TooltipAlert message={t(errors.topic)} />}
         </div>
 
-        {/* Message Input */}
         <div>
           <label htmlFor="contact-message" className="contact_form_label">
             {t("Your Message")} <span className="contact_form_required">*</span>
@@ -222,7 +213,6 @@ export function ContactForm() {
           {errors.message && <TooltipAlert message={t(errors.message)} />}
         </div>
 
-        {/* Submit Button */}
         <div className="contact_form_submit_wrapper">
           <Button
             type="submit"

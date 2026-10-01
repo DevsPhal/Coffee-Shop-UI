@@ -102,8 +102,6 @@ export function LocationpageView() {
                 </div>
               </div>
             </div>
-            {/* A real, interactive embed rather than a flat screenshot linking out — visitors
-                can pan/zoom in place, and still have a direct link to the full app below it. */}
             <div className="map_preview_card">
               <iframe
                 src="https://www.google.com/maps?q=590st+Cafe,+Street+590,+Toul+Kork,+Phnom+Penh,+Cambodia&output=embed"

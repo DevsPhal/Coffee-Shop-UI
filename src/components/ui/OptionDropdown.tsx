@@ -9,9 +9,7 @@ import { cn } from "@/lib/utils";
 
 export interface DropdownOption<T extends string> {
   value: T;
-  /** English label; translated here, so callers pass the raw text. */
   label: string;
-  /** Shown on the right of the item, e.g. a size's price. */
   hint?: string;
 }
 
@@ -19,26 +17,12 @@ export interface OptionDropdownProps<T extends string> {
   value: T;
   options: readonly DropdownOption<T>[];
   onChange: (value: T) => void;
-  /** Field heading ("Ice Level"). In the compact variant it prefixes the value instead. */
   label: string;
   icon?: React.ReactNode;
-  /**
-   * "field": full-width labelled control, for the customize modal and product page.
-   * "compact": a small pill that fits inside a cart row.
-   */
   variant?: "field" | "compact";
   className?: string;
 }
 
-/**
- * The one single-choice picker for product options — size, ice, sugar, milk — wherever a
- * customer configures a drink (customize modal, product page, cart). It used to be chips in the
- * modal, a private dropdown on the product page and four near-identical copies in the cart.
- *
- * Built on base-ui's Select so the list is portalled above the modal (never clipped by its
- * scroll area) and works with the keyboard and screen readers like a native select, while
- * looking like the storefront's other dropdowns (SortDropdown, CategoryDropdown).
- */
 export function OptionDropdown<T extends string>({
   value,
   options,
@@ -86,7 +70,6 @@ export function OptionDropdown<T extends string>({
       </Select.Trigger>
 
       <Select.Portal>
-        {/* Above the modal (z-2000), same layer as the storefront's dropdown menus. */}
         <Select.Positioner
           className="isolate z-[2100] outline-none"
           sideOffset={6}

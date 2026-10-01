@@ -15,12 +15,6 @@ function formatCountdown(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-/**
- * Linking Telegram is a bot conversation, not a widget: POST /api/users/me/telegram/link-code
- * hands back a short-lived `code` plus a `deepLink` (a t.me URL). Opening that link starts a
- * chat with the bot pre-filled with the code, and Telegram's webhook completes the link
- * server-side — this modal's only job is to display that link/code and notice when it lands.
- */
 export function TelegramLinkModal({
   open,
   onOpenChange,
@@ -52,12 +46,8 @@ export function TelegramLinkModal({
     }
   };
 
-  // Fetch a code as soon as the modal opens, so there's no extra click before the customer
-  // sees anything actionable.
   useEffect(() => {
     if (open && !linkCode) {
-      // requestCode's own setState calls run inside its async body, after this effect has
-      // already returned — not synchronously here — but the linter can't see that boundary.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       requestCode();
     }
@@ -68,8 +58,6 @@ export function TelegramLinkModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Countdown, and a light poll for `telegramLinked` flipping true once the customer has
-  // actually gone and chatted with the bot — the modal has no other way to know that happened.
   useEffect(() => {
     if (!open || !linkCode) return;
     const tick = setInterval(() => setSecondsLeft((s) => Math.max(0, s - 1)), 1000);
@@ -95,7 +83,6 @@ export function TelegramLinkModal({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Clipboard access can be denied; the code is still on screen to copy by hand.
     }
   };
 

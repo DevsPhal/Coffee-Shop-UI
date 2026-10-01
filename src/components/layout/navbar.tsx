@@ -57,8 +57,6 @@ export function Navbar() {
   const { status: authStatus } = useAuth();
 
   const userIsLoggedIn = authStatus === "signedIn";
-  // Until the session is known, the account slot shows a neutral placeholder rather than
-  // guessing — guessing "signed out" is what flashed a Login button at signed-in customers.
   const isCheckingAuth = authStatus === "checking";
   const displayTotalCount = mounted ? totalCount : 0;
   const displayT = (key: string) => (mounted ? t(key) : key);
@@ -121,7 +119,6 @@ export function Navbar() {
 
   return (
     <>
-      {/* Top Header Navbar */}
       <header className="navbar_header fixed top-0 left-0 right-0 z-[1000] w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs">
         <nav className="navbar_container w-full px-3 sm:px-6">
           <BrandLogo className="navbar_logo" priority />
@@ -141,7 +138,6 @@ export function Navbar() {
           </ul>
 
           <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 shrink-0" suppressHydrationWarning>
-            {/* Language Switcher Dropdown */}
             <div ref={langRef} className="relative">
               <button
                 type="button"
@@ -189,8 +185,6 @@ export function Navbar() {
               )}
             </div>
 
-            {/* Only shown once signed in — checkout requires an account anyway, so the cart
-                icon has nothing to offer a logged-out visitor. */}
             {userIsLoggedIn && (
               <button
                 type="button"
@@ -205,7 +199,6 @@ export function Navbar() {
               </button>
             )}
 
-            {/* Login / User Profile Button */}
             {isCheckingAuth ? (
               <span className="nav_desktop_only items-center" aria-hidden>
                 <Skeleton className="h-10 w-24 rounded-full" />
@@ -230,7 +223,6 @@ export function Navbar() {
         </nav>
       </header>
 
-      {/* Fixed Bottom Icon Navigation Bar for Phone Size including Events & Login */}
       {!(
         pathname === "/checkoutdone" ||
         pathname === "/checkout-done" ||

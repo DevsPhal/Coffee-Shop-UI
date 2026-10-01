@@ -19,7 +19,6 @@ import { OptionDropdown } from "@/components/ui/OptionDropdown";
 import type { CartItem } from "@/store/useCartStore";
 import "@/app/globals.scss";
 
-/** Extras add a flat amount per unit, on top of whatever the variant itself prices at. */
 function extrasUnitTotal(item: Pick<CartItem, "selectedExtras">): number {
   return (item.selectedExtras ?? []).reduce((sum, extra) => sum + extra.price, 0);
 }
@@ -37,7 +36,6 @@ export function OrderpageView() {
     subtotal,
   } = useCart();
 
-  // Cached by RTK Query — shares the catalogue request the rest of the app already made.
   const { products } = useCatalog();
 
   const handleContinueShopping = (e: React.MouseEvent) => {
@@ -51,7 +49,6 @@ export function OrderpageView() {
 
   return (
     <div className="order_page_container">
-      {/* Table Title */}
       <h1 className="order_page_title">{t("Shopping Cart")}</h1>
 
       {items.length === 0 ? (
@@ -78,8 +75,6 @@ export function OrderpageView() {
             </div>
             <div className="order_page_items_list">
               {items.map((item) => {
-                // Sizes and their price deltas belong to the product, so look it up in the
-                // already-cached catalogue rather than storing them on the cart line.
                 const product = products.find((p) => p.id === item.productId);
                 const variants = product?.variants ?? [];
                 const drinkOptions = product
@@ -101,7 +96,6 @@ export function OrderpageView() {
                       <div className="order_page_item_details">
                         <h3 className="order_page_item_title">{t(toTitleCase(item.title))}</h3>
                         <div className="flex flex-col items-start gap-1 mt-1 w-full max-w-full">
-                          {/* Same dropdown as the customize modal, in its compact size. */}
                           {variants.length > 1 && (
                             <OptionDropdown
                               variant="compact"
@@ -206,8 +200,6 @@ export function OrderpageView() {
           </div>
           <div className="order_page_summary_card">
             {(() => {
-              // Pre-discount total; each line carries its own original unit price. Extras are
-              // never discounted, so the same amount applies whether or not a discount is live.
               const fullSubtotal = items.reduce((acc, item) => {
                 const original = item.originalUnitPrice ?? item.unitPrice;
                 return acc + (Math.max(original, item.unitPrice) + extrasUnitTotal(item)) * item.quantity;

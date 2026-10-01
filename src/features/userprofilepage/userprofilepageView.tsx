@@ -38,18 +38,12 @@ import {
 import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
-/** The API stores gender as an enum; customers should never be shown the raw MALE/FEMALE/OTHER. */
 const GENDER_LABELS: Record<Gender, string> = {
   MALE: "Male",
   FEMALE: "Female",
   OTHER: "Other",
 };
 
-/**
- * The password-verification modal gates three different actions, so its copy needs to say
- * what it's actually for — it previously read "Verify Password" as both title and subtitle,
- * with a "Confirm Order" button left over from a copy-pasted checkout modal.
- */
 const verifyModalCopy: Record<"changePassword" | "email" | "phone", { subtitle: string; confirmLabel: string }> = {
   changePassword: {
     subtitle: "Confirm your current password to set a new one.",
@@ -70,7 +64,6 @@ export interface UserProfileData {
   name: string;
   email: string;
   phone?: string;
-  /** Raw API value, or "" when the account has none on file yet. */
   gender?: Gender | "";
   avatarUrl: string;
   capital?: string;
@@ -100,15 +93,9 @@ export function UserprofilepageView() {
       )
     : [];
 
-  // Orders come from the API, scoped to the signed-in customer by the server.
-  // Read after mount: the server has no localStorage, so reading it during the first render
-  // made the server (signed out → nothing) and the browser (signed in → the page) disagree.
   const mounted = useMounted();
   const signedIn = mounted && isAuthenticated();
 
-  // This page shows real account data (email, phone, order history) — nothing here makes
-  // sense for a logged-out visitor, so it sends them to log in instead of rendering a
-  // "Guest" account shell with buttons that have nothing to act on.
   useEffect(() => {
     if (mounted && !signedIn) {
       router.push(`/login?next=${encodeURIComponent(pathname)}`);
@@ -130,15 +117,9 @@ export function UserprofilepageView() {
     { page: 1, size: 50 },
     { skip: !signedIn }
   );
-  // A barista moving one of these orders along reaches this tab the instant the API pushes it.
   useOrderLiveUpdates(() => refetchOrders());
   const userOrders = orderPage?.content ?? [];
 
-  /**
-   * The API's user record holds name, email, phone, gender and avatar. It has no address
-   * fields, so capital/district/zip/address stay local to this browser — the checkout page
-   * collects a delivery address per order instead.
-   */
   const profile: UserProfileData = {
     userId: currentUser?.id || "N/A",
     name: currentUser?.fullName || "Guest",
@@ -176,13 +157,11 @@ export function UserprofilepageView() {
     return `${phone.slice(0, 3)}****${phone.slice(-3)}`;
   };
 
-  // Modals & Overlay States
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = usePersistentState("profile:isEditProfileOpen", false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
 
-  // Password Verification Modal States
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [verifyTarget, setVerifyTarget] = useState<"changePassword" | "email" | "phone" | null>(null);
   const [verifyPassword, setVerifyPassword] = useState("");
@@ -201,10 +180,6 @@ export function UserprofilepageView() {
       return;
     }
 
-    // The old check compared against a hardcoded "123" held in the browser, which protected
-    // nothing. The API exposes no "verify my current password" endpoint, so there is no way
-    // to check it here — the real protection is that every account action below goes through
-    // an emailed one-time code.
     setVerifyError("");
     setIsVerifyModalOpen(false);
 
@@ -225,7 +200,6 @@ export function UserprofilepageView() {
     setVerifyPassword("");
   };
 
-  // Form states for password reset
   const [passwords, setPasswords] = useState({
     current: "",
     newPass: "",
@@ -233,13 +207,9 @@ export function UserprofilepageView() {
   });
   const [passError, setPassError] = useState("");
 
-  // Edit profile form state
   const [editForm, setEditForm] = usePersistentState<UserProfileData>("profile:editForm", { ...profile });
-  // The picked file itself, kept alongside the data-URL preview in editForm.avatarUrl: the
-  // avatar goes to a separate multipart endpoint, so the preview alone cannot be saved.
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
-  // Avatar position adjustment state
   const [avatarPos, setAvatarPos] = useState({ x: 50, y: 50 });
   const [isDraggingAvatar, setIsDraggingAvatar] = useState(false);
   const dragStartRef = React.useRef({ mouseX: 0, mouseY: 0, posX: 50, posY: 50 });
@@ -330,9 +300,6 @@ export function UserprofilepageView() {
 
     setPassError("");
 
-    // The API changes a password only through the emailed reset flow — there is no
-    // "change password while signed in" endpoint — so this kicks that off rather than
-    // pretending to save one locally.
     try {
       await forgotPassword({ email: profile.email }).unwrap();
       setIsResetPasswordOpen(false);
@@ -352,32 +319,12 @@ export function UserprofilepageView() {
     }
   };
 
-  /**
-   * Opens the edit modal straight from the button.
-   *
-   * This used to route through the "Verify Password" box, which opened the edit dialog from
-   * inside another dialog's close. That handoff silently never completed — the verify box shut
-   * and the edit form never appeared — so the profile was uneditable no matter what the save
-   * handler did. Opening from a button click is the same path that already opens every other
-   * modal on this page, so it has no handoff to fail.
-   *
-   * Nothing is lost by dropping the gate: it accepted any input at all, because the API has no
-   * endpoint to check a password against. It asked for a password and then ignored it.
-   */
   const openEditProfile = () => {
     setEditForm({ ...profile });
     setAvatarFile(null);
     setIsEditProfileOpen(true);
   };
 
-  /**
-   * Saves the edit modal against PATCH /api/users/me, plus the avatar's own multipart endpoint.
-   *
-   * Only fields the customer actually changed are sent, so an untouched form is a no-op rather
-   * than a rewrite of the record with its own values. The exception is the phone number: the
-   * API reads an empty string as "clear the number on file", which is how a customer removes
-   * one, so a cleared field is sent deliberately.
-   */
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSavingProfile) return;
@@ -389,8 +336,6 @@ export function UserprofilepageView() {
     }
 
     const phone = (editForm.phone ?? "").trim();
-    // Mirrors ValidationPatterns.CAMBODIA_PHONE_REGEX so the mistake is caught here rather
-    // than coming back as a server error on an otherwise valid save.
     if (phone && !PHONE_PATTERN.test(phone)) {
       toast.add({
         type: "warning",
@@ -414,7 +359,6 @@ export function UserprofilepageView() {
       if (Object.keys(changes).length > 0) {
         await updateProfile(changes).unwrap();
       }
-      // Separate multipart endpoint, so it is its own call once the details are saved.
       if (avatarFile) {
         await uploadAvatar(avatarFile).unwrap();
         setAvatarFile(null);
@@ -439,15 +383,12 @@ export function UserprofilepageView() {
     router.push("/login");
   };
 
-  // Redirecting (see the effect above) — render nothing rather than flash the "Guest" shell
-  // for a frame first.
   if (!signedIn) return null;
 
   return (
     <div className="user_profile_container">
 
       <div className="user_profile_wrapper">
-        {/* Top Header & Breadcrumbs */}
         <div className="product_detail_header">
           <h1 className="product_detail_title">{t("User Profile")}</h1>
 
@@ -460,8 +401,6 @@ export function UserprofilepageView() {
           </nav>
         </div>
 
-        {/* User Profile Main Card — sketched until the account arrives, so it never flashes
-            "Guest" / "N/A" placeholders at a signed-in customer. */}
         {isLoadingUser ? (
           <LoadingRegion label="Loading your profile...">
             <ProfileCardSkeleton />
@@ -474,7 +413,6 @@ export function UserprofilepageView() {
           />
         ) : (
         <div className="user_profile_card">
-          {/* Left Avatar Side */}
           <div className="user_profile_avatar_side">
             <div className="user_profile_avatar_box group">
               <Image
@@ -498,10 +436,8 @@ export function UserprofilepageView() {
             </div>
           </div>
 
-          {/* Right Content Side */}
           <div className="user_profile_content_side">
             <div>
-              {/* Header Row: Username + Edit Profile & Change Password Buttons */}
               <div className="user_profile_header_row">
                 <h2 className="user_profile_username" suppressHydrationWarning>{profile.name}</h2>
                 <div className="user_profile_action_group">
@@ -531,7 +467,6 @@ export function UserprofilepageView() {
                 </div>
               </div>
 
-              {/* Tabs Bar */}
               <div className="user_profile_tabs">
                 <button
                   type="button"
@@ -578,7 +513,6 @@ export function UserprofilepageView() {
                 </button>
               </div>
 
-              {/* Profile Details List */}
               {activeTab === "about" && (
                 <div className="user_profile_details">
                   <div className="user_profile_detail_row">
@@ -625,7 +559,6 @@ export function UserprofilepageView() {
                 </div>
               )}
 
-              {/* Messages Tab Content */}
               {activeTab === "messages" && (
                 <div>
                   {userMessages.length === 0 ? (
@@ -695,7 +628,6 @@ export function UserprofilepageView() {
                 </div>
               )}
 
-              {/* Order History Tab Content */}
               {activeTab === "orders" && (
                 <div>
                   {isLoadingOrders ? (
@@ -838,7 +770,6 @@ export function UserprofilepageView() {
               )}
             </div>
 
-            {/* Bottom Actions: Log Out (Aligned Right Bottom) */}
             <div className="profile_bottom_actions">
               <button
                 type="button"
@@ -854,7 +785,6 @@ export function UserprofilepageView() {
         )}
       </div>
 
-      {/* Change Password Modal */}
       <Modal open={isResetPasswordOpen} onOpenChange={setIsResetPasswordOpen}>
         <ModalContent className="max-w-md text-left p-6" showCloseButton={false}>
           <div className="modal_header_group">
@@ -925,7 +855,6 @@ export function UserprofilepageView() {
         </ModalContent>
       </Modal>
 
-      {/* Edit Profile Modal (Full Width Landscape Split Layout) */}
       <Modal open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
         <ModalContent className="max-w-[680px] w-[92%] p-6 text-left" showCloseButton={false}>
           <div className="modal_header_group">
@@ -939,15 +868,12 @@ export function UserprofilepageView() {
           </div>
 
           <form onSubmit={handleSaveProfile} className="space-y-5 text-left">
-            {/* Split 2-Column Layout */}
             <div className="profile_edit_split_layout">
-              {/* LEFT SIDE: Photo & Direct Drag-to-Move */}
               <div className="profile_edit_avatar_column">
                 <span className="profile_edit_avatar_label">
                   Profile Picture
                 </span>
 
-                {/* Direct Drag-to-Move Circular Avatar Box */}
                 <div
                   className="avatar_interactive_wrapper group"
                   onMouseDown={handleAvatarMouseDown}
@@ -1005,7 +931,6 @@ export function UserprofilepageView() {
                 </span>
               </div>
 
-              {/* RIGHT SIDE: User Details */}
               <div className="profile_edit_fields_column">
                 <div className="profile_edit_grid_2col">
                   <div className="modal_input_group">
@@ -1047,7 +972,6 @@ export function UserprofilepageView() {
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="modal_footer_actions">
               <button
                 type="button"
@@ -1072,7 +996,6 @@ export function UserprofilepageView() {
         </ModalContent>
       </Modal>
 
-      {/* Logout Confirmation Modal */}
       <Modal open={isLogoutModalOpen} onOpenChange={setIsLogoutModalOpen}>
         <ModalContent className="max-w-sm text-center p-6" showCloseButton={false}>
           <div className="logout_modal_icon_box">
@@ -1103,8 +1026,6 @@ export function UserprofilepageView() {
         </ModalContent>
       </Modal>
 
-      {/* Verify Password Modal — this one gate covers three different actions, so its copy
-          follows verifyTarget rather than reading the same regardless of which one. */}
       <Modal open={isVerifyModalOpen} onOpenChange={setIsVerifyModalOpen}>
         <ModalContent className="max-w-[420px] w-[92%] p-6 text-left" showCloseButton={false}>
           <div className="modal_header_group">

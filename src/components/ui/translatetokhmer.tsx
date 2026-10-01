@@ -61,7 +61,6 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "Honesty & Quality": "ភាពស្មោះត្រង់ និងគុណភាព",
     "Our Warm Hospitality": "ការស្វាគមន៍ប្រកបដោយភាពកក់ក្តៅ",
     "Dedicated to welcoming every visitor with genuine Cambodian warmth, friendliness, and exceptional service.": "ឧទ្ទិសដល់ការស្វាគមន៍ភ្ញៀវគ្រប់រូបដោយភាពកក់ក្តៅ បរិស័ទមិត្តភាព និងសេវាកម្មដ៏ប្រពៃតាមបែបខ្មែរ។",
-    // Categories
     All: "ទាំងអស់",
     all: "ទាំងអស់",
     Category: "ប្រភេទទំនិញ",
@@ -107,7 +106,6 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     Material: "សម្ភារៈ",
     material: "សម្ភារៈ",
 
-    // Products
     "590 Coffee": "កាហ្វេ 590",
     "Amacanonononononononononnno": "អាមេរិកាណូ",
     "Americano": "អាមេរិកាណូ",
@@ -256,7 +254,6 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     Almond: "អាល់ម៉ុង",
     Condensed: "ខាប់",
     "No Milk": "គ្មានទឹកដោះគោ",
-    // Cart / Order Page
     "Your shopping cart is empty.": "កន្ត្រកទំនិញរបស់អ្នកទទេ",
     "Explore Menu & Add Drinks": "ស្វែងរកម៉ឺនុយ & បន្ថែមភេសជ្ជៈ",
     Product: "ផលិតផល",
@@ -269,7 +266,6 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "Proceed to Checkout": "បន្តទៅការទូទាត់",
     "Milk:": "ទឹកដោះគោ:",
 
-    // Checkout Page
     "Shipping Information": "ព័ត៌មានដឹកជញ្ជូន",
     "Full Name": "ឈ្មោះពេញ",
     "Email Address": "អាសយដ្ឋានអ៊ីមែល",
@@ -293,7 +289,6 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "Confirm Order": "បញ្ជាក់ការបញ្ជាទិញ",
     "Select Payment Method": "ជ្រើសរើសវិធីសាស្ត្រទូទាត់ប្រាក់",
 
-    // Checkout Done / Order Confirmation
     "Order Successful!": "ការបញ្ជាទិញជោគជ័យ!",
     "Thank you for your order. We are preparing it for you.": "សូមអរគុណសម្រាប់ការបញ្ជាទិញ។ ពួកយើងកំពុងរៀបចំជូនអ្នក។",
     "Order ID:": "លេខសម្គាល់ការបញ្ជាទិញ:",
@@ -303,7 +298,6 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "Back to Home": "ត្រឡប់ទៅទំព័រដើម",
     "View Order History": "មើលប្រវត្តិបញ្ជាទិញ",
 
-    // Profile & Order History
     "User Profile": "ព័ត៌មានគណនី",
     "Personal Info": "ព័ត៌មានផ្ទាល់ខ្លួន",
     "Edit Profile": "កែប្រែព័ត៌មាន",
@@ -323,7 +317,6 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "Order History": "ប្រវត្តិបញ្ជាទិញ",
     "No orders yet.": "មិនទាន់មានការបញ្ជាទិញនៅឡើយទេ។",
     Reorder: "កុម្ម៉ង់ម្តងទៀត",
-    // Login / Sign Up / Forgot Password
     "Login to your account": "ចូលទៅកាន់គណនីរបស់អ្នក",
     "Welcome back": "សូមស្វាគមន៍ការត្រឡប់មកវិញ",
     "Ready for your next cup?": "ត្រៀមខ្លួនសម្រាប់កែវបន្ទាប់ហើយឬនៅ?",
@@ -350,7 +343,6 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "Enter your email address and we'll send you instructions to reset your password.": "បញ្ចូលអាសយដ្ឋានអ៊ីមែលរបស់អ្នកដើម្បីទទួលបានការណែនាំកំណត់ពាក្យសម្ងាត់ឡើងវិញ។",
     "Send Reset Link": "ផ្ញើតំណកំណត់ពាក្យសម្ងាត់",
     "Back to Login": "ត្រឡប់ទៅការចូលឈ្មោះ",
-    // Order Details & Checkout Done
     "Order Progress Status": "ស្ថានភាពដំណើរការបញ្ជាទិញ",
     Confirmed: "បានបញ្ជាក់",
     Preparing: "កំពុងរៀបចំ",
@@ -379,9 +371,6 @@ export const translations = staticTranslations;
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// The chosen language lives in localStorage and is read through useSyncExternalStore: the
-// server and the hydrating render both see "en", then the saved choice takes over — and a
-// change in another tab (the `storage` event) follows along here too.
 const LANGUAGE_KEY = "app_language";
 const languageListeners = new Set<() => void>();
 
@@ -405,8 +394,6 @@ function readLanguage(): Language {
   }
 }
 
-// Only consulted in Khmer, which never applies during hydration (see above), so reading the
-// cache on the first client render can't make it disagree with the server.
 function readCachedTranslations(): Record<string, string> {
   if (typeof window === "undefined") return {};
   try {
@@ -426,7 +413,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(LANGUAGE_KEY, lang);
     } catch {
-      // Private mode: the choice just won't survive a reload.
     }
     languageListeners.forEach((notify) => notify());
   };
@@ -511,23 +497,19 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       const trimmedKey = key.trim();
       const upperKey = trimmedKey.toUpperCase();
 
-      // Force size codes S, M, L to always remain in English
       if (upperKey === "S" || upperKey === "M" || upperKey === "L") {
         return upperKey;
       }
 
       const lowerKey = trimmedKey.toLowerCase();
 
-      // 1. Static Dictionary Exact match
       if (staticTranslations.km[trimmedKey]) return staticTranslations.km[trimmedKey];
       if (staticTranslations.km[key]) return staticTranslations.km[key];
 
-      // 2. Case-insensitive dictionary match
       const staticKeys = Object.keys(staticTranslations.km);
       const foundStaticKey = staticKeys.find((k) => k.toLowerCase() === lowerKey);
       if (foundStaticKey) return staticTranslations.km[foundStaticKey];
 
-      // 3. Smart Pattern Matching for dynamic product options (Size: M, Quantity: 2, Ice: Normal, etc.)
       if (trimmedKey.startsWith("Size:")) {
         const val = trimmedKey.replace("Size:", "").trim();
         return `ទំហំ: ${val}`;
@@ -552,11 +534,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         return `ទឹកដោះគោ: ${translatedVal}`;
       }
 
-      // 4. Cached Auto-translation match
       if (autoTranslations[trimmedKey]) return autoTranslations[trimmedKey];
       if (autoTranslations[key]) return autoTranslations[key];
 
-      // 5. Queue untranslated keys for background batch auto-translation
       if (typeof window !== "undefined" && language === "km") {
         pendingQueue.current.add(key);
       }

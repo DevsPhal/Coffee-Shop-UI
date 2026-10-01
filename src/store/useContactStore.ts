@@ -5,7 +5,6 @@ import { toast } from "@/components/ui/toast";
 import { getAccessToken, isAuthenticated } from "@/lib/authStorage";
 import { formatPhone, PHONE_PATTERN } from "@/lib/phoneUtils";
 
-/** UI labels (shown in ContactForm's topic pills) mapped to the API's FeedbackTopic enum. */
 const TOPIC_TO_API_ENUM: Record<string, string> = {
   "General Inquiry": "GENERAL_INQUIRY",
   "Catering & Events": "CATERING_EVENTS",
@@ -65,7 +64,6 @@ interface ContactStoreState {
   errors: Partial<Record<keyof ContactMessageInput, string>>;
   messagesHistory: ContactMessageRecord[];
 
-  // Actions
   setField: <K extends keyof ContactMessageInput>(field: K, value: ContactMessageInput[K]) => void;
   setTopic: (topic: string) => void;
   prefillUser: (user: { userId?: string; name?: string; email?: string; phone?: string } | null) => void;
@@ -174,8 +172,6 @@ export const useContactStore = create<ContactStoreState>()(
           return { success: false, message: firstErr };
         }
 
-        // The feedback endpoint requires a signed-in customer — there is no guest/anonymous
-        // route for it on the API.
         if (!isAuthenticated()) {
           const message = "Please sign in to send a message.";
           toast.add({ type: "warning", description: message });

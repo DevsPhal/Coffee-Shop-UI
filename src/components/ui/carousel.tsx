@@ -66,9 +66,6 @@ function Carousel({
     },
     plugins
   );
-  // Embla is an external store: read its position through useSyncExternalStore so every
-  // listener is removed on cleanup and nothing is copied into state from an effect. The
-  // snapshot is a string so it stays referentially stable between renders.
   const subscribe = React.useCallback(
     (onChange: () => void) => {
       if (!api) return () => {};
@@ -92,7 +89,6 @@ function Carousel({
   const [selectedIndex, prevFlag, nextFlag, snapCount] = snapshot.split("|").map(Number);
   const canScrollPrev = prevFlag === 1;
   const canScrollNext = nextFlag === 1;
-  // Consumers only need how many snaps there are (dots) and their order.
   const scrollSnaps = React.useMemo(() => Array.from({ length: snapCount }, (_, i) => i), [snapCount]);
 
   const scrollPrev = React.useCallback(() => {
@@ -261,16 +257,9 @@ function CarouselNext({
   );
 }
 
-// Bottom Controls with Arrows & Dots using globals.scss classes
 function CarouselControls({ className }: { className?: string }) {
   const { scrollPrev, scrollNext, scrollTo, canScrollPrev, canScrollNext, selectedIndex, scrollSnaps } = useCarousel();
 
-  // Embla's own `loop` option silently disables itself when there aren't enough slides to fill
-  // the viewport twice over (a documented Embla constraint) — which is exactly the case for a
-  // handful of banners at a large flex-basis. Autoplay already has its own wrap-to-start
-  // fallback, but the arrow buttons don't, so they'd otherwise dead-end at the first/last slide.
-  // Wrapping manually here makes the arrows loop regardless of whether Embla's native loop
-  // actually engaged.
   const hasMultipleSlides = scrollSnaps.length > 1;
 
   const handlePrev = () => {

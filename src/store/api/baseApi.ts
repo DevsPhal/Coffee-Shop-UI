@@ -11,15 +11,10 @@ import type { ApiEnvelope, ApiErrorBody, AuthTokenResponse } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-/**
- * Every controller wraps its payload in `ApiResponse<T>`, so each endpoint unwraps with this
- * rather than repeating `(r) => r.data` inline.
- */
 export function unwrap<T>(response: ApiEnvelope<T>): T {
   return response.data;
 }
 
-/** Pulls the human-readable message out of an `ErrorResponse` body for toasts. */
 export function apiErrorMessage(
   error: FetchBaseQueryError | undefined,
   fallback = "Something went wrong. Please try again."
@@ -41,11 +36,6 @@ const rawBaseQuery = fetchBaseQuery({
   },
 });
 
-/**
- * Serialises refresh attempts: without it, several 401s arriving together would each fire
- * their own /refresh-token call and all but the first would present an already-rotated token.
- * Deliberately tiny — the only thing needed is "is a refresh in flight, and let me await it".
- */
 const refreshLock = {
   pending: null as Promise<void> | null,
   isLocked() {
@@ -66,11 +56,6 @@ const refreshLock = {
   },
 };
 
-/**
- * Wraps the base query so an expired access token is refreshed once and the original request
- * retried. A failed refresh drops the local session; it does not navigate anywhere — see
- * `dropSession` below for why.
- */
 const baseQueryWithReauth: BaseQueryFn<
   string | FetchArgs,
   unknown,
@@ -81,14 +66,9 @@ const baseQueryWithReauth: BaseQueryFn<
 
   if (result.error?.status !== 401) return result;
 
-  // A 401 with no access token on file means this request was never authenticated in the
-  // first place — an anonymous visitor hitting a guest-accessible endpoint, or one the backend
-  // happens to gate. Either way there is no session to refresh or log out of; only a 401
-  // *after* having a token — meaning it just expired — goes through reauth.
   if (!getAccessToken()) return result;
 
   if (refreshLock.isLocked()) {
-    // Another request is already refreshing — wait for it, then retry with the new token.
     await refreshLock.waitForUnlock();
     return rawBaseQuery(args, api, extraOptions);
   }
@@ -126,26 +106,11 @@ const baseQueryWithReauth: BaseQueryFn<
   return result;
 };
 
-/**
- * Clears an expired session and lets the UI react on its own — it deliberately does not
- * navigate. A raw `window.location.href` here used to fire from deep inside the data layer
- * with no coordination with whatever the Next.js router was already doing; landing right as
- * `router.push()` was mid-transition (e.g. immediately after login, when the destination
- * page's first queries can 401) raced a hard document navigation against a soft one and could
- * leave the browser on a broken "this page couldn't load" state. Every screen that actually
- * requires sign-in (checkout, profile) already watches `isLoggedIn` and redirects itself via
- * `router.push("/login?next=...")` — invalidating "Auth" here is what makes that state change
- * visible to them.
- */
 function dropSession(dispatch: Parameters<BaseQueryFn>[1]["dispatch"]): void {
   clearTokens();
   dispatch(baseApi.util.invalidateTags(["Auth"]));
 }
 
-/**
- * Single API slice; each domain file injects its own endpoints so the store stays one cache
- * and cross-domain invalidation (checkout emptying the cart and adding an order) works.
- */
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithReauth,

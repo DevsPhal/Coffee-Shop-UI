@@ -11,16 +11,6 @@ import {
 } from "./cartApi";
 import type { CheckoutRequest, OrderResponse } from "./types";
 
-/**
- * Turns the local guest cart into a real order.
- *
- * The API has no bulk cart endpoint, so the sync is: clear whatever the server cart still
- * holds from an abandoned session, POST each local line, then POST /checkout — which creates
- * a PENDING order and empties the server cart. Payment is a separate step on the order.
- *
- * The local cart is only cleared once the order exists, so a failure part-way leaves the
- * customer's basket intact and they can retry.
- */
 export function useCheckout() {
   const [clearServerCart] = useClearCartMutation();
   const [addCartItem] = useAddCartItemMutation();
@@ -29,7 +19,6 @@ export function useCheckout() {
   const [isPlacing, setIsPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const placingRef = useRef(false);
-  // Mirrors `error` for callers that need it in the same tick they await placeOrder.
   const errorRef = useRef<string | null>(null);
 
   const fail = useCallback((message: string) => {
@@ -40,12 +29,6 @@ export function useCheckout() {
   const placeOrder = useCallback(
     async (request: CheckoutRequest): Promise<OrderResponse | null> => {
       if (placingRef.current) return null;
-      // Read fresh at call time rather than subscribing to the store reactively — this hook
-      // never displays cart data, it only needs whatever the cart holds at the moment the
-      // customer clicks. (Subscribing here caused a real, reproduced bug: a second reactive
-      // subscription to the same persisted store, alongside CheckoutpageView's own via
-      // useCart(), left the page's own subtotal stuck at 0 on a cold load of /checkout even
-      // though the items list itself rendered correctly.)
       const items = useCartStore.getState().items;
       if (items.length === 0) {
         fail("Your cart is empty.");
@@ -60,8 +43,6 @@ export function useCheckout() {
       try {
         await clearServerCart().unwrap();
 
-        // Sequential rather than parallel: the server cart is one row per customer and
-        // concurrent inserts of the same product race each other.
         for (const item of items) {
           await addCartItem({
             productId: item.productId,

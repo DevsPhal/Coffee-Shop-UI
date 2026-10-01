@@ -13,14 +13,6 @@ import { CategoryCardSkeleton, EmptyState, ErrorState, LoadingRegion } from "@/c
 import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
-/**
- * Category browser.
- *
- * The API models categories as a flat list — a category has no parent and no subcategories —
- * so this is one level of real categories rather than the curated two-level taxonomy it used
- * to render. Each card's product count and preview images come from the live catalogue, so a
- * category the café adds in the admin appears here with no code change.
- */
 export function CategorypageView() {
   const { t } = useLanguage();
   const [isMobile, setIsMobile] = useState(false);
@@ -51,7 +43,6 @@ export function CategorypageView() {
     );
   }, [categories, searchQuery]);
 
-  /** A few product thumbnails per category, as a preview of what is inside. */
   const previewsFor = (categoryId: string) =>
     products.filter((product) => product.categoryId === categoryId).slice(0, 3);
 
@@ -67,7 +58,6 @@ export function CategorypageView() {
           </p>
         </div>
 
-        {/* Search */}
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-bold text-gray-400 uppercase tracking-wider hidden sm:flex items-center gap-1">
             <Filter className="w-3.5 h-3.5" />
@@ -89,7 +79,6 @@ export function CategorypageView() {
           </form>
         </div>
 
-        {/* Category Grid */}
         {isLoadingCategories ? (
           <LoadingRegion
             label="Loading categories..."

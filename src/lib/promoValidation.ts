@@ -1,9 +1,5 @@
 import { z } from "zod";
 
-/**
- * Zod Schema for validating Promotion Date input.
- * Accepts ISO date strings (e.g. "2026-08-17" or "2026-08-17T23:59:59Z") or JS Date objects.
- */
 export const PromotionDateSchema = z.object({
   promoEndDate: z.union([
     z.string().min(1, "Promotion end date cannot be empty"),
@@ -21,20 +17,10 @@ export interface PromoValidationResult {
   error?: string;
 }
 
-/**
- * Validates promotion date using Zod schema and calculates remaining days left.
- *
- * Status rules:
- * - < 5 days left  => "danger"  (Red)
- * - 5-10 days left => "warning" (Yellow)
- * - > 10 days left => "safe"    (Green)
- * - <= 0 days left => "expired" (Inactive)
- */
 export function calculatePromoTimeLeft(
   promoEndDate?: string | Date | null,
   fallbackDaysLeft?: string | number
 ): PromoValidationResult {
-  // If promoEndDate is provided, validate with Zod and calculate diff from current date
   if (promoEndDate) {
     const parseResult = PromotionDateSchema.safeParse({ promoEndDate });
 
@@ -66,9 +52,6 @@ export function calculatePromoTimeLeft(
     const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
     if (daysLeft <= 0) {
-      // The window has closed. Report it honestly instead of inventing a fresh one — the
-      // API's discountActive is what decides whether the price is still discounted, and a
-      // fabricated "15 days left" would show customers a countdown that does not exist.
       return {
         isValid: false,
         daysLeft: 0,
@@ -94,7 +77,6 @@ export function calculatePromoTimeLeft(
     };
   }
 
-  // Fallback calculation if only relative string/number (e.g. "3 days left" or 7) is passed
   if (fallbackDaysLeft !== undefined && fallbackDaysLeft !== null) {
     let days = 3;
     if (typeof fallbackDaysLeft === "number") {
@@ -105,9 +87,6 @@ export function calculatePromoTimeLeft(
     }
 
     if (days <= 0) {
-      // The window has closed. Report it honestly instead of inventing a fresh one — the
-      // API's discountActive is what decides whether the price is still discounted, and a
-      // fabricated "15 days left" would show customers a countdown that does not exist.
       return {
         isValid: false,
         daysLeft: 0,
@@ -139,11 +118,6 @@ export interface DiscountInfo {
   discountAmount: number;
 }
 
-/**
- * Formats discount badge string based on discount type and amounts.
- * - Percentage: "-25% OFF"
- * - Fixed dollar amount: "-$0.50 OFF" or "-$1.00 OFF"
- */
 export function formatDiscountBadge(
   price?: number,
   originalPrice?: number,

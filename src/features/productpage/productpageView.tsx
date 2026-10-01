@@ -31,19 +31,11 @@ import { useMounted } from "@/hooks/useMounted";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
 export interface ProductpageViewProps {
-  /** Product UUID. Falls back to the `id` query param when not passed directly. */
   id?: string;
   onAddToCart?: () => void;
   onBuyNow?: () => void;
 }
 
-/**
- * Product detail, fetched by id from `/api/products/{id}`.
- *
- * Everything shown — price, discount, description, size options — comes from that response
- * rather than from query-string parameters, so a shared or bookmarked link always reflects
- * the product's current state instead of whatever it cost when the link was made.
- */
 export function ProductpageView({
   id: propId,
   onAddToCart,
@@ -68,11 +60,6 @@ export function ProductpageView({
     refetch: refetchProduct,
   } = useGetProductQuery(productId, { skip: !productId });
 
-  // An extra's push carries the extra's own id, not which products offer it, so a change to an
-  // extra this product happens to offer can't be targeted by id the way a direct product/
-  // category change can (see RealtimeCatalogSync) — refetch this one page's own product
-  // unconditionally instead, since it's cheap and this is the one place that actually needs to
-  // know an extra it's showing just changed.
   useCatalogLiveUpdates(() => {
     if (productId) refetchProduct();
   });
@@ -90,16 +77,11 @@ export function ProductpageView({
   const displayImage = resolveProductImage(product?.image);
 
   const variants = product?.variants ?? [];
-  // Beer, soft drinks, snacks — anything sold as-is rather than made to order — get no ice/
-  // sugar/milk controls; a fresh drink gets whichever of the three actually apply to it (a hot
-  // drink has no ice option, a plain tea has no milk option).
   const drinkOptions = product
     ? getDrinkCustomization(product)
     : { ice: false, sugar: false, milk: false };
   const hasCustomization = drinkOptions.ice || drinkOptions.sugar || drinkOptions.milk;
 
-  // What the customer picked; until they pick (or if the pick isn't offered) the first variant
-  // is the selection — derived, so there's no render with nothing selected.
   const [chosenVariantId, setSelectedVariantId] = React.useState<string | null>(null);
   const [selectedIce, setSelectedIce] = React.useState<IceLevel>("NORMAL");
   const [selectedSugar, setSelectedSugar] = React.useState<SugarLevel>("NORMAL");
@@ -110,8 +92,6 @@ export function ProductpageView({
     ? chosenVariantId
     : variants[0]?.id ?? null;
 
-  // A different product offers different extras — carrying a selection across would attach an
-  // add-on that product never listed. Reset while rendering the new product, not after.
   const [extrasFor, setExtrasFor] = React.useState(product?.id);
   if (extrasFor !== product?.id) {
     setExtrasFor(product?.id);
@@ -119,9 +99,6 @@ export function ProductpageView({
   }
 
   const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? null;
-  // Each variant prices itself outright now — no product-level price to add a delta to — but
-  // `product.price` (the default variant's price) still covers the instant before the effect
-  // above has picked a variant.
   const basePrice = product?.price ?? 0;
   const displayPrice = selectedVariant ? Number(selectedVariant.finalPrice) : basePrice;
 
@@ -134,11 +111,9 @@ export function ProductpageView({
 
   const promoResult = calculatePromoTimeLeft(displayPromoEndDate, undefined);
 
-  // An open-ended discount (no end date) is still a discount — only the countdown needs one.
   const isPromotion = Boolean(product?.discountActive);
   const showCountdown = isPromotion && promoResult.isValid;
 
-  // Guests can view the product, but adding to the basket needs a customer login.
   const addCurrentSelection = () => {
     if (!product) return false;
     addItem({
@@ -182,9 +157,6 @@ export function ProductpageView({
     return <ProductDetailSkeleton />;
   }
 
-  // A missing id or a 404 both land here — a link to a product that has since been removed
-  // should say so rather than silently rendering the first item in the menu. A 404 is "gone",
-  // anything else (network, server) is a failure worth retrying.
   if (!product) {
     const isNotFound =
       !productError ||
@@ -266,7 +238,6 @@ export function ProductpageView({
             <div>
               <h2 className="product_name">{t(displayTitle)}</h2>
 
-              {/* Clickable Category Badge */}
               <div className="category_badge_wrapper">
                 <Link href={`${menuBaseUrl}?category=${encodeURIComponent(displayCategory)}`}>
                   <span className="category_badge">
@@ -285,19 +256,10 @@ export function ProductpageView({
             </div>
           </div>
 
-          {/* Product Description */}
           <p className="product_description">{t(displayDescription)}</p>
 
-          {/* Customization Options Stack — skipped entirely for a single-size, non-drink
-              product (a can of beer, a snack) rather than leaving an empty gap where a size
-              picker and three drink controls would otherwise sit. */}
           {(variants.length > 1 || hasCustomization) && (
             <div className="my-4 space-y-3">
-              {/* Size Selector — each variant prices itself outright, so there's nothing to
-                  show when there's only the one default variant every product has. */}
-              {/* The same dropdown as the customize modal and the cart. A size only shows when
-                  there's a real choice; ice/sugar/milk only for drinks they apply to — a hot
-                  drink has no ice level, a plain tea has no milk option. */}
               <div className="max-w-xs">
                 {variants.length > 1 && selectedVariantId && (
                   <OptionDropdown
@@ -343,7 +305,6 @@ export function ProductpageView({
             </div>
           )}
 
-          {/* Action Buttons Row */}
           <div className="product_actions_row">
             <Button
               type="button"

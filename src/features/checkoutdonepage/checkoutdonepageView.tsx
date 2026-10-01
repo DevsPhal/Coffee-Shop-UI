@@ -62,45 +62,26 @@ export function CheckoutdonepageView() {
     } | null; } catch { return null; }
   }, [storedCheckout]);
   const targetId = urlOrderId || stored?.orderId || "";
-  // Legacy orders can use details saved for this exact order, never for another order.
   const delivery = stored?.orderId === targetId ? stored : null;
   const [callStaffModal, setCallStaffModal] = useState(false);
-  // The API rate-limits calls itself (once per cooldown window) and tells the caller exactly
-  // when the button can work again — tracked as a plain "is it cooling down" flag rather than a
-  // one-shot "already called this session" one, so it correctly re-enables once the cooldown
-  // actually elapses. Only ever set from an event handler or a setTimeout callback, never
-  // computed from Date.now() during render — render has to stay pure.
   const [isCoolingDown, setIsCoolingDown] = useState(false);
   const [staffAnswered, setStaffAnswered] = useState(false);
   const [callStaff, { isLoading: isCallingStaff }] = useCallStaffMutation();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [payCashOnPickup] = usePayCashOnPickupMutation();
 
-  // The real order, straight from /api/customer/orders/{id}.
-  //
-  // The whole point of this screen is watching the order change: every step of the tracker
-  // below is a barista pressing a button on the queue board. The API now pushes those changes
-  // over STOMP (see useOrderLiveUpdates below), so polling is a slow fallback rather than the
-  // only path — kept at a longer interval in case the socket never connects (e.g. the API's
-  // CORS allowlist not yet covering this origin) or drops without reconnecting.
   const { currentData: order, error: orderError, refetch } = useGetMyOrderQuery(targetId, {
     skip: !targetId,
     refetchOnMountOrArgChange: true,
     pollingInterval: 30000,
   });
 
-  // Re-fetch the moment the API pushes a change for this exact order, rather than waiting for
-  // the fallback poll — a full refetch (not the pushed payload itself) so the tracker always
-  // reflects the same validated shape the REST endpoint returns.
   useOrderLiveUpdates((message) => {
     if (message.order.id === targetId) {
       refetch();
     }
   });
 
-  // Told the moment a call is actually answered — the button itself only knows it asked. This
-  // doesn't touch isCoolingDown: the API's own cooldown keeps running regardless of whether the
-  // call was answered, so re-enabling the button early here would just earn a 429 on a retry.
   useStaffCallUpdates((message) => {
     if (message.orderId === targetId && message.type === "ANSWERED") {
       setStaffAnswered(true);
@@ -116,13 +97,8 @@ export function CheckoutdonepageView() {
   const displayItems = order?.items ?? [];
   const calculatedSubtotal = displayItems.reduce((sum, item) => sum + Number(item.subtotal), 0);
   const isDelivery = order?.fulfillmentMethod === "DELIVERY";
-  // The API now defaults deliveryFee to 0 rather than null once an order exists, so that can no
-  // longer tell "not set yet" apart from "genuinely free" — awaitingDeliveryFee is the real flag.
   const isDeliveryFeePending = isDelivery && order?.awaitingDeliveryFee === true;
   const displayDeliveryFee = Number(order?.deliveryFee ?? 0);
-  // A delivery order lands here with no payment method chosen — that step waits until the fee
-  // is set, so Cash/Bakong is only offered once the total actually includes it. Pickup has no
-  // fee to wait for, so it can offer payment as soon as the order exists.
   const needsPaymentChoice = order?.status === "PENDING" && !order.paymentMethod && !isDeliveryFeePending;
   const grandTotal = Number(order?.totalAmount ?? 0);
   const selectedCurrency = order?.bakongCurrency === "KHR" && order.bakongAmount != null ? "KHR" : "USD";
@@ -135,30 +111,6 @@ export function CheckoutdonepageView() {
   const displayEstimatedTime = delivery?.estimatedTime || (order?.fulfillmentMethod === "DELIVERY" ? "10–15 mins (estimate)" : "5 mins (estimate)");
 
 
-  /**
-   * Where the order sits on the three-step tracker, derived straight from the API's real
-   * status rather than mirrored into state — so when the poll (or the live push) brings back a
-   * new status, the tracker moves on its own with nothing left to keep in sync.
-   *
-   * The API's actual lifecycle (OrderStatus.java): PENDING -> PAID -> PREPARING ->
-   * OUT_FOR_DELIVERY (delivery only) -> COMPLETED (pickup) or DELIVERED (delivery). A delivery
-   * order genuinely has four stops, not three — OUT_FOR_DELIVERY means the drink has already
-   * left the shop and a courier is on the way, which is a materially different thing to tell
-   * the customer than "a barista is making it." Collapsing the two into one "Preparing" step
-   * (as this used to) meant a customer whose order was already out for delivery still saw
-   * "a barista is making your order right now."
-   *
-   *   PENDING / PAID     -> 1  placed, waiting on the counter
-   *   PREPARING          -> 2  a barista has picked it up
-   *   OUT_FOR_DELIVERY   -> 3  handed to a courier, on its way (delivery only)
-   *   COMPLETED/DELIVERED-> 4  made (pickup) or arrived (delivery)
-   *
-   * Pickup never passes through 3 — it has no courier leg, so it jumps straight from 2 to 4,
-   * and the tracker's own step 3 ("Ready") goes straight from "todo" to "done" for it, same as
-   * before this change.
-   *
-   * CANCELLED sits outside the steps entirely and takes over the banner instead.
-   */
   const currentStep =
     order?.status === "COMPLETED" || order?.status === "DELIVERED"
       ? 4
@@ -170,8 +122,6 @@ export function CheckoutdonepageView() {
   const isCancelled = order?.status === "CANCELLED";
   const isUnpaid = order?.status === "PENDING";
 
-  // Held at step 1 until mounted so the first client paint matches the server's, where the
-  // order has not been fetched yet.
   const effectiveStep = isMounted ? currentStep : 1;
   const isOutForDelivery = isDelivery && effectiveStep === 3;
 
@@ -211,10 +161,6 @@ export function CheckoutdonepageView() {
             ? "A barista is making your order right now."
             : "Thank you for ordering with 590st CAFE. You are in the queue.";
 
-  // The tracker's stops. Step 3 is worded for whichever way the order reaches the customer —
-  // "Delivering"/"Delivered" only actually turns current/done for a delivery order, since
-  // pickup has no courier leg and moves straight from "Preparing" to "Ready" — and doneLabel is
-  // what a step reads once it has actually happened.
   const steps: { step: number; label: string; doneLabel?: string }[] = [
     { step: 1, label: "Confirmed" },
     { step: 2, label: "Preparing" },
@@ -223,14 +169,6 @@ export function CheckoutdonepageView() {
       : { step: 3, label: "Ready", doneLabel: "Ready!" },
   ];
 
-  /**
-   * Each circle is in one of three states. Step 1 is the only one that can still be "current"
-   * on its own: an unpaid order has been placed but not confirmed. The moment payment lands
-   * step 1 is simply done, and the live edge of the tracker moves to whatever's actually
-   * happening next — which is why a paid, unstarted order shows a tick on "Confirmed" and
-   * nothing pulsing, and why step 3 now genuinely pulses while a courier has it (effectiveStep
-   * === 3) rather than jumping straight from "todo" to "done".
-   */
   const stepState = (step: number): "done" | "current" | "todo" => {
     if (isCancelled) return "todo";
     if (step === 1) return isUnpaid ? "current" : "done";
@@ -247,7 +185,6 @@ export function CheckoutdonepageView() {
       setStaffAnswered(false);
       setCallStaffModal(true);
 
-      // Date.now()/setTimeout here are fine — this runs inside an event handler, not render.
       const waitMs = result.nextCallAllowedAt
         ? new Date(result.nextCallAllowedAt).getTime() - Date.now()
         : 0;
@@ -256,9 +193,6 @@ export function CheckoutdonepageView() {
         setTimeout(() => setIsCoolingDown(false), waitMs);
       }
     } catch (error) {
-      // A 429 here means the API's own cooldown is still running (e.g. from before this page
-      // loaded) — its message already says how long is left, so just surface it rather than
-      // guessing a duration to re-disable the button for.
       toast.add({ type: "error", description: apiErrorMessage(error as never, "Could not notify staff. Please try again.") });
     }
   };
@@ -269,12 +203,6 @@ export function CheckoutdonepageView() {
       ? "Staff Notified"
       : "Call Staff";
 
-  /**
-   * A delivery order lands here with no payment method chosen yet — that choice waited on the
-   * shop setting the fee, so the customer never pays (or generates a Bakong QR) against a total
-   * that's missing it. Cash confirms right here; Bakong hands off to /payment, which generates
-   * the QR against the order's now fee-inclusive total.
-   */
   const handleChoosePayment = async (chosenMethod: "QR Scan" | "Cash") => {
     if (!targetId) return;
     if (chosenMethod === "Cash") {
@@ -356,9 +284,6 @@ export function CheckoutdonepageView() {
           </button>
         </div>
       )}
-      {/* Bakong was already chosen (generating the QR stamps this on the order) but the
-          transfer never completed — e.g. the customer left /payment before scanning. Without
-          this, there'd be no way back to that QR once needsPaymentChoice above stops applying. */}
       {isUnpaid && order?.paymentMethod === "BAKONG" && (
         <div className="p-4 text-center">
           <Link
@@ -369,7 +294,6 @@ export function CheckoutdonepageView() {
           </Link>
         </div>
       )}
-      {/* 1. TOP BANNER SECTION WITH RESORT POOL BACKGROUND */}
       <div className="banner_section">
         <div
           className="banner_bg"
@@ -402,7 +326,6 @@ export function CheckoutdonepageView() {
         </div>
       </div>
 
-      {/* 2. ORDER STATUS ANIMATED TIMELINE */}
       <div className="progress_status_container">
         <div className="progress_status_card">
           <h2 className="progress_status_header">
@@ -410,14 +333,9 @@ export function CheckoutdonepageView() {
             {t("Order Progress Status")}
           </h2>
 
-          {/* Timeline Stepper */}
           <div className="stepper_container">
-            {/* Background Base Line */}
             <div className="stepper_bg_line" />
             
-            {/* Animated Flow Line — reaches step 1 while the order is only queued, half way
-                once a barista starts it, all the way (but still pink, not yet "done" green)
-                once it's out for delivery, and green once it has actually arrived/is ready. */}
             <div
               className={`stepper_flow_line ${
                 effectiveStep >= 4
@@ -469,13 +387,11 @@ export function CheckoutdonepageView() {
         </div>
       </div>
 
-      {/* 3. ORDER DETAILS SUMMARY CARD */}
       <div className="main_content">
         <div className="card_box">
           <h2 className="card_title">{t("Order details")}</h2>
           <p className="card_subtitle">{t("See complete details for your order")}</p>
 
-          {/* Metadata Key-Value Rows */}
           <div className="meta_row_group">
             <div className="meta_row">
               <span className="label_muted">{t("Customer:")}</span>
@@ -504,10 +420,8 @@ export function CheckoutdonepageView() {
             </div>
           </div>
 
-          {/* Divider */}
           <hr className="divider" />
 
-          {/* Order Items List */}
           <div className="meta_row_group divide-y divide-gray-100/60">
             {displayItems.map((item) => {
               const customDetails: string[] = [];
@@ -553,13 +467,9 @@ export function CheckoutdonepageView() {
             })}
           </div>
 
-          {/* Divider */}
           <hr className="divider_sm" />
 
-          {/* Subtotal & Discount */}
           {(() => {
-            // The order records what was actually charged, so the pre-discount total is not
-            // recoverable from it. Showing the charged total keeps the figures honest.
             const fullSubtotal = displayItems.reduce(
               (acc, item) => acc + Number(item.subtotal),
               0
@@ -589,7 +499,6 @@ export function CheckoutdonepageView() {
             );
           })()}
 
-          {/* Delivery Fee */}
           {isDelivery && (
             <div className="meta_row">
               <span className="label_muted">{t("Delivery Fee")}:</span>
@@ -605,7 +514,6 @@ export function CheckoutdonepageView() {
             </div>
           )}
 
-          {/* Grand Total */}
           <div className="meta_row">
             <span className="label_muted font-bold text-gray-900">{t("Grand total:")}</span>
             <span className="value_grand_total" suppressHydrationWarning>
@@ -614,7 +522,6 @@ export function CheckoutdonepageView() {
           </div>
         </div>
 
-        {/* Desktop Action Buttons */}
         <div className="desktop_actions">
           <button
             type="button"
@@ -632,7 +539,6 @@ export function CheckoutdonepageView() {
         </div>
       </div>
 
-      {/* Fixed Mobile Bottom Bar Portalled to Body */}
       {isMounted && createPortal(
         <div className="mobile_bottom_bar">
           <button
@@ -652,7 +558,6 @@ export function CheckoutdonepageView() {
         document.body
       )}
 
-      {/* Call Staff Modal */}
       <Modal open={callStaffModal} onOpenChange={setCallStaffModal}>
         <ModalContent className="modal_card" showCloseButton={false}>
           <div className="modal_icon_badge">
@@ -672,8 +577,6 @@ export function CheckoutdonepageView() {
         </ModalContent>
       </Modal>
 
-      {/* Payment Method Modal — only reachable once needsPaymentChoice is true (see above),
-          so the total it shows and charges against already includes the delivery fee. */}
       <PaymentMethodModal
         open={isPaymentModalOpen}
         onOpenChange={setIsPaymentModalOpen}

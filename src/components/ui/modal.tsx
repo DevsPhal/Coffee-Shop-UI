@@ -132,7 +132,6 @@ function ModalDescription({
   )
 }
 
-// Aliases for Dialog naming convention compatibility
 const Dialog = Modal
 const DialogTrigger = ModalTrigger
 const DialogPortal = ModalPortal

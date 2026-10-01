@@ -37,7 +37,6 @@ interface CreateProps {
 }
 
 export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
-  // Leaving mid-verification ends that step; the typed details stay for a quick return.
   const onBackToLogin = () => {
     clearPersistentState("signup:awaitingOtp");
     leave();
@@ -47,8 +46,6 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
   const [verifyRegistration, { isLoading: isVerifying }] = useVerifyRegistrationMutation();
   const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
   const [submitError, setSubmitError] = useState("");
-  // Kept across a refresh, with the email above, so a reload while waiting for the emailed code
-  // stays on the code step instead of asking to register again.
   const [awaitingOtp, setAwaitingOtp] = usePersistentState("signup:awaitingOtp", false);
   const [otp, setOtp] = useState("");
   const [username, setUsername] = usePersistentState("signup:username", "");
@@ -58,7 +55,6 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  // Zod Errors & Active Focused Input
   const [errors, setErrors] = useState<FormErrors>({});
   const [, setActiveInput] = useState<keyof FormErrors | null>(null);
 
@@ -88,7 +84,6 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
     e.preventDefault();
     setSubmitError("");
 
-    // Validate with Zod
     const formData = { username, gender, email, phone, password };
 
     const validationResult = signUpSchema.safeParse(formData);
@@ -113,8 +108,6 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
 
     setErrors({});
 
-    // POST /api/auth/register creates the account as PENDING_VERIFICATION and emails a
-    // 6-digit code; the account only becomes usable once that code is verified below.
     try {
       await register({
         fullName: username.trim(),
@@ -159,11 +152,6 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
     }
   };
 
-  /*
-   * Second step of sign-up. /api/auth/register leaves the account PENDING_VERIFICATION and
-   * emails a 6-digit code; without this screen the customer gets a "code sent" toast, stays
-   * on the filled-in form, and can never activate the account they just created.
-   */
   if (awaitingOtp) {
     return (
       <div className="w-full space-y-4">
@@ -244,7 +232,6 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
 
       <form onSubmit={handleSubmit} className="w-full space-y-3" noValidate>
 
-        {/* Customer display name; email is used for login. */}
         <div>
           <label className="login_input_label">
             {t("Full Name")}
@@ -274,7 +261,6 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
           )}
         </div>
 
-        {/* Gender Dropdown Selection */}
         <div>
           <label className="login_input_label">
             {t("Gender")}
@@ -282,9 +268,6 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
           <GenderDropdown
             value={gender}
             onChange={(value) => {
-              // Store the API's enum value, not the label: sending "Male" fails Jackson's
-              // enum binding and the whole request is rejected as a malformed body, before
-              // any field validation runs.
               setGender(value);
               validateField("gender", value);
             }}
@@ -294,7 +277,6 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
           )}
         </div>
 
-        {/* Email Field */}
         <div>
           <label className="login_input_label">
             {t("Email Address")}
@@ -324,7 +306,6 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
           )}
         </div>
 
-        {/* Phone Number Input Field */}
         <div>
           <label className="login_input_label">
             {t("Phone Number")}
@@ -353,7 +334,6 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
           )}
         </div>
 
-        {/* Password Field */}
         <div>
           <label className="login_input_label">
             {t("Password")}
@@ -391,9 +371,6 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
           )}
         </div>
 
-        {/* There is no Telegram sign-up — an account has to exist before Telegram can be
-            linked to it (from the profile page) — so this points back to login rather than
-            offering a "Register with Telegram" button that could never create an account. */}
         {!isAdmin && (
           <p className="flex items-center justify-center gap-1.5 pt-1 text-center text-xs text-gray-500">
             <Send className="h-3.5 w-3.5 shrink-0 text-sky-500" />

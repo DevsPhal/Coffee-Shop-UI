@@ -8,11 +8,6 @@ import type {
   UUID,
 } from "./types";
 
-/**
- * The server-side cart. The storefront keeps a local zustand cart so guests can shop without
- * an account; these endpoints are used at checkout, when the local lines are pushed up and
- * turned into an order. See `syncCartAndCheckout` in src/features/checkoutpage.
- */
 export const cartApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getCart: builder.query<CartResponse, void>({
@@ -55,7 +50,6 @@ export const cartApi = baseApi.injectEndpoints({
       invalidatesTags: ["Cart"],
     }),
 
-    /** Turns whatever is in the server cart into a PENDING order and empties the cart. */
     checkout: builder.mutation<OrderResponse, CheckoutRequest>({
       query: (body) => ({ url: "/api/customer/cart/checkout", method: "POST", body }),
       transformResponse: unwrap<OrderResponse>,

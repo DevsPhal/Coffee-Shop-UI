@@ -12,15 +12,12 @@ import type { TelegramWidgetAuthRequest } from "@/store/api/types";
 
 declare global {
   interface Window {
-    /** Telegram's widget calls this by name once the customer approves the login prompt. */
     onTelegramAuth?: (user: TelegramWidgetAuthRequest) => void;
   }
 }
 
-/** Build-time fallback, used only if the API's widget config can't be fetched. */
 const FALLBACK_BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
 
-/** Tips shown under the widget for when Telegram's confirmation never arrives. */
 const TROUBLESHOOTING_TIPS = [
   "The confirmation comes from the chat named \"Telegram\" (blue check), not from the 590st Cafe bot. Open it and tap Confirm.",
   "Choose Cambodia (+855) and type your number without the leading 0, e.g. 12 345 678.",
@@ -29,11 +26,6 @@ const TROUBLESHOOTING_TIPS = [
   "After several tries Telegram pauses confirmations for a while. Wait a few minutes, then try again.",
 ];
 
-/**
- * Telegram only renders the widget on the domain set with @BotFather's /setdomain, and shows
- * "Bot domain invalid" anywhere else (www., localhost, ngrok). The API reports that domain;
- * without it, only localhost is treated as unsupported.
- */
 function isUnsupportedHost(loginDomain: string | null | undefined) {
   if (typeof window === "undefined") return false;
   const host = window.location.hostname.toLowerCase();
@@ -41,24 +33,9 @@ function isUnsupportedHost(loginDomain: string | null | undefined) {
   return ["localhost", "127.0.0.1", "0.0.0.0", "[::1]"].includes(host);
 }
 
-/**
- * "Log in with Telegram" via Telegram's own widget script. Register-or-login: the widget proves
- * identity (its `hash` is an HMAC the API verifies against the bot token), so an approved
- * callback goes straight to `/api/auth/login/telegram`, which signs in a known Telegram account
- * or creates a customer account for a new one — no OTP step, unlike email login.
- *
- * The bot comes from the API (`/api/auth/telegram/widget-config`), the same source the backend's
- * own widget test page uses, so frontend and backend can never disagree about which bot's token
- * verifies the login. NEXT_PUBLIC_TELEGRAM_BOT_USERNAME is only a fallback.
- */
 export function TelegramLoginWidget({
   onSuccess,
 }: {
-  /**
-   * Runs once the API has issued tokens. Resolve false when the caller turned the account away
-   * (a staff account on the storefront) — the widget then drops its "signing in" state instead
-   * of announcing a sign-in that didn't stick.
-   */
   onSuccess: () => Promise<boolean> | boolean | void;
 }) {
   const { t } = useLanguage();
@@ -67,16 +44,9 @@ export function TelegramLoginWidget({
   const [loginTelegram] = useLoginTelegramMutation();
   const { data: config, isLoading: isLoadingConfig } = useGetTelegramWidgetConfigQuery();
   const botUsername = config?.botUsername || FALLBACK_BOT_USERNAME;
-  // True from the moment Telegram hands back an approved login until our API answers. Without
-  // it, the gap between approving in Telegram and the redirect showed nothing at all, so a slow
-  // or failed sign-in looked exactly like "nothing happened".
   const [isSigningIn, setIsSigningIn] = useState(false);
-  // Telegram's script is third-party: it can be slow, or blocked outright (ad blockers, some
-  // networks). "failed" shows a retry instead of an empty gap where the button should be.
   const [scriptState, setScriptState] = useState<"loading" | "ready" | "failed">("loading");
   const [attempt, setAttempt] = useState(0);
-  // The widget calls back by global name long after the effect ran; reading these through refs
-  // keeps that callback on the current props instead of the first render's.
   const onSuccessRef = useRef(onSuccess);
   useEffect(() => {
     onSuccessRef.current = onSuccess;
@@ -90,14 +60,12 @@ export function TelegramLoginWidget({
     if (!botUsername || !container || isLoadingConfig || onUnsupportedHost) return;
 
     window.onTelegramAuth = async (user) => {
-      // Telegram can fire the callback twice (a double-tap on Confirm); one sign-in is enough.
       if (signingInRef.current) return;
       signingInRef.current = true;
       setIsSigningIn(true);
       try {
         await loginTelegram(user).unwrap();
       } catch (err) {
-        // Logged so a failure can be diagnosed from DevTools, not only the toast.
         console.error("[Telegram login] API rejected the sign-in", err);
         signingInRef.current = false;
         setIsSigningIn(false);
@@ -135,8 +103,6 @@ export function TelegramLoginWidget({
 
     return () => {
       delete window.onTelegramAuth;
-      // The script injects its iframe next to itself; clearing both means a re-run (a changed
-      // bot, or React's dev double-mount) renders one button instead of stacking a second.
       container.replaceChildren();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -178,8 +144,6 @@ export function TelegramLoginWidget({
           </div>
         ) : (
           <>
-            {/* Held at the widget's large size (238×40) until the iframe paints, so the form
-                doesn't jump when Telegram's button appears. */}
             <div className="relative flex min-h-10 min-w-59.5 justify-center">
               {(isLoadingConfig || !mounted || scriptState === "loading") && (
                 <Skeleton className="absolute inset-0 rounded-[10px]" />

@@ -5,7 +5,6 @@ import { ChevronDown, Check, Users } from "lucide-react";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import type { Gender } from "@/store/api/types";
 
-/** Value is the API's enum; label is what the customer reads. */
 const GENDER_CHOICES: { value: Gender; label: string }[] = [
   { value: "MALE", label: "Male" },
   { value: "FEMALE", label: "Female" },
@@ -16,21 +15,11 @@ export interface GenderDropdownProps {
   value: Gender | "";
   onChange: (value: Gender) => void;
   placeholder?: string;
-  /** Overrides the trigger button's classes entirely, to match whatever input style the
-   *  surrounding form uses (e.g. a modal's plain `modal_input_control` vs. a signup form's
-   *  bordered field) — this is the one custom dropdown shared across both. */
   triggerClassName?: string;
   className?: string;
   id?: string;
 }
 
-/**
- * The one custom gender picker, shared by sign-up and the profile edit modal — previously each
- * had its own copy of this exact dropdown. A native `<select>` would be simpler, but browsers
- * render those with their own inconsistent chrome that can't be styled to match the rest of a
- * form; this renders identically everywhere and keeps the same icon/checkmark treatment as
- * every other custom dropdown in the app (CategoryDropdown, language switcher).
- */
 export function GenderDropdown({
   value,
   onChange,

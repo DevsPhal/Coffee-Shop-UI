@@ -5,9 +5,6 @@ import L from "leaflet";
 import { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 
-// Leaflet's default marker image paths are relative to its own CSS file, which breaks once
-// bundled — pointing the icon at the same CDN Leaflet's own docs use sidesteps that entirely
-// instead of wiring up a local asset copy step just for three small PNGs.
 const pinIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -33,9 +30,6 @@ function ClickToPlace({ onPick }: { onPick: (lat: number, lng: number) => void }
   return null;
 }
 
-/** Follows `lat`/`lng` from outside the map (the search box, "Locate Me") by recentering the
- *  view on them. A click or drag on the map itself also lands close to the map's current
- *  center already, so this stays quiet then instead of fighting the gesture that just happened. */
 function FollowExternalCoords({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
   const isFirstRender = useRef(true);
@@ -46,7 +40,7 @@ function FollowExternalCoords({ lat, lng }: { lat: number; lng: number }) {
       return;
     }
     const center = map.getCenter();
-    const driftDegrees = 0.0005; // ~50m — a click/drag rarely lands exactly on the old center
+    const driftDegrees = 0.0005;
     if (Math.abs(center.lat - lat) > driftDegrees || Math.abs(center.lng - lng) > driftDegrees) {
       map.setView([lat, lng], map.getZoom(), { animate: true });
     }
@@ -55,11 +49,6 @@ function FollowExternalCoords({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
-/** Real drag-the-pin / click-anywhere map picker, replacing what used to be a read-only Google
- *  Maps embed iframe — that iframe rendered a live map but couldn't report clicks or a dragged
- *  marker back to the page at all, so the pin looked stuck wherever geolocation first placed it.
- *  Runs on OpenStreetMap tiles (no API key needed), matching the Nominatim search/reverse-geocode
- *  this page already uses. */
 export default function DeliveryMapPicker({ lat, lng, onPick }: DeliveryMapPickerProps) {
   return (
     <MapContainer

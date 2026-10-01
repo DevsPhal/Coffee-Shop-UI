@@ -4,10 +4,6 @@ import { toTitleCase } from "@/lib/utils";
 import { useListCategoriesQuery, useListProductsQuery } from "./catalogApi";
 import type { CustomerProductResponse, UUID } from "./types";
 
-/**
- * The page size is deliberately large: this is a single café's menu, not a marketplace, and
- * the storefront filters and groups client-side.
- */
 const CATALOG_PAGE_SIZE = 300;
 
 export interface CatalogCategory {
@@ -23,8 +19,6 @@ export function useCatalog(categoryId?: UUID) {
     ...(categoryId ? { categoryId } : {}),
   });
 
-  // Only ACTIVE products are sellable; the API returns status so the storefront can hide the
-  // rest rather than showing something that would fail at checkout.
   const products = useMemo(
     () => (data?.content ?? []).filter((p) => p.status === "ACTIVE"),
     [data]
@@ -33,10 +27,6 @@ export function useCatalog(categoryId?: UUID) {
   return {
     products,
     total: data?.totalElements ?? 0,
-    // Also true while a *new* category is fetched for the first time: RTK Query keeps showing
-    // the previous category's `data` then, so without this the old products would sit under
-    // the new category's heading until the response lands. A background refetch of the same
-    // list (a live catalogue push) keeps `currentData` and does not flash a skeleton.
     isLoading: isLoading || (isFetching && currentData === undefined),
     isFetching,
     error,
@@ -44,12 +34,6 @@ export function useCatalog(categoryId?: UUID) {
   };
 }
 
-/**
- * Categories from GET /api/categories, each with how many ACTIVE products it holds.
- * The count still comes from the product list — the categories endpoint doesn't carry one —
- * so a category with zero products today still shows up here, unlike the old approach that
- * derived categories purely from whatever products happened to reference them.
- */
 export function useCategories() {
   const {
     data: categoryList,
@@ -93,12 +77,6 @@ export function useCategories() {
   };
 }
 
-/**
- * The price a customer actually pays for one variant, already discounted. Each variant prices
- * itself now (no product-level price to add a delta to) — falls back to the first active
- * variant when no id is given or matched, so callers never have to special-case "no size
- * chosen yet".
- */
 export function priceWithVariant(
   product: CustomerProductResponse,
   variantId?: UUID | null

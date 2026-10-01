@@ -5,24 +5,10 @@ import Link from "next/link";
 import { AlertTriangle, Loader2, RefreshCw, WifiOff, type LucideIcon } from "lucide-react";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 
-/**
- * The one place the storefront's loading, error and empty states live, so every page waits,
- * fails and comes up empty the same way instead of each inventing its own grey box or line of
- * red text. Skeletons mirror the real card they stand in for, so nothing jumps when data lands.
- */
-
-/* ----------------------------------------------------------------------------------------
- * Skeleton primitives
- * -------------------------------------------------------------------------------------- */
-
 export function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`skeleton ${className}`} aria-hidden />;
 }
 
-/**
- * Announces "loading" once to screen readers and hides the skeleton shapes themselves, which
- * carry no meaning of their own.
- */
 export function LoadingRegion({
   label = "Loading...",
   className = "",
@@ -36,14 +22,11 @@ export function LoadingRegion({
   return (
     <div role="status" aria-live="polite" aria-busy="true" className={className}>
       {children}
-      {/* Last, and absolutely positioned by sr-only, so it never takes a grid cell or shifts
-          sibling spacing like `.cards-container > * + *`. */}
       <span className="sr-only">{t(label)}</span>
     </div>
   );
 }
 
-/** Stands in for the default grid `Card` — same padding, image height and two action pills. */
 export function ProductCardSkeleton() {
   return (
     <div className="skeleton_card flex flex-col rounded-lg border border-gray-100 bg-[#f8f8f8] p-5" aria-hidden>
@@ -60,7 +43,6 @@ export function ProductCardSkeleton() {
   );
 }
 
-/** Several product cards, returned bare so each page keeps its own grid wrapper. */
 export function ProductCardSkeletons({ count = 8 }: { count?: number }) {
   return (
     <>
@@ -71,7 +53,6 @@ export function ProductCardSkeletons({ count = 8 }: { count?: number }) {
   );
 }
 
-/** Stands in for the horizontal phone-menu card: thumbnail, two text lines, "+ ADD" pill. */
 export function PhoneCardSkeleton() {
   return (
     <div
@@ -100,7 +81,6 @@ export function CategoryPillsSkeleton({ count = 6 }: { count?: number }) {
   );
 }
 
-/** Stands in for a category tile on /category: icon + name, count, preview thumbnails, link. */
 export function CategoryCardSkeleton() {
   return (
     <div className="flex flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm" aria-hidden>
@@ -119,7 +99,6 @@ export function CategoryCardSkeleton() {
   );
 }
 
-/** Stands in for a bento event tile — same fixed height as `.event_card`. */
 export function EventCardSkeleton() {
   return (
     <div className="relative h-[340px] overflow-hidden rounded-2xl bg-[#f1f5f9]" aria-hidden>
@@ -133,7 +112,6 @@ export function EventCardSkeleton() {
   );
 }
 
-/** Stands in for an order card: id + status, meta lines, item rows, total + actions. */
 export function OrderCardSkeleton() {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm" aria-hidden>
@@ -163,7 +141,6 @@ export function OrderCardSkeleton() {
   );
 }
 
-/** Stands in for the whole product detail page: breadcrumb, square image, info panel. */
 export function ProductDetailSkeleton() {
   return (
     <LoadingRegion label="Loading product..." className="product_detail_container font-sans">
@@ -201,7 +178,6 @@ export function ProductDetailSkeleton() {
   );
 }
 
-/** Stands in for the profile card: round avatar, name + actions, tab bar, detail rows. */
 export function ProfileCardSkeleton() {
   return (
     <div
@@ -237,11 +213,6 @@ export function ProfileCardSkeleton() {
   );
 }
 
-/* ----------------------------------------------------------------------------------------
- * Full-block states
- * -------------------------------------------------------------------------------------- */
-
-/** For waits with no layout worth sketching (route Suspense, an order being looked up). */
 export function PageLoader({ label = "Loading...", className = "" }: { label?: string; className?: string }) {
   const { t } = useLanguage();
   return (
@@ -265,10 +236,6 @@ function isNetworkError(error: unknown) {
   );
 }
 
-/**
- * The customer-facing wording for a failed request. Unlike `apiErrorMessage` this never
- * surfaces developer hints (env var names, "the API") — a network failure reads as one.
- */
 function friendlyErrorMessage(error: unknown, fallback: string) {
   if (isNetworkError(error)) return "Please check your internet connection and try again.";
   const body = (error as { data?: { message?: unknown } } | undefined)?.data;
@@ -277,12 +244,9 @@ function friendlyErrorMessage(error: unknown, fallback: string) {
 
 export interface ErrorStateProps {
   title?: string;
-  /** The RTK Query error; its message is shown when it carries one. */
   error?: unknown;
-  /** Shown when the error has no message of its own. */
   message?: string;
   onRetry?: () => void;
-  /** An optional way out besides retrying, e.g. back to the menu. */
   secondaryAction?: { label: string; href: string };
   compact?: boolean;
   className?: string;

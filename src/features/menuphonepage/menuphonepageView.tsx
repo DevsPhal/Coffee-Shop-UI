@@ -82,10 +82,8 @@ export function PhoneCard({
     product.discountAmount
   );
 
-  // The discount window comes from the API, so there is no separate "days left" field.
   const promoResult = calculatePromoTimeLeft(product.discountEndsAt, undefined);
 
-  // An open-ended discount (no end date) is still a discount — only the countdown needs one.
   const isPromotion = product.discountActive;
   const showCountdown = isPromotion && promoResult.isValid;
 
@@ -99,7 +97,6 @@ export function PhoneCard({
         className={`phone-card cursor-pointer ${isSelected ? "selected" : "default"}`}
         suppressHydrationWarning
       >
-        {/* Left: Drink Image Container */}
         <div className="image-container relative shrink-0">
           <Image
             src={imgSrc}
@@ -125,9 +122,7 @@ export function PhoneCard({
           )}
         </div>
 
-        {/* Middle: Drink Info (Title, Discount Tag, Info Icon, Price) */}
         <div className="card-info flex-1 min-w-0 overflow-hidden">
-          {/* Title + PROMO Badge + Info Icon */}
           <div className="title-row inline-flex items-center gap-1.5 min-w-0 max-w-full overflow-hidden flex-wrap">
             <h3 className="item-title truncate min-w-0 flex-initial">
               {t(product.title)}
@@ -150,12 +145,10 @@ export function PhoneCard({
             </button>
           </div>
 
-          {/* Price Label */}
           <div className="price-label">
             {t("Price")}
           </div>
 
-          {/* Price Value with Original Price Strikethrough */}
           <div className="price-value flex items-center gap-1.5 flex-wrap">
             {product.originalPrice && product.originalPrice > product.price && isPromotion && (
               <span className="line-through text-xs text-gray-400 font-medium">
@@ -168,7 +161,6 @@ export function PhoneCard({
           </div>
         </div>
 
-        {/* Right: + ADD Button */}
         <button
           type="button"
           onClick={handleAdd}
@@ -178,7 +170,6 @@ export function PhoneCard({
         </button>
       </div>
 
-      {/* Select Size / Customization Modal Popup */}
       <SelectSizeModal
         open={isSizeModalOpen}
         onOpenChange={setIsSizeModalOpen}
@@ -240,7 +231,6 @@ export function MenupageView() {
     <div className="menu-view-container relative w-full max-w-full overflow-x-hidden box-border">
       <div className="menu-view-wrapper w-full max-w-full overflow-x-hidden box-border">
         
-        {/* Header Section */}
         <div className="menu-header w-full max-w-full overflow-hidden">
           <h1 className="menu-title">
             {t("Our Full Menu")}
@@ -250,15 +240,12 @@ export function MenupageView() {
           </p>
         </div>
 
-        {/* Desktop Category Filter & Search Row */}
         <div className="category_desktop_row flex-col sm:flex-row items-center justify-between gap-4 my-6 px-2">
-          {/* Same category dropdown as the mobile row and the other menu pages. */}
           <CategoryDropdown
             selectedCategory={selectedCategory}
             onSelectCategory={setSelectedCategory}
           />
 
-          {/* Desktop Search Input Form */}
           <form
             onSubmit={(e) => e.preventDefault()}
             className="flex items-center min-w-[240px] bg-white border border-gray-200 focus-within:border-[#A1255B] rounded-full p-1 shadow-2xs transition-all"
@@ -293,9 +280,7 @@ export function MenupageView() {
           </form>
         </div>
 
-        {/* Mobile Filter & Search Bar Row */}
         <div className="category_mobile_row items-center justify-between gap-2 my-4 px-2 w-full">
-          {/* Category Dropdown Pill (Left - Thin & Slim) */}
           <div className="shrink-0">
             <CategoryDropdown
               selectedCategory={selectedCategory}
@@ -303,7 +288,6 @@ export function MenupageView() {
             />
           </div>
 
-          {/* Product Search Form Input with Search Button (Right) */}
           <form
             onSubmit={(e) => e.preventDefault()}
             className="flex items-center flex-1 min-w-0 rounded-full bg-white border border-gray-200 focus-within:border-[#A1255B] p-1 shadow-2xs transition-all"
@@ -338,7 +322,6 @@ export function MenupageView() {
           </form>
         </div>
 
-        {/* Phone Sized Cards Container */}
         {isLoading ? (
           <LoadingRegion label="Loading menu..." className="cards-container pb-6">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -384,7 +367,6 @@ export function MenupageView() {
 
       </div>
 
-      {/* Product Detail Modal (Rendered on document.body via Portal) */}
       {activeModalProduct && mounted && (() => {
         const modalDiscountInfo = formatDiscountBadge(
           activeModalProduct.price,

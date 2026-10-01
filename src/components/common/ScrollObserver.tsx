@@ -60,7 +60,6 @@ export default function ScrollObserver() {
       });
     };
 
-    // Defer observer setup until React hydration completes
     const initTimer = setTimeout(() => {
       if (isDisposed) return;
 

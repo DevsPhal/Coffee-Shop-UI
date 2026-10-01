@@ -16,12 +16,6 @@ export interface SortDropdownProps {
   className?: string;
 }
 
-/**
- * A styled replacement for a plain `<select>` — browsers render a native select's open menu
- * with their own OS chrome (a plain list, no icon, no rounded panel), which looks visibly out
- * of place next to every other dropdown in the app, all of which are this same custom pattern
- * (CategoryDropdown, GenderDropdown, the language switcher).
- */
 export function SortDropdown({ value, options, onChange, className = "" }: SortDropdownProps) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);

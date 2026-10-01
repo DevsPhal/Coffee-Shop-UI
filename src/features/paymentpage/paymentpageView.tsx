@@ -20,35 +20,18 @@ import { BANK_APPS, bankAppLaunch, bankAppPayLaunch, storeUrl, type BankApp, typ
 import type { Currency, OrderResponse } from "@/store/api/types";
 import "@/app/globals.scss";
 
-/**
- * Bank-app links only work on a phone that has the app installed. iPadOS reports a desktop
- * Safari user agent, so a touch-capable "Macintosh" is treated as an iPad too.
- */
 const isPhone = () =>
   typeof navigator !== "undefined" &&
   (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
     (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
 
-/** Anything past PENDING means the money is in (cancelled is handled separately). */
 const PAID_STATUSES: OrderResponse["status"][] = ["PAID", "PREPARING", "OUT_FOR_DELIVERY", "COMPLETED", "DELIVERED"];
 
-/** How often to ask the API whether the transfer has landed. */
 const POLL_MS = 4000;
 
-/**
- * If the page is still in front this long after handing off to a bank-app link, the app most
- * likely isn't installed — Android does nothing at all and iOS only shows its own error.
- */
 const APP_OPEN_TIMEOUT_MS = 2500;
 
-/**
- * Hands the QR to the phone's share sheet ("Save Image" on iOS) so it can be picked from the
- * gallery inside ABA, ACLEDA or any other KHQR app; falls back to a plain download. Resolves
- * false only when the customer backed out of the share sheet.
- */
 async function saveQrImage(dataUrl: string, fileName: string, preferDownload = false): Promise<boolean> {
-  // Decoded synchronously: Safari drops the tap's user activation across an await, and then
-  // refuses to open the share sheet.
   const bytes = Uint8Array.from(atob(dataUrl.split(",")[1]), (c) => c.charCodeAt(0));
   const file = new File([bytes], fileName, { type: "image/png" });
   if (!preferDownload && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
@@ -57,7 +40,6 @@ async function saveQrImage(dataUrl: string, fileName: string, preferDownload = f
       return true;
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return false;
-      // Some browsers expose share but refuse files at call time — fall through to download.
     }
   }
   const link = document.createElement("a");
@@ -75,18 +57,6 @@ type CheckOutcome =
 
 type Phase = "loading" | "awaiting_fee" | "waiting" | "paid" | "expired" | "error";
 
-/**
- * The Bakong payment screen for a customer order.
- *
- * The QR is generated server-side against the shop's Bakong account and rendered here from the
- * returned KHQR payload — it is a real, scannable code tied to this order and amount. The
- * amount shown is the one the API encoded into the QR rather than a client-side conversion, so
- * what the customer reads is always what their wallet will charge.
- *
- * Payment cannot be self-declared: the page polls the confirm endpoint, which checks the
- * transfer against Bakong, and only moves on once the order actually comes back with a
- * payment recorded against it.
- */
 export function PaymentpageView() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
@@ -100,12 +70,9 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
   const [qrImage, setQrImage] = useState<{ currency: Currency; dataUrl: string; khqr: string } | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
-  /** Only the terminal outcomes are stored; everything else is derived from the query state. */
   const [settled, setSettled] = useState<"paid" | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [verificationError, setVerificationError] = useState<string | null>(null);
-  // A delivery order has no delivery fee until the shop prices it from the pinned location, and
-  // the QR must encode the final total — so payment waits here until that fee lands.
   const [awaitingFee, setAwaitingFee] = useState(false);
 
   const [generateQr, { data: qr, isLoading: isGenerating }] = useGenerateBakongQrMutation();
@@ -115,22 +82,14 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const mounted = useMounted();
   const onPhone = mounted && isPhone();
 
-  // Guards the poll so a slow request cannot overlap the next tick.
   const checkInFlightRef = useRef<Promise<CheckOutcome> | null>(null);
   const pollingRequestRef = useRef<Promise<OrderResponse> | null>(null);
   const isRequestingQrRef = useRef(false);
   const hasAdoptedCurrencyRef = useRef(false);
   const hasPaidRef = useRef(false);
   const isActiveRef = useRef(true);
-  /** The last automatic toast, so a retry loop hitting the same problem doesn't stack them. */
   const lastNoticeRef = useRef<string | null>(null);
-  /** Which picker button is saving right now ("other" = the plain save link), for its spinner. */
   const [savingFor, setSavingFor] = useState<BankAppId | "other" | null>(null);
-  /**
-   * The bank the QR was saved for, and which QR. Confirmation only checks the order's current
-   * QR, so once it changes (currency switch, expiry) the saved image is stale and must not be
-   * presented as ready to pay.
-   */
   const [savedFor, setSavedFor] = useState<{ bank: BankAppId; qr: string } | null>(null);
 
   useEffect(() => {
@@ -167,29 +126,19 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
       if (!orderId || isRequestingQrRef.current || hasPaidRef.current) return;
       isRequestingQrRef.current = true;
       try {
-        // Let an in-flight check finish before changing the QR it is checking.
         await pollingRequestRef.current?.catch(() => null);
         if (!isActiveRef.current || hasPaidRef.current) return;
-        // A refreshed payment link may already be paid. Check the existing transfer before
-        // replacing its QR/hash, including when the customer asks for a new QR after expiry.
         const existingOrder = await getOrder(orderId, false).unwrap();
         if (handleOrder(existingOrder)) return;
-        // deliveryFee defaults to 0 once an order exists, not null — awaitingDeliveryFee is the
-        // real "has the shop actually priced this yet" flag. Generating a QR while this is true
-        // would encode a total that's missing the fee entirely.
         if (existingOrder.fulfillmentMethod === "DELIVERY" && existingOrder.awaitingDeliveryFee) {
           setAwaitingFee(true);
           return;
         }
         setAwaitingFee(false);
         if (existingOrder.bakongMd5Hash) {
-          // A failed check mustn't hide the QR — the poll keeps retrying and reports the problem.
           const checkedOrder = await confirmPayment(orderId).unwrap().catch(() => null);
           if (checkedOrder && handleOrder(checkedOrder)) return;
         }
-        // Reopening the page (a reload, or the phone dropping the tab while the bank app was
-        // open) must show the QR the customer may already be paying, in its own currency — the
-        // API hands that same QR back while it's still valid.
         let wanted = chosen;
         if (!hasAdoptedCurrencyRef.current) {
           hasAdoptedCurrencyRef.current = true;
@@ -232,19 +181,12 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     return () => clearTimeout(timer);
   }, [orderId, currency, requestQr]);
 
-  // While the shop hasn't priced the delivery yet, re-check on the same interval as the payment
-  // poll below; requestQr itself flips awaitingFee back off once a fee (or a paid/cancelled
-  // order) shows up, which lets the effect above take over and generate the real QR.
   useEffect(() => {
     if (!awaitingFee) return;
     const interval = setInterval(() => { void requestQr(currency); }, POLL_MS);
     return () => clearInterval(interval);
   }, [awaitingFee, currency, requestQr]);
 
-  // The push already carries the full order, so this settles paid/cancelled the instant the API
-  // broadcasts it (staff marking cash paid, a webhook, ...) without waiting on the next poll
-  // tick — and while still pricing the delivery, an instant nudge to fetch the real QR the
-  // moment the fee lands rather than waiting up to POLL_MS.
   useOrderLiveUpdates((message) => {
     if (message.order.id !== orderId) return;
     if (handleOrder(message.order)) return;
@@ -253,8 +195,6 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     }
   });
 
-  // The QR is tagged with the currency it was issued for, so a stale code is never shown while
-  // a switch to the other currency is still in flight.
   const currentQr = qrImage && qrImage.currency === currency ? qrImage.dataUrl : null;
   const currentKhqr = qrImage && qrImage.currency === currency ? qrImage.khqr : null;
   const savedForBank = savedFor && savedFor.qr === currentQr ? savedFor.bank : null;
@@ -278,9 +218,6 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     ? "This payment link is missing its order. Please start from the checkout."
     : failure;
 
-  // Countdown to the QR's real expiry, which the API reports as a duration so no timezone
-  // reconciliation is needed between the phone and the shop. Expiry is derived from the
-  // remaining seconds rather than pushed into state, so the effect only ever schedules a tick.
   useEffect(() => {
     if (effectivePhase !== "waiting" || secondsLeft === null || secondsLeft <= 0) return;
     const timer = setTimeout(() => setSecondsLeft((prev) => (prev ?? 1) - 1), 1000);
@@ -293,10 +230,6 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     }
   }, [effectivePhase, notify]);
 
-  /**
-   * One check against the bank, settled to a single outcome so a tap on "I've paid" that lands
-   * while the background poll is mid-check can wait for that same check and report it.
-   */
   const runCheck = useCallback(async (): Promise<CheckOutcome> => {
     if (!orderId) return { kind: "skipped" };
     try {
@@ -307,14 +240,10 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
       setVerificationError(null);
       return { kind: "unpaid" };
     } catch (err) {
-      // Staff may have confirmed or cancelled the order while a bank lookup failed.
       try {
         if (handleOrder(await getOrder(orderId, false).unwrap())) return { kind: "settled" };
       } catch {
-        // Keep retrying the same transfer when the connection returns.
       }
-      // 502: the API reached us but couldn't ask the bank at all, so automatic confirmation
-      // is down — tell the customer how to get served rather than to keep waiting.
       const bankUnreachable = (err as { status?: unknown } | null)?.status === 502;
       const message = bankUnreachable
         ? "We can't confirm payments automatically right now. If you've paid, show your bank receipt at the counter — we'll keep checking too."
@@ -326,34 +255,17 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     }
   }, [orderId, confirmPayment, getOrder, handleOrder]);
 
-  /**
-   * `manual` is the "I've paid" button: the background poll stays quiet, but a customer who
-   * pressed the button always gets an answer — "nothing has arrived yet" or why we can't tell.
-   */
-  const checkPayment = useCallback(async (manual = false) => {
-    if (!orderId || isRequestingQrRef.current || hasPaidRef.current) return;
-    const inFlight = checkInFlightRef.current;
-    if (inFlight && !manual) return;
-    const check = inFlight ?? runCheck();
-    if (!inFlight) checkInFlightRef.current = check;
+  const checkPayment = useCallback(async () => {
+    if (!orderId || isRequestingQrRef.current || hasPaidRef.current || checkInFlightRef.current) return;
+    const check = runCheck();
+    checkInFlightRef.current = check;
     try {
-      const outcome = await check;
-      if (!manual || !isActiveRef.current || hasPaidRef.current) return;
-      if (outcome.kind === "unpaid") {
-        toast.add({
-          type: "info",
-          description: "No payment received yet. If you just paid, give it a moment — this page updates on its own.",
-        });
-      } else if (outcome.kind === "failed") {
-        toast.add({ type: "warning", description: outcome.message });
-      }
+      await check;
     } finally {
-      if (!inFlight) checkInFlightRef.current = null;
+      checkInFlightRef.current = null;
     }
   }, [orderId, runCheck]);
 
-  // Keep checking after QR expiry: a transfer sent just before the deadline may arrive later.
-  // Returning from a banking app or reconnecting also triggers an immediate check.
   useEffect(() => {
     if (effectivePhase !== "waiting" && effectivePhase !== "expired") return;
     const poll = () => { void checkPayment(); };
@@ -374,8 +286,6 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     };
   }, [effectivePhase, checkPayment]);
 
-  // The browser gives no error when an app link goes nowhere, so watch for the page losing
-  // focus instead: if it never does, tell the customer rather than leaving the tap silent.
   const launchApp = useCallback((url: string, appName: string, installUrl?: string) => {
     let leftPage = false;
     const onLeave = () => { leftPage = true; };
@@ -400,8 +310,6 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     }, APP_OPEN_TIMEOUT_MS);
   }, []);
 
-  // A phone can't scan its own screen. The Bakong app has an official link that opens this
-  // exact payment (and returns here after); the poll above picks up the payment either way.
   const openBakongApp = useCallback(async () => {
     if (!orderId) return;
     try {
@@ -418,11 +326,8 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     }
   }, [orderId, generateDeeplink, launchApp]);
 
-  // ABA and ACLEDA can't be handed a KHQR by link, so: save the QR first, then open the app
-  // (a second tap, since opening an app needs a fresh tap after the share sheet on iOS).
   const openBankApp = useCallback((bank: BankAppId) => {
     const app = BANK_APPS[bank];
-    // Straight onto this order's payment when the bank takes a KHQR by link (ABA).
     const payUrl = currentKhqr ? bankAppPayLaunch(app, currentKhqr) : null;
     if (payUrl) {
       launchApp(payUrl, app.name, storeUrl(app));
@@ -436,10 +341,6 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     launchApp(url, app.name, storeUrl(app));
   }, [launchApp, currentKhqr]);
 
-  // Tapping a bank opens its app straight away — no share sheet in between. ABA opens on the
-  // payment itself; for the others the customer screenshots the QR first (the hint above the
-  // tiles says so) and picks it from the gallery inside the app. On Android that QR is also
-  // dropped into Downloads on the way, silently.
   const chooseBank = useCallback((bank: BankAppId) => {
     if (!currentQr || !orderId) return;
     setSavedFor({ bank, qr: currentQr });
@@ -449,14 +350,12 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     }
     if (/Android/i.test(navigator.userAgent)) {
       void saveQrImage(currentQr, `590st-cafe-khqr-${orderId.slice(0, 8)}.png`, true).catch(() => undefined);
-      // A beat for the download to register before the page hands off to the app.
       window.setTimeout(() => openBankApp(bank), 400);
       return;
     }
     openBankApp(bank);
   }, [currentQr, orderId, openBankApp]);
 
-  /** The optional "Save QR image" link: the share sheet on iPhone, a download on Android. */
   const saveQrFor = useCallback(async (bank: BankAppId | null) => {
     if (!currentQr || !orderId) return;
     setSavingFor(bank ?? "other");
@@ -724,21 +623,23 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
             )}
           </div>
 
-          <p className="mt-3 mb-0 text-[11px] text-gray-400">
-            {effectivePhase === "waiting"
-              ? "Waiting for your payment — this page updates on its own."
-              : effectivePhase === "expired"
-                ? "Already paid? We're still checking your transfer."
-                : " "}
-          </p>
-          {verificationError ? (
-            <p role="status" className="mt-3 text-xs text-amber-700">{verificationError}</p>
-          ) : null}
           {effectivePhase === "waiting" || effectivePhase === "expired" ? (
-            <button type="button" onClick={() => { void checkPayment(true); }} disabled={isChecking} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
-              {isChecking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-              {isChecking ? "Checking payment..." : "I've paid — check payment"}
-            </button>
+            <p
+              role="status"
+              aria-live="polite"
+              className="mt-3 mb-0 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3.5 py-1.5 text-[11px] font-semibold text-emerald-700"
+            >
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              {effectivePhase === "waiting"
+                ? "Pay with the QR — we confirm it automatically"
+                : "Already paid? We're still confirming your transfer"}
+            </p>
+          ) : null}
+          {verificationError ? (
+            <p role="status" className="mt-3 mb-0 text-xs text-amber-700">{verificationError}</p>
           ) : null}
         </div>
       </div>
@@ -766,7 +667,6 @@ function StepNumber({ n }: { n: number }) {
   );
 }
 
-/** The bank's name on its brand colour; widens for longer names like ACLEDA. */
 function BankBadge({ app, small = false }: { app: BankApp; small?: boolean }) {
   return (
     <span
@@ -781,10 +681,6 @@ function BankBadge({ app, small = false }: { app: BankApp; small?: boolean }) {
   );
 }
 
-/**
- * Shown once the customer has picked a bank (and the app has been opened): what to do in the
- * app, and a way back into it if they came back here before paying.
- */
 function BankSteps({
   app,
   onOpen,

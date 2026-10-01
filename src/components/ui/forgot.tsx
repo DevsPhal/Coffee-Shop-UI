@@ -22,7 +22,6 @@ interface ForgotProps {
 }
 
 export function Forgot({ onBackToLogin: leave }: ForgotProps) {
-  // Leaving the flow ends it — the next visit starts from the email step again.
   const onBackToLogin = () => {
     clearPersistentState("forgot:step");
     clearPersistentState("forgot:resetEmail");
@@ -34,7 +33,6 @@ export function Forgot({ onBackToLogin: leave }: ForgotProps) {
   const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
   const [email, setEmail] = usePersistentState("forgot:email", "");
   const [error, setError] = useState<string | undefined>(undefined);
-  // Kept across a refresh so a reload while typing the emailed code stays on that step.
   const [step, setStep] = usePersistentState<"request" | "reset" | "done">("forgot:step", "request");
   const [resetEmail, setResetEmail] = usePersistentState("forgot:resetEmail", "");
   const [otp, setOtp] = useState("");
@@ -131,14 +129,12 @@ export function Forgot({ onBackToLogin: leave }: ForgotProps) {
 
   return (
     <div className="w-full space-y-4">
-      {/* Icon Circle */}
       <div className="flex justify-center">
         <div className="login_avatar_circle">
           <KeyRound className="w-10 h-10 stroke-[1.5]" />
         </div>
       </div>
 
-      {/* Title & Subtitle */}
       <h1 className="login_title">
         {t(step === "request" ? "Forgot Password?" : step === "reset" ? "Reset your password" : "Password reset")}
       </h1>
@@ -235,7 +231,6 @@ export function Forgot({ onBackToLogin: leave }: ForgotProps) {
         </form>
       ) : (
         <form onSubmit={handleSubmit} className="w-full space-y-4" noValidate>
-          {/* Email Field */}
           <div>
             <label htmlFor="forgot-email" className="login_input_label">
               {t("Email Address")}
@@ -265,7 +260,6 @@ export function Forgot({ onBackToLogin: leave }: ForgotProps) {
             {error && <TooltipAlert message={error} />}
           </div>
 
-          {/* Submit Button */}
           <Button
             type="submit"
             disabled={isBusy}
@@ -274,7 +268,6 @@ export function Forgot({ onBackToLogin: leave }: ForgotProps) {
             {isRequesting ? t("Sending...") : t("Send reset code")}
           </Button>
 
-          {/* Back to Login Link */}
           <div className="flex justify-center pt-2">
             <button
               type="button"
