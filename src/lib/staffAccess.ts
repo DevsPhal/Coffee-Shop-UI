@@ -10,4 +10,4 @@ export function adminLoginUrl(): string {
 }
 
 export const STAFF_ACCOUNT_MESSAGE =
-  "This is a staff account. Staff sign in on the admin dashboard, not the customer site.";
+  "Staff accounts sign in on the admin dashboard.";

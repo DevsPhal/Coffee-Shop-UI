@@ -157,7 +157,7 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
       <div className="w-full space-y-4">
         <div className="flex justify-center">
           <div className="login_avatar_circle">
-            <UserPlus className="w-10 h-10 stroke-[1.5]" />
+            <UserPlus aria-hidden="true" />
           </div>
         </div>
         <h1 className="login_title">{t("Verify your email")}</h1>
@@ -189,7 +189,7 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
               try {
                 await resendOtp({ purpose: "REGISTER", email: email.trim() }).unwrap();
                 setOtp("");
-                toast.add({ type: "success", description: "A new verification code has been requested. Check your email." });
+                toast.add({ type: "success", description: "New code sent — check your email." });
               } catch (err) {
                 toast.add({
                   type: "warning",
@@ -220,7 +220,7 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
     <div className="w-full space-y-4">
       <div className="flex justify-center">
         <div className="login_avatar_circle">
-          <UserPlus className="w-10 h-10 stroke-[1.5]" />
+          <UserPlus aria-hidden="true" />
         </div>
       </div>
       <h1 className="login_title">

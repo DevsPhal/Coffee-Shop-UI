@@ -118,7 +118,7 @@ export function CheckoutpageView() {
     if (!navigator.geolocation) {
       toast.add({
         type: "warning",
-        description: "Geolocation is not supported by your browser.",
+        description: "Location isn't supported on this browser.",
       });
       return;
     }
@@ -134,7 +134,7 @@ export function CheckoutpageView() {
         setIsLocating(false);
         toast.add({
           type: "warning",
-          description: "Could not retrieve exact location. Defaulting to Phnom Penh region.",
+          description: "Couldn't get your location — using Phnom Penh.",
         });
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -219,7 +219,7 @@ export function CheckoutpageView() {
     if (items.length === 0) {
       toast.add({
         type: "warning",
-        description: "Your cart is empty! Please add items before placing order.",
+        description: "Your cart is empty — add items first.",
       });
       return;
     }

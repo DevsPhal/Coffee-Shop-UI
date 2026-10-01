@@ -16,7 +16,7 @@ export function useRequireLogin() {
     signInToastId = toast.add({
       type: "info",
       title: "Sign in to order",
-      description: "Browse freely — sign in to add items to your cart and check out.",
+      description: "Sign in to add items and check out.",
       timeout: 8000,
       actionProps: {
         children: "Sign in",

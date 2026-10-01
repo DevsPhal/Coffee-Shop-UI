@@ -189,7 +189,7 @@ export function UserprofilepageView() {
       setIsResetPasswordOpen(true);
       toast.add({
         type: "success",
-        description: "Password verified! Please enter your new password.",
+        description: "Password verified — enter your new password.",
       });
     } else if (verifyTarget === "email") {
       setShowEmail(true);
@@ -306,7 +306,7 @@ export function UserprofilepageView() {
       setPasswords({ current: "", newPass: "", confirmPass: "" });
       toast.add({
         type: "success",
-        description: `We emailed a reset code to ${profile.email}. Use it on the reset page to set your new password.`,
+        description: `Reset code sent to ${profile.email}.`,
       });
     } catch (err) {
       toast.add({
@@ -351,7 +351,7 @@ export function UserprofilepageView() {
 
     if (Object.keys(changes).length === 0 && !avatarFile) {
       setIsEditProfileOpen(false);
-      toast.add({ type: "info", description: "Nothing to save — no details were changed." });
+      toast.add({ type: "info", description: "No changes to save." });
       return;
     }
 

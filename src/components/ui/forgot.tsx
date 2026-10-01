@@ -131,7 +131,7 @@ export function Forgot({ onBackToLogin: leave }: ForgotProps) {
     <div className="w-full space-y-4">
       <div className="flex justify-center">
         <div className="login_avatar_circle">
-          <KeyRound className="w-10 h-10 stroke-[1.5]" />
+          <KeyRound aria-hidden="true" />
         </div>
       </div>
 

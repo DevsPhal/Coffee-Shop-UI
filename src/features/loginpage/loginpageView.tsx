@@ -5,7 +5,7 @@ import { BrandLogo } from "@/components/common/BrandLogo";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { User, Mail, Eye, EyeOff, Check, Heart, ArrowLeft } from "lucide-react";
+import { User, Mail, Eye, EyeOff, Check, Heart, MailCheck, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Forgot } from "@/components/ui/forgot";
@@ -195,7 +195,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
           {loginTicket ? (
             <form onSubmit={handleVerifyOtp} className="w-full">
               <div className="login_avatar_circle">
-                <Check className="w-10 h-10 stroke-[1.5]" />
+                <MailCheck aria-hidden="true" />
               </div>
               <h1 className="login_title">{t("Enter your code")}</h1>
               <p className="login_subtitle">
@@ -259,7 +259,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
           ) : (
             <>
               <div className="login_avatar_circle">
-                <User className="w-10 h-10 stroke-[1.5]" />
+                <User aria-hidden="true" />
               </div>
               <h1 className="login_title">
                 {t("Login to your account")}

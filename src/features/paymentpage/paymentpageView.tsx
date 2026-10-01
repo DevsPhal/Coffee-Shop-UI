@@ -302,7 +302,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
       toast.add({
         type: "warning",
         title: `${appName} didn't open`,
-        description: "Check the app is installed, or open it yourself and scan the saved QR.",
+        description: "Make sure it's installed, or open it and scan the QR.",
         ...(installUrl
           ? { actionProps: { children: "Get the app", onClick: () => { window.open(installUrl, "_blank", "noopener"); } } }
           : {}),
@@ -368,7 +368,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
       if (saved) {
         toast.add({
           type: "success",
-          description: "QR saved. In your bank app, tap Scan, choose the photo from your gallery, then come back here.",
+          description: "QR saved — scan it from your gallery in your bank app.",
         });
       }
     } catch {
