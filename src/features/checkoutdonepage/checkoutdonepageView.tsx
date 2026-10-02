@@ -114,7 +114,10 @@ export function CheckoutdonepageView() {
     : `$ ${amount.toFixed(2)}`;
   const displayCustomerName =
     order?.contactName || order?.customerName || delivery?.customerName || currentUser?.fullName || "Customer";
-  const displayLocation = order?.deliveryAddress || (order?.fulfillmentMethod === "PICKUP" ? "Pickup at Store" : delivery?.location) || "Pickup at Store";
+  const displayLocation =
+    order?.fulfillmentMethod === "DINE_IN" && order.tableNumber
+      ? `Table ${order.tableNumber}`
+      : order?.deliveryAddress || (order?.fulfillmentMethod === "PICKUP" ? "Pickup at Store" : delivery?.location) || "Pickup at Store";
   const displayEstimatedTime = useEstimateLabel(order);
 
 

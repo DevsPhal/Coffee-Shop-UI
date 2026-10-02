@@ -263,15 +263,18 @@ export interface UpdateCartItemRequest {
   extraIds?: UUID[];
 }
 
+export type FulfillmentMethod = "PICKUP" | "DELIVERY" | "DINE_IN";
+
 export interface CheckoutRequest {
   note?: string;
   deliveryLatitude?: number;
   deliveryLongitude?: number;
   delivery?: {
-    method: "PICKUP" | "DELIVERY";
+    method: FulfillmentMethod;
     contactName: string;
     contactPhone: string;
     address?: string;
+    tableNumber?: string;
   };
 }
 
@@ -297,7 +300,8 @@ export interface OrderItemResponse {
 }
 
 export interface OrderResponse {
-  fulfillmentMethod?: "PICKUP" | "DELIVERY" | null;
+  fulfillmentMethod?: FulfillmentMethod | null;
+  tableNumber?: string | null;
   deliveryAddress?: string | null;
   contactName?: string | null;
   contactPhone?: string | null;
@@ -374,7 +378,8 @@ export interface StaffCallResponse {
   orderId: UUID;
   customerName: string | null;
   orderStatus: OrderStatus;
-  fulfillmentMethod: "PICKUP" | "DELIVERY" | null;
+  fulfillmentMethod: FulfillmentMethod | null;
+  tableNumber: string | null;
   status: StaffCallStatus;
   reason: StaffCallReason;
   note: string | null;
@@ -390,7 +395,8 @@ export interface StaffCallMessage {
   orderId: UUID;
   customerName: string | null;
   orderStatus: OrderStatus;
-  fulfillmentMethod: "PICKUP" | "DELIVERY" | null;
+  fulfillmentMethod: FulfillmentMethod | null;
+  tableNumber: string | null;
   reason: StaffCallReason;
   note: string | null;
   calledAt: string;
@@ -436,4 +442,16 @@ export interface PublicEventResponse {
 export interface ShopSettingsResponse {
   deliveryFee: Numeric;
   khrPerUsdRate: Numeric;
+}
+
+export type TableStatus = "AVAILABLE" | "OCCUPIED" | "RESERVED";
+
+export interface TableResponse {
+  id: UUID;
+  tableNumber: string;
+  size: "SMALL" | "MEDIUM" | "LARGE";
+  capacity: number;
+  guestCount: number;
+  status: TableStatus;
+  scanUrl: string;
 }

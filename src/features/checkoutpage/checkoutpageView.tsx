@@ -13,8 +13,9 @@ import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { shippingInformationSchema } from "@/lib/authSchema";
 import { cleanPhoneInput, phoneInputProps } from "@/lib/phoneUtils";
-import { AlertCircle, Check, MapPin, Navigation, Compass, Search, Loader2 } from "lucide-react";
+import { AlertCircle, Armchair, Check, MapPin, Navigation, Compass, Search, Loader2 } from "lucide-react";
 import { isAuthenticated } from "@/lib/authStorage";
+import { useDineInTable } from "@/lib/dineIn";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import { useGetCurrentUserQuery } from "@/store/api/authApi";
 import { usePayCashOnPickupMutation } from "@/store/api/orderApi";
@@ -61,7 +62,10 @@ export function CheckoutpageView() {
   const [baristaNote, setBaristaNote] = usePersistentState("checkout:baristaNote", "");
   const [capital, setCapital] = usePersistentState("checkout:capital", "Phnom Penh");
   const [address, setAddress] = usePersistentState("checkout:address", "");
-  const [deliveryMethod, setDeliveryMethod] = usePersistentState<"pickup" | "grab">("checkout:deliveryMethod", "pickup");
+  const dineInTable = useDineInTable();
+  // "dinein" is the default but only counts while a scanned table is remembered; otherwise it's pickup.
+  const [chosenMethod, setDeliveryMethod] = usePersistentState<"pickup" | "grab" | "dinein">("checkout:deliveryMethod", "dinein");
+  const deliveryMethod = chosenMethod === "dinein" && !dineInTable ? "pickup" : chosenMethod;
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
@@ -187,7 +191,7 @@ export function CheckoutpageView() {
     field: "fullName" | "email" | "phone" | "address" | "capital",
     val?: string
   ) => {
-    if (deliveryMethod === "pickup" && ["capital", "address"].includes(field)) {
+    if (deliveryMethod !== "grab" && ["capital", "address"].includes(field)) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
       return;
     }
@@ -200,9 +204,9 @@ export function CheckoutpageView() {
     }
   };
 
-  const handleSelectDeliveryMethod = (method: "pickup" | "grab") => {
+  const handleSelectDeliveryMethod = (method: "pickup" | "grab" | "dinein") => {
     setDeliveryMethod(method);
-    if (method === "pickup") {
+    if (method !== "grab") {
       setErrors((prev) => ({
         ...prev,
         capital: undefined,
@@ -223,7 +227,7 @@ export function CheckoutpageView() {
     }
 
     const schemaToValidate =
-      deliveryMethod === "pickup"
+      deliveryMethod !== "grab"
         ? shippingInformationSchema.pick({ fullName: true, email: true, phone: true })
         : shippingInformationSchema;
 
@@ -286,18 +290,22 @@ export function CheckoutpageView() {
     }
 
     const isDelivery = deliveryMethod === "grab";
+    const isDineIn = deliveryMethod === "dinein" && dineInTable !== null;
     const deliveryLocation = isDelivery
       ? [address, capital].filter(Boolean).join(", ") || "Delivery Address"
-      : "Pickup at Store";
+      : isDineIn
+        ? `Table ${dineInTable}`
+        : "Pickup at Store";
 
     const order = await placeOrder({
       note: baristaNote.trim(),
       ...(isDelivery ? { deliveryLatitude: mapCoords.lat, deliveryLongitude: mapCoords.lng } : {}),
       delivery: {
-        method: isDelivery ? "DELIVERY" : "PICKUP",
+        method: isDelivery ? "DELIVERY" : isDineIn ? "DINE_IN" : "PICKUP",
         contactName: fullName.trim(),
         contactPhone: phone.trim(),
         ...(isDelivery ? { address: deliveryLocation } : {}),
+        ...(isDineIn ? { tableNumber: dineInTable } : {}),
       },
     });
     if (!order) {
@@ -450,7 +458,7 @@ export function CheckoutpageView() {
                 </div>
               </div>
 
-              {deliveryMethod === "pickup" ? (
+              {deliveryMethod !== "grab" ? (
                 <div className="checkout_form_row">
                   <div>
                     <label className="checkout_field_label">{t("Phone Number")}</label>
@@ -557,6 +565,32 @@ export function CheckoutpageView() {
             <h2 className="checkout_section_title">{t("Delivery Method")}</h2>
 
             <div className="checkout_delivery_options">
+              {dineInTable ? (
+                <div
+                  onClick={() => handleSelectDeliveryMethod("dinein")}
+                  className={`checkout_delivery_card ${
+                    deliveryMethod === "dinein" ? "checkout_delivery_card_active" : ""
+                  }`}
+                >
+                  <div className="checkout_delivery_card_content">
+                    <div className="checkout_delivery_logo_container">
+                      <Armchair className="h-7 w-7 text-[#A1255B]" aria-hidden />
+                    </div>
+                    <div>
+                      <h3 className="checkout_delivery_title">
+                        {t("Dine-in")} · {t("Table")} {dineInTable}
+                      </h3>
+                      <p className="checkout_delivery_price">{t("Served to your table")}</p>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`checkout_radio_indicator ${
+                      deliveryMethod === "dinein" ? "checkout_radio_indicator_active" : ""
+                    }`}
+                  />
+                </div>
+              ) : null}
               <div
                 onClick={() => handleSelectDeliveryMethod("pickup")}
                 className={`checkout_delivery_card ${
