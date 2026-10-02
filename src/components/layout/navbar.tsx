@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import {
   ChevronDown,
-  ChevronRight,
   Home,
   UtensilsCrossed,
   LayoutGrid,
@@ -47,8 +46,6 @@ export function Navbar() {
   const pathname = usePathname();
   const { language, setLanguage, t } = useLanguage();
   const [isLangOpen, setIsLangOpen] = useState(false);
-  const [isCategoryHovered, setIsCategoryHovered] = useState(false);
-  const categoryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const langRef = useRef<HTMLDivElement>(null);
 
   const currentLangCode = mounted ? language : "en";
@@ -60,17 +57,6 @@ export function Navbar() {
   const isCheckingAuth = authStatus === "checking";
   const displayTotalCount = mounted ? totalCount : 0;
   const displayT = (key: string) => (mounted ? t(key) : key);
-
-  const handleCategoryMouseEnter = () => {
-    if (categoryTimeoutRef.current) clearTimeout(categoryTimeoutRef.current);
-    setIsCategoryHovered(true);
-  };
-
-  const handleCategoryMouseLeave = () => {
-    categoryTimeoutRef.current = setTimeout(() => {
-      setIsCategoryHovered(false);
-    }, 150);
-  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

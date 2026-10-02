@@ -137,27 +137,6 @@ export function UserprofilepageView() {
   };
 
   const [activeTab, setActiveTab] = usePersistentState<"about" | "messages" | "orders">("profile:activeTab", "about");
-  const [showEmail, setShowEmail] = useState(false);
-  const [showPhone, setShowPhone] = useState(false);
-
-  const maskEmail = (email: string) => {
-    if (!email || email === "N/A") return "N/A";
-    const parts = email.split("@");
-    if (parts.length !== 2) return "••••••••";
-    const [userPart, domain] = parts;
-    if (userPart.length <= 2) {
-      return `${userPart.slice(0, 1)}***@${domain}`;
-    }
-    const maskedName = `${userPart.slice(0, 2)}${"*".repeat(Math.max(userPart.length - 2, 3))}`;
-    return `${maskedName}@${domain}`;
-  };
-
-  const maskPhone = (phone: string) => {
-    if (!phone) return "";
-    if (phone.length <= 4) return "••••••••";
-    return `${phone.slice(0, 3)}****${phone.slice(-3)}`;
-  };
-
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = usePersistentState("profile:isEditProfileOpen", false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -192,10 +171,6 @@ export function UserprofilepageView() {
         type: "success",
         description: "Password verified — enter your new password.",
       });
-    } else if (verifyTarget === "email") {
-      setShowEmail(true);
-    } else if (verifyTarget === "phone") {
-      setShowPhone(true);
     }
 
     setVerifyPassword("");
@@ -587,11 +562,9 @@ export function UserprofilepageView() {
                           type="button"
                           onClick={() => {
                             clearContactHistory();
-                            if (typeof window !== "undefined") {
-                              try {
-                                localStorage.removeItem("contact_store");
-                              } catch {}
-                            }
+                            try {
+                              localStorage.removeItem("contact_store");
+                            } catch {}
                             toast.add({ type: "warning", description: "Message history cleared." });
                           }}
                           className="inline-flex items-center gap-1 rounded-full text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1 border border-rose-200 transition-colors cursor-pointer"

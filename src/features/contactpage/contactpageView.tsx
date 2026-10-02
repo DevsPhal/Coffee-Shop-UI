@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, Phone, Mail, Clock, Send, Coffee } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import ContactForm from "./components/ContactForm";
@@ -12,7 +12,6 @@ import "@/app/globals.scss";
 export function ContactpageView() {
   const router = useRouter();
   const { t } = useLanguage();
-  const googleMapUrl = "https://maps.app.goo.gl/DKbvJw3Hz2tsCriQA?g_st=it";
   const [menuHref, setMenuHref] = useState("/menu");
 
   useEffect(() => {

@@ -13,7 +13,7 @@ import type { SizeSelection } from "@/components/ui/SelectSizeModal";
 import { useCart } from "@/context/CartContext";
 import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { useLanguage } from "@/components/ui/translatetokhmer";
-import { ShoppingBag, ChevronRight, ShoppingCart, Plus, Check, Search, Clock, SearchX } from "lucide-react";
+import { Search, Clock, SearchX } from "lucide-react";
 import {
   EmptyState,
   ErrorState,
@@ -184,7 +184,6 @@ export function PhoneCard({
 export function MenupageView() {
   const searchParams = useSearchParams();
   const queryCategory = searchParams.get("category");
-  const { openCart, addItem, subtotal, totalCount } = useCart();
   const { t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = usePersistentState<string>("menu-phone:selectedCategory", ALL_CATEGORIES);
   const [searchQuery, setSearchQuery] = usePersistentState<string>("menu-phone:searchQuery", "");

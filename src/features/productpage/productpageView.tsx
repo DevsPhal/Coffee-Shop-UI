@@ -6,7 +6,6 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
-import { useAuth } from "@/context/AuthContext";
 import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { toast } from "@/components/ui/toast";
@@ -27,7 +26,6 @@ import { OptionDropdown } from "@/components/ui/OptionDropdown";
 import type { CartExtra } from "@/store/useCartStore";
 import { useCatalogLiveUpdates } from "@/hooks/useCatalogLiveUpdates";
 import "@/app/globals.scss";
-import { useMounted } from "@/hooks/useMounted";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
 export interface ProductpageViewProps {
@@ -44,10 +42,8 @@ export function ProductpageView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { addItem } = useCart();
-  const { isLoggedIn } = useAuth();
   const requireLogin = useRequireLogin();
   const { t } = useLanguage();
-  const isMounted = useMounted();
   const isMobile = useIsMobile();
 
   const menuBaseUrl = isMobile ? "/menuphone" : "/menu";
@@ -66,7 +62,6 @@ export function ProductpageView({
 
   const product = apiProduct ? toStoreProduct(apiProduct) : null;
 
-  const displayId = product?.id ?? productId;
   const displayTitle = product?.title ?? "";
   const displayOriginalPrice = product?.originalPrice;
   const displayDiscountType = product?.discountType;

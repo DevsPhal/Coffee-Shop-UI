@@ -12,7 +12,7 @@ export default function PointerCapturePolyfill() {
         if (this.hasPointerCapture && this.hasPointerCapture(pointerId)) {
           originalRelease.call(this, pointerId);
         }
-      } catch (e) {
+      } catch {
       }
     };
 
@@ -21,7 +21,7 @@ export default function PointerCapturePolyfill() {
       Element.prototype.setPointerCapture = function (pointerId: number) {
         try {
           originalSet.call(this, pointerId);
-        } catch (e) {
+        } catch {
         }
       };
     }

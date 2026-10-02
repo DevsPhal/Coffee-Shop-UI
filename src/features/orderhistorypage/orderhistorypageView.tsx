@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { ShoppingBag, Clock, MapPin, ChevronRight, RefreshCw, CheckCircle2, Truck, Package, User } from "lucide-react";
@@ -12,7 +11,6 @@ import { useMounted } from "@/hooks/useMounted";
 import { useListMyOrdersQuery } from "@/store/api/orderApi";
 import { toTitleCase } from "@/lib/utils";
 import type { OrderResponse, OrderStatus } from "@/store/api/types";
-import { useLanguage } from "@/components/ui/translatetokhmer";
 import { OrderEstimateBadge } from "@/components/common/OrderEstimate";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { EmptyState, ErrorState, LoadingRegion, OrderCardSkeleton } from "@/components/ui/states";
@@ -20,7 +18,6 @@ import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
 export function OrderhistorypageView() {
-  const { t } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
   const { addItem, openCart } = useCart();

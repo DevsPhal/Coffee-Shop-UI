@@ -14,7 +14,7 @@ export function usePersistentState<T>(
   useEffect(() => {
     try {
       const raw = window.sessionStorage.getItem(PREFIX + key);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- restoring after hydration is the point
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (raw !== null) setValue(JSON.parse(raw) as T);
     } catch {
     }

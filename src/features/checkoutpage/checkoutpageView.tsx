@@ -7,7 +7,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
-import { useMounted } from "@/hooks/useMounted";
 import { toast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
 import { Modal, ModalContent } from "@/components/ui/modal";
@@ -53,7 +52,6 @@ export function CheckoutpageView() {
   const [payCashOnPickup] = usePayCashOnPickupMutation();
 
   const { t } = useLanguage();
-  const isMounted = useMounted();
   const [enteredName, setFullName] = usePersistentState<string | null>("checkout:enteredName", null);
   const [enteredEmail, setEmail] = usePersistentState<string | null>("checkout:enteredEmail", null);
   const [enteredPhone, setPhone] = usePersistentState<string | null>("checkout:enteredPhone", null);

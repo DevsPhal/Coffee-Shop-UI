@@ -10,7 +10,7 @@ import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { Clock } from "lucide-react";
 import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidation";
-import { resolveProductImage, discountPercent, type StoreProduct } from "@/store/api/productAdapter";
+import { resolveProductImage, type StoreProduct } from "@/store/api/productAdapter";
 import SelectSizeModal, { type SizeSelection } from "@/components/ui/SelectSizeModal";
 import "@/app/globals.scss";
 
@@ -33,7 +33,7 @@ export function Card({
   onBuyNow,
   onOpenInfo,
 }: CardProps) {
-  const { id, title, price, originalPrice, discountType, discountAmount, category } = product;
+  const { id, title, price, originalPrice, discountType, discountAmount } = product;
   const promoEndDate = product.discountEndsAt;
   const promoDaysLeft = undefined as string | undefined;
   const router = useRouter();

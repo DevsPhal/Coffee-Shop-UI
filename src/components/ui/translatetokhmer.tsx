@@ -418,6 +418,22 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 const LANGUAGE_KEY = "app_language";
 const languageListeners = new Set<() => void>();
+const TRANSLATION_CACHE_KEY = "auto_translations_km";
+const MAX_AUTO_TRANSLATE_LENGTH = 500;
+
+const staticKmByLowerKey = new Map<string, string>();
+for (const [key, value] of Object.entries(staticTranslations.km)) {
+  const lower = key.toLowerCase();
+  if (!staticKmByLowerKey.has(lower)) staticKmByLowerKey.set(lower, value);
+}
+
+const OPTION_PREFIXES: { prefix: string; label: string; translateValue: boolean }[] = [
+  { prefix: "Size:", label: "ទំហំ", translateValue: false },
+  { prefix: "Quantity:", label: "ចំនួន", translateValue: false },
+  { prefix: "Ice:", label: "ទឹកកក", translateValue: true },
+  { prefix: "Sugar:", label: "ស្ករ", translateValue: true },
+  { prefix: "Milk:", label: "ទឹកដោះគោ", translateValue: true },
+];
 
 function subscribeLanguage(onChange: () => void) {
   languageListeners.add(onChange);
@@ -442,23 +458,55 @@ function readLanguage(): Language {
 function readCachedTranslations(): Record<string, string> {
   if (typeof window === "undefined") return {};
   try {
-    return JSON.parse(localStorage.getItem("auto_translations_km") ?? "{}");
+    return JSON.parse(localStorage.getItem(TRANSLATION_CACHE_KEY) ?? "{}");
   } catch {
     return {};
   }
+}
+
+async function translateWithGoogle(text: string): Promise<string | null> {
+  const res = await fetch(
+    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=km&dt=t&q=${encodeURIComponent(text)}`
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!Array.isArray(data?.[0])) return null;
+  return (data[0] as Array<[string]>).map((item) => item?.[0] || "").join("") || null;
+}
+
+async function translateWithMyMemory(text: string): Promise<string | null> {
+  const res = await fetch(
+    `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|km`
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data?.responseData?.translatedText || null;
+}
+
+async function translateToKhmer(text: string): Promise<string | null> {
+  let translated: string | null = null;
+  try {
+    translated = await translateWithGoogle(text);
+  } catch {}
+  if (!translated) {
+    try {
+      translated = await translateWithMyMemory(text);
+    } catch {}
+  }
+  if (!translated) return null;
+  return text.endsWith(".") ? translated : translated.replace(/[.។]+$/, "").trim();
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const language = useSyncExternalStore(subscribeLanguage, readLanguage, () => "en" as Language);
   const [autoTranslations, setAutoTranslations] = useState<Record<string, string>>(readCachedTranslations);
   const pendingQueue = useRef<Set<string>>(new Set());
-  const isBatchProcessing = useRef<boolean>(false);
+  const isBatchProcessing = useRef(false);
 
   const setLanguage = (lang: Language) => {
     try {
       localStorage.setItem(LANGUAGE_KEY, lang);
-    } catch {
-    }
+    } catch {}
     languageListeners.forEach((notify) => notify());
   };
 
@@ -470,45 +518,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     pendingQueue.current.clear();
 
     const newTranslations: Record<string, string> = {};
-
     for (const text of keysToTranslate) {
-      if (!text || text.length > 500) continue;
-      try {
-        const res = await fetch(
-          `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=km&dt=t&q=${encodeURIComponent(
-            text
-          )}`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data[0] && Array.isArray(data[0])) {
-            let translatedText = (data[0] as Array<[string]>).map((item) => item?.[0] || "").join("");
-            if (translatedText) {
-              if (!text.endsWith(".")) {
-                translatedText = translatedText.replace(/[\.។]+$/, "").trim();
-              }
-              newTranslations[text] = translatedText;
-              newTranslations[text.trim()] = translatedText;
-            }
-          }
-        }
-      } catch (e) {
-        try {
-          const res2 = await fetch(
-            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|km`
-          );
-          if (res2.ok) {
-            const data2 = await res2.json();
-            if (data2?.responseData?.translatedText) {
-              let translatedText = data2.responseData.translatedText;
-              if (!text.endsWith(".")) {
-                translatedText = translatedText.replace(/[\.។]+$/, "").trim();
-              }
-              newTranslations[text] = translatedText;
-              newTranslations[text.trim()] = translatedText;
-            }
-          }
-        } catch (err) {}
+      if (!text || text.length > MAX_AUTO_TRANSLATE_LENGTH) continue;
+      const translated = await translateToKhmer(text);
+      if (translated) {
+        newTranslations[text] = translated;
+        newTranslations[text.trim()] = translated;
       }
     }
 
@@ -518,20 +533,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       setAutoTranslations((prev) => {
         const updated = { ...prev, ...newTranslations };
         try {
-          localStorage.setItem("auto_translations_km", JSON.stringify(updated));
-        } catch (e) {}
+          localStorage.setItem(TRANSLATION_CACHE_KEY, JSON.stringify(updated));
+        } catch {}
         return updated;
       });
     }
   }, []);
 
   useEffect(() => {
-    if (language === "km" && pendingQueue.current.size > 0) {
-      const timer = setTimeout(() => {
-        processBatchQueue();
-      }, 150);
-      return () => clearTimeout(timer);
-    }
+    if (language !== "km" || pendingQueue.current.size === 0) return;
+    const timer = setTimeout(processBatchQueue, 150);
+    return () => clearTimeout(timer);
   }, [language, autoTranslations, processBatchQueue]);
 
   const t = useCallback(
@@ -541,51 +553,25 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
       const trimmedKey = key.trim();
       const upperKey = trimmedKey.toUpperCase();
+      if (upperKey === "S" || upperKey === "M" || upperKey === "L") return upperKey;
 
-      if (upperKey === "S" || upperKey === "M" || upperKey === "L") {
-        return upperKey;
+      const staticMatch =
+        staticTranslations.km[trimmedKey] ||
+        staticTranslations.km[key] ||
+        staticKmByLowerKey.get(trimmedKey.toLowerCase());
+      if (staticMatch) return staticMatch;
+
+      for (const { prefix, label, translateValue } of OPTION_PREFIXES) {
+        if (!trimmedKey.startsWith(prefix)) continue;
+        const value = trimmedKey.slice(prefix.length).trim();
+        const shown = translateValue ? staticTranslations.km[value] || autoTranslations[value] || value : value;
+        return `${label}: ${shown}`;
       }
 
-      const lowerKey = trimmedKey.toLowerCase();
+      const autoMatch = autoTranslations[trimmedKey] || autoTranslations[key];
+      if (autoMatch) return autoMatch;
 
-      if (staticTranslations.km[trimmedKey]) return staticTranslations.km[trimmedKey];
-      if (staticTranslations.km[key]) return staticTranslations.km[key];
-
-      const staticKeys = Object.keys(staticTranslations.km);
-      const foundStaticKey = staticKeys.find((k) => k.toLowerCase() === lowerKey);
-      if (foundStaticKey) return staticTranslations.km[foundStaticKey];
-
-      if (trimmedKey.startsWith("Size:")) {
-        const val = trimmedKey.replace("Size:", "").trim();
-        return `ទំហំ: ${val}`;
-      }
-      if (trimmedKey.startsWith("Quantity:")) {
-        const val = trimmedKey.replace("Quantity:", "").trim();
-        return `ចំនួន: ${val}`;
-      }
-      if (trimmedKey.startsWith("Ice:")) {
-        const val = trimmedKey.replace("Ice:", "").trim();
-        const translatedVal = staticTranslations.km[val] || autoTranslations[val] || val;
-        return `ទឹកកក: ${translatedVal}`;
-      }
-      if (trimmedKey.startsWith("Sugar:")) {
-        const val = trimmedKey.replace("Sugar:", "").trim();
-        const translatedVal = staticTranslations.km[val] || autoTranslations[val] || val;
-        return `ស្ករ: ${translatedVal}`;
-      }
-      if (trimmedKey.startsWith("Milk:")) {
-        const val = trimmedKey.replace("Milk:", "").trim();
-        const translatedVal = staticTranslations.km[val] || autoTranslations[val] || val;
-        return `ទឹកដោះគោ: ${translatedVal}`;
-      }
-
-      if (autoTranslations[trimmedKey]) return autoTranslations[trimmedKey];
-      if (autoTranslations[key]) return autoTranslations[key];
-
-      if (typeof window !== "undefined" && language === "km") {
-        pendingQueue.current.add(key);
-      }
-
+      if (typeof window !== "undefined") pendingQueue.current.add(key);
       return key;
     },
     [language, autoTranslations]

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -49,9 +50,11 @@ export function LocationpageView() {
       </div>
       <div className="location_page_grid">
         <div className="location_page_image_box group">
-          <img
+          <Image
             src="/images/590st%20cafe.jpg"
             alt="590st CAFE Location"
+            fill
+            sizes="(min-width: 1024px) 50vw, 100vw"
             className="location_page_image"
           />
           <div className="location_image_overlay_gradient" />
