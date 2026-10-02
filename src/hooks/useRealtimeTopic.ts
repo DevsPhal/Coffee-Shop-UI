@@ -6,14 +6,14 @@ import { getAccessToken, isAuthenticated } from "@/lib/authStorage";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "wss://api.590stcafe.shop/ws";
 
-export function useRealtimeTopic<T>(topic: string, onMessage: (message: T) => void) {
+export function useRealtimeTopic<T>(topic: string, onMessage: (message: T) => void, enabled = true) {
   const onMessageRef = useRef(onMessage);
   useEffect(() => {
     onMessageRef.current = onMessage;
   }, [onMessage]);
 
   useEffect(() => {
-    if (!isAuthenticated()) return;
+    if (!enabled || !isAuthenticated()) return;
 
     const client = new Client({
       brokerURL: WS_URL,
@@ -37,5 +37,5 @@ export function useRealtimeTopic<T>(topic: string, onMessage: (message: T) => vo
     return () => {
       client.deactivate();
     };
-  }, [topic]);
+  }, [topic, enabled]);
 }

@@ -13,6 +13,7 @@ import { useListMyOrdersQuery } from "@/store/api/orderApi";
 import { toTitleCase } from "@/lib/utils";
 import type { OrderResponse, OrderStatus } from "@/store/api/types";
 import { useLanguage } from "@/components/ui/translatetokhmer";
+import { OrderEstimateBadge } from "@/components/common/OrderEstimate";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { EmptyState, ErrorState, LoadingRegion, OrderCardSkeleton } from "@/components/ui/states";
 import "@/app/globals.scss";
@@ -178,6 +179,7 @@ export function OrderhistorypageView() {
                   >
                     {order.status}
                   </span>
+                  <OrderEstimateBadge order={order} />
                 </div>
                 <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" />

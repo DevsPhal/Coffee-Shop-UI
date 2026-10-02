@@ -29,6 +29,7 @@ import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { cleanPhoneInput, formatPhone, phoneInputProps, PHONE_PATTERN, samePhone } from "@/lib/phoneUtils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
+import { OrderEstimateBadge } from "@/components/common/OrderEstimate";
 import {
   ErrorState,
   LoadingRegion,
@@ -687,6 +688,7 @@ export function UserprofilepageView() {
                               >
                                 {order.status}
                               </span>
+                              <OrderEstimateBadge order={order} />
                             </div>
                             <span className="history_meta_date">
                               <Clock className="w-3 h-3" />

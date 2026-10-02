@@ -7,6 +7,7 @@ import type {
   OrderStatus,
   PageQuery,
   PageResponse,
+  StaffCallRequest,
   StaffCallResponse,
   UUID,
 } from "./types";
@@ -17,8 +18,8 @@ interface OrderListQuery extends PageQuery {
 
 export const orderApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    callStaff: builder.mutation<StaffCallResponse, UUID>({
-      query: (id) => ({ url: `/api/customer/orders/${id}/call-staff`, method: "POST" }),
+    callStaff: builder.mutation<StaffCallResponse, { id: UUID; body: StaffCallRequest }>({
+      query: ({ id, body }) => ({ url: `/api/customer/orders/${id}/call-staff`, method: "POST", body }),
       transformResponse: unwrap<StaffCallResponse>,
     }),
     listMyOrders: builder.query<PageResponse<OrderResponse>, OrderListQuery | void>({

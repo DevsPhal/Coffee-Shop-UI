@@ -3,6 +3,6 @@
 import { useRealtimeTopic } from "./useRealtimeTopic";
 import type { StaffCallMessage } from "@/store/api/types";
 
-export function useStaffCallUpdates(onMessage: (message: StaffCallMessage) => void) {
-  useRealtimeTopic<StaffCallMessage>("/user/queue/staff-calls", onMessage);
+export function useStaffCallUpdates(onMessage: (message: StaffCallMessage) => void, enabled = true) {
+  useRealtimeTopic<StaffCallMessage>("/user/queue/staff-calls", onMessage, enabled);
 }

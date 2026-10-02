@@ -7,6 +7,7 @@ import { LanguageProvider } from "@/components/ui/translatetokhmer";
 import ScrollObserver from "@/components/common/ScrollObserver";
 import PointerCapturePolyfill from "@/components/common/PointerCapturePolyfill";
 import RealtimeCatalogSync from "@/components/RealtimeCatalogSync";
+import OrderNotifications from "@/components/OrderNotifications";
 import LoginWelcome from "@/components/LoginWelcome";
 import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
@@ -56,6 +57,7 @@ export default function RootLayout({
                 <ScrollObserver />
                 <PointerCapturePolyfill />
                 <RealtimeCatalogSync />
+                <OrderNotifications />
                 <LoginWelcome />
                 {children}
                 <Toaster />

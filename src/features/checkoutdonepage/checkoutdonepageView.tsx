@@ -28,11 +28,14 @@ import {
 } from "@/store/api/orderApi";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
+import { useEstimateLabel } from "@/components/common/OrderEstimate";
 import { useStaffCallUpdates } from "@/hooks/useStaffCallUpdates";
 import { ICE_LABELS, MILK_LABELS, SUGAR_LABELS, VARIANT_LABELS } from "@/store/api/optionMapping";
 import { toTitleCase } from "@/lib/utils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { PaymentMethodModal } from "@/components/ui/PaymentMethodModal";
+import { StaffCallReasonModal } from "@/components/ui/StaffCallReasonModal";
+import type { StaffCallReason } from "@/store/api/types";
 import { EmptyState, ErrorState, PageLoader } from "@/components/ui/states";
 import "@/app/globals.scss";
 
@@ -58,12 +61,13 @@ export function CheckoutdonepageView() {
   const storedCheckout = useSyncExternalStore(subscribeToStorage, readStoredCheckout, () => null);
   const stored = useMemo(() => {
     try { return JSON.parse(storedCheckout ?? "null") as {
-      orderId?: string; customerName?: string; location?: string; estimatedTime?: string; paymentType?: string;
+      orderId?: string; customerName?: string; location?: string; paymentType?: string;
     } | null; } catch { return null; }
   }, [storedCheckout]);
   const targetId = urlOrderId || stored?.orderId || "";
   const delivery = stored?.orderId === targetId ? stored : null;
   const [callStaffModal, setCallStaffModal] = useState(false);
+  const [reasonModalOpen, setReasonModalOpen] = useState(false);
   const [isCoolingDown, setIsCoolingDown] = useState(false);
   const [staffAnswered, setStaffAnswered] = useState(false);
   const [callStaff, { isLoading: isCallingStaff }] = useCallStaffMutation();
@@ -85,12 +89,6 @@ export function CheckoutdonepageView() {
   useStaffCallUpdates((message) => {
     if (message.orderId === targetId && message.type === "ANSWERED") {
       setStaffAnswered(true);
-      toast.add({
-        type: "success",
-        description: message.answeredByName
-          ? `${message.answeredByName} is on the way to help.`
-          : "Staff is on the way to help.",
-      });
     }
   });
 
@@ -108,7 +106,7 @@ export function CheckoutdonepageView() {
   const displayCustomerName =
     order?.contactName || order?.customerName || delivery?.customerName || currentUser?.fullName || "Customer";
   const displayLocation = order?.deliveryAddress || (order?.fulfillmentMethod === "PICKUP" ? "Pickup at Store" : delivery?.location) || "Pickup at Store";
-  const displayEstimatedTime = delivery?.estimatedTime || (order?.fulfillmentMethod === "DELIVERY" ? "10–15 mins (estimate)" : "5 mins (estimate)");
+  const displayEstimatedTime = useEstimateLabel(order);
 
 
   const currentStep =
@@ -178,10 +176,16 @@ export function CheckoutdonepageView() {
     return effectiveStep > 3 ? "done" : effectiveStep === 3 ? "current" : "todo";
   };
 
-  const handleCallStaff = async () => {
+  const handleOpenCallStaff = () => {
+    if (isCallingStaff || !targetId || isCoolingDown) return;
+    setReasonModalOpen(true);
+  };
+
+  const handleCallStaff = async (reason: StaffCallReason, note: string) => {
     if (isCallingStaff || !targetId || isCoolingDown) return;
     try {
-      const result = await callStaff(targetId).unwrap();
+      const result = await callStaff({ id: targetId, body: { reason, note: note || undefined } }).unwrap();
+      setReasonModalOpen(false);
       setStaffAnswered(false);
       setCallStaffModal(true);
 
@@ -525,7 +529,7 @@ export function CheckoutdonepageView() {
         <div className="desktop_actions">
           <button
             type="button"
-            onClick={handleCallStaff}
+            onClick={handleOpenCallStaff}
             disabled={isCallingStaff || isCoolingDown}
             className="btn_desktop_staff"
           >
@@ -543,7 +547,7 @@ export function CheckoutdonepageView() {
         <div className="mobile_bottom_bar">
           <button
             type="button"
-            onClick={handleCallStaff}
+            onClick={handleOpenCallStaff}
             disabled={isCallingStaff || isCoolingDown}
             className="btn_mobile_staff"
           >
@@ -576,6 +580,13 @@ export function CheckoutdonepageView() {
           </button>
         </ModalContent>
       </Modal>
+
+      <StaffCallReasonModal
+        open={reasonModalOpen}
+        onOpenChange={setReasonModalOpen}
+        isDelivery={isDelivery}
+        onConfirm={handleCallStaff}
+      />
 
       <PaymentMethodModal
         open={isPaymentModalOpen}

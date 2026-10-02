@@ -332,7 +332,6 @@ export function CheckoutpageView() {
           customerName:
             (fullName || "").trim() || currentUser?.fullName || "Customer",
           location: deliveryLocation,
-          estimatedTime: isDelivery ? "10 - 15 mins" : "5 mins",
           paymentType,
         })
       );
