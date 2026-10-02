@@ -8,6 +8,7 @@ import { toStoreProduct } from "@/store/api/productAdapter";
 import { useCatalog } from "@/store/api/useCatalog";
 import { Search, SearchX } from "lucide-react";
 import { EmptyState, ErrorState, LoadingRegion, ProductCardSkeletons } from "@/components/ui/states";
+import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
@@ -18,6 +19,16 @@ export function DrinkpageView() {
   const { products, isLoading, error, refetch } = useCatalog(
     selectedCategory === ALL_CATEGORIES ? undefined : selectedCategory
   );
+
+  // Already showing everything and it's still empty: switching category would do nothing, so say why.
+  const showAllOrNotify = () => {
+    if (selectedCategory === ALL_CATEGORIES) {
+      void refetch();
+      toast.add({ type: "info", description: "There are no drinks on the menu right now — please check back soon." });
+      return;
+    }
+    setSelectedCategory(ALL_CATEGORIES);
+  };
 
   const filteredProducts = products
     .filter((product) => {
@@ -105,7 +116,7 @@ export function DrinkpageView() {
             action={
               searchQuery.trim()
                 ? { label: "Clear search", onClick: () => setSearchQuery("") }
-                : { label: "View all drinks", onClick: () => setSelectedCategory(ALL_CATEGORIES) }
+                : { label: "View all drinks", onClick: showAllOrNotify }
             }
             className="my-8"
           />

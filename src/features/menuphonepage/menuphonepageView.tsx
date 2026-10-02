@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/states";
 import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidation";
 import SelectSizeModal from "@/components/ui/SelectSizeModal";
+import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { useMounted } from "@/hooks/useMounted";
@@ -195,6 +196,16 @@ export function MenupageView() {
     selectedCategory === ALL_CATEGORIES ? undefined : selectedCategory
   );
 
+  // Already showing everything and it's still empty: switching category would do nothing, so say why.
+  const showAllOrNotify = () => {
+    if (selectedCategory === ALL_CATEGORIES) {
+      void refetch();
+      toast.add({ type: "info", description: "The menu is empty right now — please check back soon." });
+      return;
+    }
+    setSelectedCategory(ALL_CATEGORIES);
+  };
+
   useEffect(() => {
     if (queryCategory) {
       setSelectedCategory(queryCategory);
@@ -346,7 +357,7 @@ export function MenupageView() {
             action={
               searchQuery.trim()
                 ? { label: "Clear search", onClick: () => setSearchQuery("") }
-                : { label: "View all products", onClick: () => setSelectedCategory(ALL_CATEGORIES) }
+                : { label: "View all products", onClick: showAllOrNotify }
             }
             className="my-6"
           />

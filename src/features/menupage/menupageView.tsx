@@ -16,6 +16,7 @@ import {
   ProductCardSkeletons,
   Skeleton,
 } from "@/components/ui/states";
+import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
@@ -49,6 +50,16 @@ export function MenupageView() {
   const { products, isLoading, error, refetch } = useCatalog(
     selectedCategory === ALL_CATEGORIES || isFeatured ? undefined : selectedCategory
   );
+
+  // Already showing everything and it's still empty: switching category would do nothing, so say why.
+  const showAllOrNotify = () => {
+    if (selectedCategory === ALL_CATEGORIES) {
+      void refetch();
+      toast.add({ type: "info", description: "The menu is empty right now — please check back soon." });
+      return;
+    }
+    setSelectedCategory(ALL_CATEGORIES);
+  };
 
   const rawFilteredProducts = products
     .filter((product) => (isFeatured ? product.discountActive : true))
@@ -187,7 +198,7 @@ export function MenupageView() {
             action={
               searchQuery.trim()
                 ? { label: "Clear search", onClick: () => setSearchQuery("") }
-                : { label: "View all products", onClick: () => setSelectedCategory(ALL_CATEGORIES) }
+                : { label: "View all products", onClick: showAllOrNotify }
             }
             className="my-8"
           />
