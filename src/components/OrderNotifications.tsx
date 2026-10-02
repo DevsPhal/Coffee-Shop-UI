@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
 
 import { toast } from "@/components/ui/toast";
 import { useLanguage } from "@/components/ui/translatetokhmer";
@@ -9,6 +10,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { useStaffCallUpdates } from "@/hooks/useStaffCallUpdates";
 import { getOrderEstimate } from "@/lib/estimate";
+import { baseApi } from "@/store/api/baseApi";
+import type { AppDispatch } from "@/store/redux";
 import type { OrderResponse, OrderUpdateMessage, StaffCallMessage } from "@/store/api/types";
 
 type ToastType = "success" | "info" | "warning";
@@ -27,6 +30,7 @@ export function OrderNotifications() {
   const { t } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
+  const dispatch = useDispatch<AppDispatch>();
 
   const estimateText = useCallback(
     (order: OrderResponse) => {
@@ -45,11 +49,7 @@ export function OrderNotifications() {
       const id = shortId(order.id);
       switch (action) {
         case "PREPARING":
-          return {
-            type: "success",
-            title: t("Your order is being prepared"),
-            description: estimateText(order) ?? id,
-          };
+          return { type: "success", title: t("Your order is being prepared"), description: estimateText(order) ?? id };
         case "ESTIMATE_SET": {
           const estimate = estimateText(order);
           return estimate ? { type: "info", title: t("Estimated time updated"), description: estimate } : null;
@@ -105,18 +105,18 @@ export function OrderNotifications() {
     useCallback(
       (message: StaffCallMessage) => {
         if (message.type !== "ANSWERED") return;
+        dispatch(baseApi.util.invalidateTags([{ type: "StaffCall", id: message.orderId }]));
+        const who = message.answeredByName || t("Staff");
         show(
           {
             type: "success",
-            title: t("Staff is on the way"),
-            description: message.answeredByName
-              ? `${message.answeredByName} ${t("is coming to help you.")}`
-              : t("Someone is coming to help you."),
+            title: `${who} ${t("responded to your request")}`,
+            description: message.reply ? `“${message.reply}”` : t("A staff member is on the way to help."),
           },
           message.orderId
         );
       },
-      [show, t]
+      [dispatch, show, t]
     ),
     isLoggedIn
   );

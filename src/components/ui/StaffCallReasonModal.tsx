@@ -39,6 +39,10 @@ const REASONS: ReasonOption[] = [
   { value: "OTHER", label: "Something else", hint: "Tell us what you need", icon: MessageSquare },
 ];
 
+export const STAFF_CALL_REASON_LABELS = Object.fromEntries(
+  REASONS.map(({ value, label }) => [value, label]),
+) as Record<StaffCallReason, string>;
+
 export interface StaffCallReasonModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

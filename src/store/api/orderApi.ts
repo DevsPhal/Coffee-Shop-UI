@@ -21,6 +21,12 @@ export const orderApi = baseApi.injectEndpoints({
     callStaff: builder.mutation<StaffCallResponse, { id: UUID; body: StaffCallRequest }>({
       query: ({ id, body }) => ({ url: `/api/customer/orders/${id}/call-staff`, method: "POST", body }),
       transformResponse: unwrap<StaffCallResponse>,
+      invalidatesTags: (_result, _error, { id }) => [{ type: "StaffCall", id }],
+    }),
+    getMyStaffCall: builder.query<StaffCallResponse | null, UUID>({
+      query: (id) => `/api/customer/orders/${id}/staff-call`,
+      transformResponse: unwrap<StaffCallResponse | null>,
+      providesTags: (_result, _error, id) => [{ type: "StaffCall", id }],
     }),
     listMyOrders: builder.query<PageResponse<OrderResponse>, OrderListQuery | void>({
       query: (params) => ({
@@ -110,4 +116,5 @@ export const {
   useConfirmBakongPaymentMutation,
   useCancelMyOrderMutation,
   useCallStaffMutation,
+  useGetMyStaffCallQuery,
 } = orderApi;

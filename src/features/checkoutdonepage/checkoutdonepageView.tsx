@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useSyncExternalStore } from "react";
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -18,23 +18,25 @@ import {
   ConciergeBell,
   UtensilsCrossed,
   XCircle,
+  MessageCircleReply,
 } from "lucide-react";
 import { isAuthenticated } from "@/lib/authStorage";
 import { useGetCurrentUserQuery } from "@/store/api/authApi";
 import {
   useGetMyOrderQuery,
   useCallStaffMutation,
+  useGetMyStaffCallQuery,
   usePayCashOnPickupMutation,
 } from "@/store/api/orderApi";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { useEstimateLabel } from "@/components/common/OrderEstimate";
-import { useStaffCallUpdates } from "@/hooks/useStaffCallUpdates";
+import { formatShopClock, parseShopDateTime } from "@/lib/estimate";
 import { ICE_LABELS, MILK_LABELS, SUGAR_LABELS, VARIANT_LABELS } from "@/store/api/optionMapping";
 import { toTitleCase } from "@/lib/utils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { PaymentMethodModal } from "@/components/ui/PaymentMethodModal";
-import { StaffCallReasonModal } from "@/components/ui/StaffCallReasonModal";
+import { STAFF_CALL_REASON_LABELS, StaffCallReasonModal } from "@/components/ui/StaffCallReasonModal";
 import type { StaffCallReason } from "@/store/api/types";
 import { EmptyState, ErrorState, PageLoader } from "@/components/ui/states";
 import "@/app/globals.scss";
@@ -68,8 +70,6 @@ export function CheckoutdonepageView() {
   const delivery = stored?.orderId === targetId ? stored : null;
   const [callStaffModal, setCallStaffModal] = useState(false);
   const [reasonModalOpen, setReasonModalOpen] = useState(false);
-  const [isCoolingDown, setIsCoolingDown] = useState(false);
-  const [staffAnswered, setStaffAnswered] = useState(false);
   const [callStaff, { isLoading: isCallingStaff }] = useCallStaffMutation();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [payCashOnPickup] = usePayCashOnPickupMutation();
@@ -86,11 +86,20 @@ export function CheckoutdonepageView() {
     }
   });
 
-  useStaffCallUpdates((message) => {
-    if (message.orderId === targetId && message.type === "ANSWERED") {
-      setStaffAnswered(true);
-    }
+  const { currentData: staffCall } = useGetMyStaffCallQuery(targetId, {
+    skip: !targetId,
+    refetchOnMountOrArgChange: true,
   });
+  const cooldownUntil = staffCall?.nextCallAllowedAt ? parseShopDateTime(staffCall.nextCallAllowedAt).getTime() : 0;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const wait = cooldownUntil - Date.now();
+    if (wait <= 0) return;
+    const timer = setTimeout(() => setNow(Date.now()), wait + 100);
+    return () => clearTimeout(timer);
+  }, [cooldownUntil]);
+  const isCoolingDown = cooldownUntil > now;
+  const staffAnswered = staffCall?.status === "ANSWERED";
 
   const displayItems = order?.items ?? [];
   const calculatedSubtotal = displayItems.reduce((sum, item) => sum + Number(item.subtotal), 0);
@@ -184,28 +193,22 @@ export function CheckoutdonepageView() {
   const handleCallStaff = async (reason: StaffCallReason, note: string) => {
     if (isCallingStaff || !targetId || isCoolingDown) return;
     try {
-      const result = await callStaff({ id: targetId, body: { reason, note: note || undefined } }).unwrap();
+      await callStaff({ id: targetId, body: { reason, note: note || undefined } }).unwrap();
       setReasonModalOpen(false);
-      setStaffAnswered(false);
       setCallStaffModal(true);
-
-      const waitMs = result.nextCallAllowedAt
-        ? new Date(result.nextCallAllowedAt).getTime() - Date.now()
-        : 0;
-      if (waitMs > 0) {
-        setIsCoolingDown(true);
-        setTimeout(() => setIsCoolingDown(false), waitMs);
-      }
     } catch (error) {
       toast.add({ type: "error", description: apiErrorMessage(error as never, "Could not notify staff. Please try again.") });
     }
   };
 
-  const callStaffLabel = staffAnswered
-    ? "Staff is Coming"
-    : isCoolingDown
-      ? "Staff Notified"
-      : "Call Staff";
+  const callStaffLabel = isCoolingDown
+    ? "Staff Notified"
+    : staffAnswered
+      ? "Call Staff Again"
+      : staffCall?.status === "OPEN"
+        ? "Update Request"
+        : "Call Staff";
+  const formatTime = (value: string | null) => (value ? formatShopClock(parseShopDateTime(value)) : "");
 
   const handleChoosePayment = async (chosenMethod: "QR Scan" | "Cash") => {
     if (!targetId) return;
@@ -268,6 +271,51 @@ export function CheckoutdonepageView() {
           <span role="alert" className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700">
             {t("Could not refresh order progress. Retrying automatically.")}
           </span>
+        </div>
+      )}
+      {staffCall && !isCancelled && (
+        <div className="p-4 flex justify-center">
+          <div
+            role="status"
+            aria-live="polite"
+            className={`w-full max-w-xl rounded-2xl border px-4 py-3 text-left ${
+              staffAnswered ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  staffAnswered ? "bg-emerald-600 text-white" : "bg-amber-500 text-white"
+                }`}
+              >
+                {staffAnswered ? <MessageCircleReply className="w-4 h-4" /> : <ConciergeBell className="w-4 h-4" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm font-bold ${staffAnswered ? "text-emerald-800" : "text-amber-800"}`}>
+                  {staffAnswered
+                    ? `${staffCall.answeredByName || t("Staff")} ${t("responded to your request")}`
+                    : t("Waiting for a staff member to respond")}
+                </p>
+                <p className="text-xs text-gray-600 mt-0.5" suppressHydrationWarning>
+                  {t(STAFF_CALL_REASON_LABELS[staffCall.reason])}
+                  {" · "}
+                  {staffAnswered
+                    ? `${t("answered at")} ${formatTime(staffCall.answeredAt)}`
+                    : `${t("called at")} ${formatTime(staffCall.calledAt)}`}
+                </p>
+                {staffCall.note && (
+                  <p className="text-xs text-gray-500 mt-1 break-words">
+                    {t("Your note:")} &ldquo;{staffCall.note}&rdquo;
+                  </p>
+                )}
+                {staffAnswered && (
+                  <p className="mt-2 rounded-xl bg-white border border-emerald-100 px-3 py-2 text-sm text-gray-900 break-words">
+                    {staffCall.reply ? `“${staffCall.reply}”` : t("A staff member is on the way to help.")}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
       {isDeliveryFeePending && (
