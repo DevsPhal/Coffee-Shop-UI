@@ -188,7 +188,7 @@ export function ProductpageView({
           </Link>
           <span className="breadcrumb_separator">»</span>
           <Link
-            href={`${menuBaseUrl}?category=${encodeURIComponent(displayCategory)}`}
+            href={`${menuBaseUrl}?category=${encodeURIComponent(product?.categoryId ?? displayCategory)}`}
             className="breadcrumb_link"
           >
             {t(displayCategory)}
@@ -234,7 +234,7 @@ export function ProductpageView({
               <h2 className="product_name">{t(displayTitle)}</h2>
 
               <div className="category_badge_wrapper">
-                <Link href={`${menuBaseUrl}?category=${encodeURIComponent(displayCategory)}`}>
+                <Link href={`${menuBaseUrl}?category=${encodeURIComponent(product?.categoryId ?? displayCategory)}`}>
                   <span className="category_badge">
                     {t(displayCategory)}
                   </span>

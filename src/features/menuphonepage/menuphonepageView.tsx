@@ -8,7 +8,8 @@ import { useSearchParams } from "next/navigation";
 import { CategoryDropdown } from "@/components/ui";
 import { ALL_CATEGORIES } from "@/components/ui/CategoryDropdown";
 import { resolveProductImage, toStoreProduct, type StoreProduct } from "@/store/api/productAdapter";
-import { useCatalog } from "@/store/api/useCatalog";
+import { useCatalog, useCategories } from "@/store/api/useCatalog";
+import { isCategoryId, useCategoryQuery } from "@/lib/categoryParam";
 import type { SizeSelection } from "@/components/ui/SelectSizeModal";
 import { useCart } from "@/context/CartContext";
 import { useRequireLogin } from "@/hooks/useRequireLogin";
@@ -194,7 +195,7 @@ export function MenupageView() {
   const mounted = useMounted();
 
   const { products, isLoading, error, refetch } = useCatalog(
-    selectedCategory === ALL_CATEGORIES ? undefined : selectedCategory
+    isCategoryId(selectedCategory) ? selectedCategory : undefined
   );
 
   // Already showing everything and it's still empty: switching category would do nothing, so say why.
@@ -207,11 +208,8 @@ export function MenupageView() {
     setSelectedCategory(ALL_CATEGORIES);
   };
 
-  useEffect(() => {
-    if (queryCategory) {
-      setSelectedCategory(queryCategory);
-    }
-  }, [queryCategory, setSelectedCategory]);
+  const { categories } = useCategories();
+  useCategoryQuery({ queryCategory, selectedCategory, setSelectedCategory, categories });
 
   useEffect(() => {
     if (activeModalProduct) {

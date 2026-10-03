@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/cards/card";
 import { ALL_CATEGORIES, CategoryDropdown } from "@/components/ui/CategoryDropdown";
@@ -19,6 +19,7 @@ import {
 import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { isCategoryId, useCategoryQuery } from "@/lib/categoryParam";
 
 const FEATURED = "Featured";
 
@@ -38,17 +39,12 @@ export function MenupageView() {
   const [searchQuery, setSearchQuery] = usePersistentState<string>("menu:searchQuery", "");
   const [sortBy, setSortBy] = usePersistentState<string>("menu:sortBy", "newest");
 
-  useEffect(() => {
-    if (queryCategory) {
-      setSelectedCategory(queryCategory);
-    }
-  }, [queryCategory, setSelectedCategory]);
-
   const { categories } = useCategories();
+  useCategoryQuery({ queryCategory, selectedCategory, setSelectedCategory, categories, specialValues: [FEATURED] });
 
   const isFeatured = selectedCategory === FEATURED;
   const { products, isLoading, error, refetch } = useCatalog(
-    selectedCategory === ALL_CATEGORIES || isFeatured ? undefined : selectedCategory
+    isCategoryId(selectedCategory) ? selectedCategory : undefined
   );
 
   // Already showing everything and it's still empty: switching category would do nothing, so say why.
