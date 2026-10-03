@@ -238,8 +238,8 @@ export function Card({
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 mb-4 w-full min-w-0">
-          <h3 className="card_title group-hover:underline mb-0 truncate min-w-0 flex-1" title={t(title)}>
+        <div className="flex flex-col items-start gap-1 mb-4 w-full min-w-0">
+          <h3 className="card_title product_card_title group-hover:underline mb-0 w-full" title={t(title)}>
             {t(title)}
           </h3>
 

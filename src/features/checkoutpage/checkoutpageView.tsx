@@ -15,7 +15,8 @@ import { shippingInformationSchema } from "@/lib/authSchema";
 import { cleanPhoneInput, phoneInputProps } from "@/lib/phoneUtils";
 import { AlertCircle, Armchair, Check, MapPin, Navigation, Compass, Search, Loader2 } from "lucide-react";
 import { isAuthenticated } from "@/lib/authStorage";
-import { useDineInTable } from "@/lib/dineIn";
+import { normalizeTableNumber, setDineInTable, TABLE_NUMBER_PATTERN, useDineIn } from "@/lib/dineIn";
+import { useLazyGetTableQuery } from "@/store/api/tableApi";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import { useGetCurrentUserQuery } from "@/store/api/authApi";
 import { usePayCashOnPickupMutation } from "@/store/api/orderApi";
@@ -62,10 +63,13 @@ export function CheckoutpageView() {
   const [baristaNote, setBaristaNote] = usePersistentState("checkout:baristaNote", "");
   const [capital, setCapital] = usePersistentState("checkout:capital", "Phnom Penh");
   const [address, setAddress] = usePersistentState("checkout:address", "");
-  const dineInTable = useDineInTable();
-  // "dinein" is the default but only counts while a scanned table is remembered; otherwise it's pickup.
-  const [chosenMethod, setDeliveryMethod] = usePersistentState<"pickup" | "grab" | "dinein">("checkout:deliveryMethod", "dinein");
-  const deliveryMethod = chosenMethod === "dinein" && !dineInTable ? "pickup" : chosenMethod;
+  const dineIn = useDineIn();
+  // Until the customer picks a method, scanning a shop QR makes dine-in the default.
+  const [chosenMethod, setDeliveryMethod] = usePersistentState<"pickup" | "grab" | "dinein" | null>("checkout:deliveryMethod", null);
+  const deliveryMethod = chosenMethod ?? (dineIn.active ? "dinein" : "pickup");
+  const [tableInput, setTableInput] = useState<string | null>(null);
+  const tableNumber = normalizeTableNumber(tableInput ?? dineIn.tableNumber ?? "");
+  const [lookupTable, { isFetching: isCheckingTable }] = useLazyGetTableQuery();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
@@ -84,6 +88,7 @@ export function CheckoutpageView() {
     phone?: string;
     capital?: string;
     address?: string;
+    table?: string;
   }>({});
 
   const handleOpenMapModal = () => {
@@ -206,6 +211,7 @@ export function CheckoutpageView() {
 
   const handleSelectDeliveryMethod = (method: "pickup" | "grab" | "dinein") => {
     setDeliveryMethod(method);
+    if (method !== "dinein") setErrors((prev) => ({ ...prev, table: undefined }));
     if (method !== "grab") {
       setErrors((prev) => ({
         ...prev,
@@ -215,9 +221,34 @@ export function CheckoutpageView() {
     }
   };
 
-  const handlePlaceOrderNow = (e: React.MouseEvent) => {
+  // Confirms the typed table exists before the order is placed, and remembers it for this visit.
+  const confirmTable = async (): Promise<boolean> => {
+    if (!TABLE_NUMBER_PATTERN.test(tableNumber)) {
+      const message = tableNumber ? t("Use the number shown on your table, e.g. 05") : t("Enter your table number");
+      setErrors((prev) => ({ ...prev, table: message }));
+      toast.add({ type: "warning", description: message });
+      return false;
+    }
+    try {
+      const table = await lookupTable(tableNumber, true).unwrap();
+      setDineInTable(table.tableNumber);
+      setTableInput(null);
+      setErrors((prev) => ({ ...prev, table: undefined }));
+      return true;
+    } catch (err) {
+      const notFound = (err as { status?: unknown } | null)?.status === 404;
+      const message = notFound
+        ? `${t("Table")} ${tableNumber} ${t("doesn't exist. Check the number on your table.")}`
+        : apiErrorMessage(err as Parameters<typeof apiErrorMessage>[0], "Could not check the table number.");
+      setErrors((prev) => ({ ...prev, table: message }));
+      toast.add({ type: "warning", description: message });
+      return false;
+    }
+  };
+
+  const handlePlaceOrderNow = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isPlacing) return;
+    if (isPlacing || isCheckingTable) return;
     if (items.length === 0) {
       toast.add({
         type: "warning",
@@ -272,6 +303,8 @@ export function CheckoutpageView() {
 
     setErrors({});
 
+    if (deliveryMethod === "dinein" && !(await confirmTable())) return;
+
     if (deliveryMethod === "grab") {
       void handleSubmitDeliveryOrder();
     } else {
@@ -290,11 +323,11 @@ export function CheckoutpageView() {
     }
 
     const isDelivery = deliveryMethod === "grab";
-    const isDineIn = deliveryMethod === "dinein" && dineInTable !== null;
+    const isDineIn = deliveryMethod === "dinein";
     const deliveryLocation = isDelivery
       ? [address, capital].filter(Boolean).join(", ") || "Delivery Address"
       : isDineIn
-        ? `Table ${dineInTable}`
+        ? `Table ${tableNumber}`
         : "Pickup at Store";
 
     const order = await placeOrder({
@@ -305,7 +338,7 @@ export function CheckoutpageView() {
         contactName: fullName.trim(),
         contactPhone: phone.trim(),
         ...(isDelivery ? { address: deliveryLocation } : {}),
-        ...(isDineIn ? { tableNumber: dineInTable } : {}),
+        ...(isDineIn ? { tableNumber } : {}),
       },
     });
     if (!order) {
@@ -565,32 +598,31 @@ export function CheckoutpageView() {
             <h2 className="checkout_section_title">{t("Delivery Method")}</h2>
 
             <div className="checkout_delivery_options">
-              {dineInTable ? (
-                <div
-                  onClick={() => handleSelectDeliveryMethod("dinein")}
-                  className={`checkout_delivery_card ${
-                    deliveryMethod === "dinein" ? "checkout_delivery_card_active" : ""
-                  }`}
-                >
-                  <div className="checkout_delivery_card_content">
-                    <div className="checkout_delivery_logo_container">
-                      <Armchair className="h-7 w-7 text-[#A1255B]" aria-hidden />
-                    </div>
-                    <div>
-                      <h3 className="checkout_delivery_title">
-                        {t("Dine-in")} · {t("Table")} {dineInTable}
-                      </h3>
-                      <p className="checkout_delivery_price">{t("Served to your table")}</p>
-                    </div>
+              <div
+                onClick={() => handleSelectDeliveryMethod("dinein")}
+                className={`checkout_delivery_card ${
+                  deliveryMethod === "dinein" ? "checkout_delivery_card_active" : ""
+                }`}
+              >
+                <div className="checkout_delivery_card_content">
+                  <div className="checkout_delivery_logo_container">
+                    <Armchair className="h-7 w-7 text-[#A1255B]" aria-hidden />
                   </div>
-
-                  <div
-                    className={`checkout_radio_indicator ${
-                      deliveryMethod === "dinein" ? "checkout_radio_indicator_active" : ""
-                    }`}
-                  />
+                  <div>
+                    <h3 className="checkout_delivery_title">
+                      {t("Dine-in")}
+                      {deliveryMethod === "dinein" && tableNumber && !errors.table ? ` · ${t("Table")} ${tableNumber}` : ""}
+                    </h3>
+                    <p className="checkout_delivery_price">{t("Served to your table")}</p>
+                  </div>
                 </div>
-              ) : null}
+
+                <div
+                  className={`checkout_radio_indicator ${
+                    deliveryMethod === "dinein" ? "checkout_radio_indicator_active" : ""
+                  }`}
+                />
+              </div>
               <div
                 onClick={() => handleSelectDeliveryMethod("pickup")}
                 className={`checkout_delivery_card ${
@@ -643,6 +675,33 @@ export function CheckoutpageView() {
                   }`}
                 />
               </div>
+              {deliveryMethod === "dinein" ? (
+                <div className="checkout_table_field">
+                  <label htmlFor="checkout-table-number" className="checkout_field_label">
+                    {t("Table number")}
+                  </label>
+                  <Input
+                    id="checkout-table-number"
+                    value={tableInput ?? dineIn.tableNumber ?? ""}
+                    onChange={(e) => {
+                      setTableInput(e.target.value.toUpperCase().replace(/[^A-Za-z0-9-]/g, "").slice(0, 20));
+                      setErrors((prev) => ({ ...prev, table: undefined }));
+                    }}
+                    placeholder={t("e.g. 05")}
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    aria-invalid={Boolean(errors.table)}
+                    aria-describedby={errors.table ? "checkout-table-error" : "checkout-table-hint"}
+                    className={`checkout_input checkout_table_input ${errors.table ? "border-red-500" : ""}`}
+                  />
+                  {errors.table ? (
+                    <p id="checkout-table-error" className="checkout_table_error">{errors.table}</p>
+                  ) : (
+                    <p id="checkout-table-hint" className="checkout_table_hint">{t("You'll find the number on your table.")}</p>
+                  )}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -790,9 +849,10 @@ export function CheckoutpageView() {
             <button
               type="button"
               onClick={handlePlaceOrderNow}
+              disabled={isCheckingTable}
               className="checkout_submit_btn"
             >
-              {t("Place Order")}
+              {isCheckingTable ? t("Checking table...") : t("Place Order")}
             </button>
 
             <button

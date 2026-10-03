@@ -100,9 +100,9 @@ export function MenupageView() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-gray-200">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 mb-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl sm:text-2xl font-extrabold text-[#A1255B] tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-[#A1255B] tracking-tight whitespace-nowrap">
               {getPageTitle()}
             </h2>
             {isLoading ? (
@@ -114,7 +114,7 @@ export function MenupageView() {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-xs sm:text-sm font-semibold text-gray-600">
                 {t("Category:")}
@@ -134,7 +134,7 @@ export function MenupageView() {
 
             <form
               onSubmit={(e) => e.preventDefault()}
-              className="flex items-center rounded-full bg-white border border-gray-200 focus-within:border-[#A1255B] focus-within:ring-1 focus-within:ring-[#A1255B] p-1 pl-3.5 shadow-2xs transition-all flex-1 sm:flex-none sm:w-64"
+              className="flex items-center rounded-full bg-white border border-gray-200 focus-within:border-[#A1255B] focus-within:ring-1 focus-within:ring-[#A1255B] p-1 pl-3.5 shadow-2xs transition-all flex-1 min-w-[12rem] lg:flex-none lg:w-64"
             >
               <Search className="w-4 h-4 text-gray-400 shrink-0 mr-2 pointer-events-none" />
               <input
@@ -175,7 +175,7 @@ export function MenupageView() {
         {isLoading ? (
           <LoadingRegion
             label="Loading menu..."
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
           >
             <ProductCardSkeletons count={8} />
           </LoadingRegion>
@@ -203,7 +203,7 @@ export function MenupageView() {
             className="my-8"
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {sortedProducts.map((product) => (
               <Card key={product.id} product={product} />
             ))}

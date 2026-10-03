@@ -135,7 +135,7 @@ export function Navbar() {
                   src={selectedLanguage.flag}
                   alt={selectedLanguage.label}
                   width={20}
-                  height={14}
+                  height={20}
                   className="h-4 w-4 sm:h-5 sm:w-5 rounded-lg object-cover"
                 />
                 <ChevronDown className={`h-3 w-3 text-gray-700 transition-transform ${isLangOpen ? "rotate-180" : ""}`} />
@@ -161,7 +161,7 @@ export function Navbar() {
                         src={languageItem.flag}
                         alt={languageItem.label}
                         width={24}
-                        height={16}
+                        height={24}
                         className="h-5 w-5 rounded-lg object-cover shrink-0"
                       />
                       <span>{languageItem.label}</span>
@@ -217,14 +217,14 @@ export function Navbar() {
         pathname === "/checkout"
       ) && (
         <div className="mobile_nav_bottom_bar fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] py-2 px-1 w-full max-w-full overflow-x-hidden" suppressHydrationWarning>
-          <div className="max-w-md mx-auto flex items-center justify-around gap_10">
+          <div className="w-full max-w-md mx-auto flex items-center justify-between">
             {mobileNavItems.map((item) => {
               const active = isMobileNavActive(item.href);
               const Icon = item.icon;
 
               if (item.pending) {
                 return (
-                  <span key="account" className="flex items-center justify-center p-2.5" aria-hidden>
+                  <span key="account" className="flex h-11 min-w-0 flex-1 items-center justify-center" aria-hidden>
                     <Skeleton className="h-6 w-6 rounded-full" />
                   </span>
                 );
@@ -234,11 +234,15 @@ export function Navbar() {
                 <Link
                   key={item.key}
                   href={item.href}
-                  className={`flex items-center justify-center p-2.5 rounded-full transition-all duration-200 ${
-                    active ? "bg-[#A1255B]/15 scale-110" : "hover:bg-gray-100"
-                  }`}
+                  aria-label={displayT(item.key)}
+                  aria-current={active ? "page" : undefined}
+                  className="flex h-11 min-w-0 flex-1 items-center justify-center"
                 >
-                  <div className="icon-wrapper flex items-center justify-center">
+                  <div
+                    className={`icon-wrapper flex h-11 w-11 items-center justify-center rounded-full transition-all duration-200 ${
+                      active ? "bg-[#A1255B]/15 scale-110" : "hover:bg-gray-100"
+                    }`}
+                  >
                     <Icon
                       className={`nav-icon h-6 w-6 transition-all duration-200 ${
                         active ? "text-[#A1255B]" : "text-gray-500 opacity-60 hover:opacity-100"

@@ -124,18 +124,14 @@ export function PhoneCard({
         </div>
 
         <div className="card-info flex-1 min-w-0 overflow-hidden">
-          <div className="title-row inline-flex items-center gap-1.5 min-w-0 max-w-full overflow-hidden flex-wrap">
-            <h3 className="item-title truncate min-w-0 flex-initial">
+          <div className="title-row flex items-start gap-1.5 min-w-0">
+            <h3 className="item-title line-clamp-2 break-words min-w-0 flex-1" title={t(product.title)}>
               {t(product.title)}
             </h3>
-            {isPromotion && (
-              <span className="bg-[#A1255B] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
-                PROMO
-              </span>
-            )}
             <button
               type="button"
               title="Product Details"
+              aria-label={`${t("Product Details")}: ${t(product.title)}`}
               onClick={(e) => {
                 e.stopPropagation();
                 if (onOpenInfo) onOpenInfo(product);
@@ -146,8 +142,13 @@ export function PhoneCard({
             </button>
           </div>
 
-          <div className="price-label">
+          <div className="price-label flex items-center gap-1.5">
             {t("Price")}
+            {isPromotion && (
+              <span className="bg-[#A1255B] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
+                PROMO
+              </span>
+            )}
           </div>
 
           <div className="price-value flex items-center gap-1.5 flex-wrap">

@@ -16,4 +16,4 @@ export const tableApi = baseApi.injectEndpoints({
   }),
 });
 
-export const { useGetTableQuery, useListMyTableOrdersQuery } = tableApi;
+export const { useGetTableQuery, useLazyGetTableQuery, useListMyTableOrdersQuery } = tableApi;
