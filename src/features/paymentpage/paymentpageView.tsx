@@ -71,7 +71,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const [awaitingFee, setAwaitingFee] = useState(false);
 
   const [generateQr, { data: qr, isLoading: isGenerating }] = useGenerateBakongQrMutation();
-  const [confirmPayment, { isLoading: isChecking }] = useConfirmBakongPaymentMutation();
+  const [confirmPayment] = useConfirmBakongPaymentMutation();
   const [getOrder] = useLazyGetMyOrderQuery();
   const mounted = useMounted();
   const onPhone = mounted && isPhone();
@@ -85,6 +85,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const lastNoticeRef = useRef<string | null>(null);
   const [guideBank, setGuideBank] = useState<BankAppId>("aba");
   const [qrAction, setQrAction] = useState<"save" | "share" | null>(null);
+  const [manualCheck, setManualCheck] = useState<"checking" | "not_yet" | null>(null);
 
   useEffect(() => {
     isActiveRef.current = true;
@@ -221,10 +222,10 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     }
   }, [effectivePhase, notify]);
 
-  const runCheck = useCallback(async (): Promise<CheckOutcome> => {
+  const runCheck = useCallback(async (manual = false): Promise<CheckOutcome> => {
     if (!orderId) return { kind: "skipped" };
     try {
-      const request = confirmPayment(orderId).unwrap();
+      const request = confirmPayment({ id: orderId, manual }).unwrap();
       pollingRequestRef.current = request;
       const order = await request;
       if (handleOrder(order)) return { kind: "settled" };
@@ -235,9 +236,9 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
         if (handleOrder(await getOrder(orderId, false).unwrap())) return { kind: "settled" };
       } catch {
       }
-      const bankUnreachable = (err as { status?: unknown } | null)?.status === 502;
-      const message = bankUnreachable
-        ? "We can't confirm payments automatically right now. If you've paid, show your bank receipt at the counter — we'll keep checking too."
+      const bankUnavailable = (err as { status?: unknown } | null)?.status === 502;
+      const message = bankUnavailable
+        ? "Automatic confirmation is paused right now. If you've paid, show your bank receipt at the counter."
         : "We couldn't verify your payment yet. We'll keep checking automatically.";
       if (isActiveRef.current && !hasPaidRef.current) setVerificationError(message);
       return { kind: "failed", message };
@@ -256,6 +257,28 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
       checkInFlightRef.current = null;
     }
   }, [orderId, runCheck]);
+
+  // "I've paid" — waits for any background check, then asks once more with priority.
+  const checkNow = useCallback(async () => {
+    if (!orderId || hasPaidRef.current) return;
+    setManualCheck("checking");
+    await checkInFlightRef.current?.catch(() => null);
+    if (hasPaidRef.current) return;
+    const check = runCheck(true);
+    checkInFlightRef.current = check;
+    try {
+      const outcome = await check;
+      if (isActiveRef.current) setManualCheck(outcome.kind === "unpaid" ? "not_yet" : null);
+    } finally {
+      checkInFlightRef.current = null;
+    }
+  }, [orderId, runCheck]);
+
+  useEffect(() => {
+    if (manualCheck !== "not_yet") return;
+    const timer = setTimeout(() => setManualCheck(null), 8000);
+    return () => clearTimeout(timer);
+  }, [manualCheck]);
 
   useEffect(() => {
     if (effectivePhase !== "waiting" && effectivePhase !== "expired") return;
@@ -413,7 +436,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
                   role="radio"
                   aria-checked={selected}
                   onClick={() => setCurrency(option)}
-                  disabled={!isLive || isChecking}
+                  disabled={!isLive}
                   className={`min-w-[72px] cursor-pointer rounded-full border-none px-3 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed ${
                     selected ? "bg-white text-gray-900 shadow-sm" : "bg-transparent text-gray-500 hover:text-gray-800"
                   }`}
@@ -448,7 +471,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
                 <button
                   type="button"
                   onClick={retryQr}
-                  disabled={!orderId || isChecking || isGenerating}
+                  disabled={!orderId || isGenerating}
                   className="inline-flex cursor-pointer items-center gap-2 rounded-full border-none bg-[#A1255B] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#881d52] active:scale-95 disabled:opacity-60"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
@@ -472,6 +495,28 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
               </span>
               {isLive ? "Waiting for payment — confirms automatically" : "Already paid? We're still confirming it"}
             </p>
+          ) : null}
+          {isLive || isExpired ? (
+            <div className="mt-3 flex flex-col items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => { void checkNow(); }}
+                disabled={manualCheck === "checking"}
+                className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-5 text-xs font-bold text-gray-900 transition hover:bg-gray-50 active:scale-95 disabled:cursor-wait disabled:opacity-70"
+              >
+                {manualCheck === "checking" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                )}
+                {manualCheck === "checking" ? "Checking with your bank…" : "I've paid — check now"}
+              </button>
+              {manualCheck === "not_yet" ? (
+                <p role="status" className="m-0 text-[11px] leading-snug text-gray-500">
+                  Not received yet. Transfers can take a few seconds — we&apos;ll keep checking.
+                </p>
+              ) : null}
+            </div>
           ) : null}
           {verificationError ? (
             <p role="status" className="m-0 mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-snug text-amber-800">

@@ -82,17 +82,25 @@ export const orderApi = baseApi.injectEndpoints({
       transformResponse: unwrap<BakongDeeplinkResponse>,
     }),
 
-    confirmBakongPayment: builder.mutation<OrderResponse, UUID>({
-      query: (id) => ({
-        url: `/api/customer/orders/${id}/pay/bakong/confirm`,
-        method: "POST",
-        timeout: 15000,
-      }),
+    // `manual`: the customer tapped "I've paid", so the server may ask Bakong again sooner.
+    confirmBakongPayment: builder.mutation<OrderResponse, UUID | { id: UUID; manual?: boolean }>({
+      query: (arg) => {
+        const { id, manual } = typeof arg === "string" ? { id: arg, manual: false } : arg;
+        return {
+          url: `/api/customer/orders/${id}/pay/bakong/confirm`,
+          method: "POST",
+          params: manual ? { manual: true } : undefined,
+          timeout: 15000,
+        };
+      },
       transformResponse: unwrap<OrderResponse>,
-      invalidatesTags: (_r, _e, id) => [
-        { type: "Order", id },
-        { type: "Order", id: "LIST" },
-      ],
+      invalidatesTags: (_r, _e, arg) => {
+        const id = typeof arg === "string" ? arg : arg.id;
+        return [
+          { type: "Order", id },
+          { type: "Order", id: "LIST" },
+        ];
+      },
     }),
 
     cancelMyOrder: builder.mutation<OrderResponse, UUID>({
