@@ -86,6 +86,8 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const [guideBank, setGuideBank] = useState<BankAppId>("aba");
   const [qrAction, setQrAction] = useState<"save" | "share" | null>(null);
   const [manualCheck, setManualCheck] = useState<"checking" | "not_yet" | null>(null);
+  // Bakong can't be asked (e.g. its daily limit is reached): staff confirm from the customer's receipt instead.
+  const [checksPaused, setChecksPaused] = useState(false);
 
   useEffect(() => {
     isActiveRef.current = true;
@@ -230,6 +232,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
       const order = await request;
       if (handleOrder(order)) return { kind: "settled" };
       setVerificationError(null);
+      setChecksPaused(false);
       return { kind: "unpaid" };
     } catch (err) {
       try {
@@ -238,9 +241,12 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
       }
       const bankUnavailable = (err as { status?: unknown } | null)?.status === 502;
       const message = bankUnavailable
-        ? "Automatic confirmation is paused right now. If you've paid, show your bank receipt at the counter."
+        ? "Automatic confirmation is paused right now."
         : "We couldn't verify your payment yet. We'll keep checking automatically.";
-      if (isActiveRef.current && !hasPaidRef.current) setVerificationError(message);
+      if (isActiveRef.current && !hasPaidRef.current) {
+        setVerificationError(message);
+        setChecksPaused(bankUnavailable);
+      }
       return { kind: "failed", message };
     } finally {
       pollingRequestRef.current = null;
@@ -483,7 +489,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
 
           <p className="m-0 mt-3 text-xs text-gray-500">Scan with ABA, ACLEDA, Bakong or any KHQR banking app</p>
 
-          {isLive || isExpired ? (
+          {(isLive || isExpired) && !checksPaused ? (
             <p
               role="status"
               aria-live="polite"
@@ -496,7 +502,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
               {isLive ? "Waiting for payment — confirms automatically" : "Already paid? We're still confirming it"}
             </p>
           ) : null}
-          {isLive || isExpired ? (
+          {(isLive || isExpired) && !checksPaused ? (
             <div className="mt-3 flex flex-col items-center gap-1.5">
               <button
                 type="button"
@@ -518,7 +524,18 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
               ) : null}
             </div>
           ) : null}
-          {verificationError ? (
+          {checksPaused && orderId ? (
+            <div role="status" aria-live="polite" className="mt-4 w-full rounded-2xl bg-amber-50 px-4 py-3 text-left">
+              <p className="m-0 text-sm font-bold text-amber-900">Already paid? Show your receipt at the counter</p>
+              <p className="m-0 mt-1 text-xs leading-snug text-amber-800">
+                We can&apos;t confirm payments automatically right now. Show staff your bank receipt and this
+                order number — this page updates by itself once they confirm.
+              </p>
+              <p className="m-0 mt-2 inline-block rounded-lg bg-white px-2.5 py-1 font-mono text-sm font-bold tracking-wider text-gray-900">
+                #{orderId.slice(0, 8).toUpperCase()}
+              </p>
+            </div>
+          ) : verificationError ? (
             <p role="status" className="m-0 mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-snug text-amber-800">
               {verificationError}
             </p>

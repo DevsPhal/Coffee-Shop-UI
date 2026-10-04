@@ -65,6 +65,7 @@ export function OrderNotifications() {
         case "DELIVERY_FEE_SET":
           return { type: "info", title: t("Delivery fee is ready"), description: t("Choose how you'd like to pay.") };
         case "BAKONG_CONFIRMED":
+        case "BAKONG_BY_RECEIPT":
         case "CASH_COLLECTED":
           return pathname.startsWith("/payment")
             ? null
