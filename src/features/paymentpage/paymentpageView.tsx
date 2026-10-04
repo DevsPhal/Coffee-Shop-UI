@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
-import { CheckCircle2, ChevronDown, Download, Loader2, RefreshCw, Share2 } from "lucide-react";
+import { CheckCircle2, Download, Loader2, RefreshCw, Share2 } from "lucide-react";
 
 import { toast } from "@/components/ui/toast";
 import { apiErrorMessage } from "@/store/api/baseApi";
@@ -15,7 +15,7 @@ import {
 } from "@/store/api/orderApi";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { useMounted } from "@/hooks/useMounted";
-import { BANK_APPS, type BankApp, type BankAppId } from "@/lib/bankApps";
+import { BANK_APPS, type BankAppId } from "@/lib/bankApps";
 import type { Currency, OrderResponse } from "@/store/api/types";
 import "@/app/globals.scss";
 
@@ -63,7 +63,6 @@ export function PaymentpageView() {
 function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const router = useRouter();
   const [currency, setCurrency] = useState<Currency>("USD");
-  const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
   const [qrImage, setQrImage] = useState<{ currency: Currency; dataUrl: string } | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [settled, setSettled] = useState<"paid" | null>(null);
@@ -325,7 +324,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
         <CheckCircle2 className="h-16 w-16 text-green-600" />
         <h1 className="text-2xl font-extrabold text-gray-900">Payment received</h1>
         <p className="text-sm text-gray-600">Opening your order progress...</p>
-        <button type="button" onClick={() => router.replace(`/checkoutdone?orderId=${encodeURIComponent(orderId!)}`)} className="rounded-xl bg-gray-900 px-5 py-3 text-sm font-bold text-white">
+        <button type="button" onClick={() => router.replace(`/checkoutdone?orderId=${encodeURIComponent(orderId!)}`)} className="cursor-pointer rounded-full border-none bg-[#A1255B] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#881d52]">
           Track my order
         </button>
       </div>
@@ -341,52 +340,92 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
           The shop is reviewing your pinned location and pricing the delivery. Your payment QR
           will appear here automatically — no need to refresh.
         </p>
-        <button type="button" onClick={() => router.push("/checkout")} className="rounded-xl bg-gray-100 px-5 py-3 text-sm font-bold text-gray-700">
+        <button type="button" onClick={() => router.push("/checkout")} className="cursor-pointer rounded-full border-none bg-gray-100 px-5 py-3 text-sm font-bold text-gray-700 transition hover:bg-gray-200">
           Back to checkout
         </button>
       </div>
     );
   }
 
+  const isLive = effectivePhase === "waiting";
+  const isExpired = effectivePhase === "expired";
+  const isUrgent = isLive && secondsLeft !== null && secondsLeft <= 60;
+
+  const retryQr = () => {
+    setFailure(null);
+    setSecondsLeft(null);
+    setQrImage(null);
+    void requestQr(currency);
+  };
+
   return (
-    <div className="w-full max-w-md mx-auto px-4 py-4 sm:py-6 font-sans min-h-[70vh] flex flex-col justify-center">
-      <div>
-        <div className="flex items-center justify-between mb-3 w-full">
-          <h1 className="text-lg sm:text-xl font-extrabold text-gray-900 m-0">Scan to pay</h1>
-          <button
-            onClick={() => router.push("/checkout")}
-            type="button"
-            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-all cursor-pointer active:scale-95 border-none"
-          >
-            Back
-          </button>
-        </div>
+    <div className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col px-4 py-4 font-sans sm:py-6">
+      <div className="mb-4 flex w-full items-center justify-between">
+        <h1 className="m-0 text-xl font-extrabold text-gray-900">Scan to pay</h1>
+        <button
+          onClick={() => router.push("/checkout")}
+          type="button"
+          className="cursor-pointer rounded-full border-none bg-gray-100 px-4 py-2 text-xs font-bold text-gray-700 transition-all hover:bg-gray-200 active:scale-95"
+        >
+          Back
+        </button>
+      </div>
 
-        <div className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-3.5 py-2 shadow-2xs mb-3 w-full">
-          <span className="text-xs font-bold text-[#E21F26]">KHQR</span>
-
-          <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 px-2.5 py-0.5 rounded-full">
-            {effectivePhase === "waiting" ? (
-              <Loader2 className="w-3 h-3 text-[#E21F26] animate-spin" />
-            ) : null}
-            <span className="text-[11px] font-bold text-gray-700" suppressHydrationWarning>
-              {effectivePhase === "expired"
-                  ? "Expired"
-                  : formattedTime}
+      <section className="w-full overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-md">
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
+          <div className="flex items-center gap-2">
+            <span className="rounded bg-[#E21F26] px-1.5 py-0.5 text-[10px] font-black tracking-wider text-white">KHQR</span>
+            <span className="text-sm font-extrabold text-gray-900">590st Cafe</span>
+          </div>
+          {isLive || isExpired ? (
+            <span
+              className={`rounded-full px-2.5 py-1 text-[11px] font-bold tabular-nums ${
+                isExpired
+                  ? "bg-red-50 text-red-600"
+                  : isUrgent
+                    ? "bg-amber-50 text-amber-700"
+                    : "bg-gray-100 text-gray-700"
+              }`}
+              suppressHydrationWarning
+            >
+              {isExpired ? "Expired" : `Expires in ${formattedTime}`}
             </span>
-          </div>
+          ) : null}
         </div>
 
-        <div className="w-full max-w-sm sm:max-w-md mx-auto bg-white rounded-3xl border border-gray-100 shadow-md p-4 sm:p-6 flex flex-col items-center justify-center text-center">
-          <div className="flex flex-col items-center justify-center mb-2">
-            <p className="text-sm font-black tracking-tight text-gray-900 m-0">590st Cafe</p>
-            <p className="text-xs font-medium text-gray-500 mt-0.5 mb-0">
-              Scan with any Bakong-enabled banking app
-            </p>
+        <div className="flex flex-col items-center px-5 pb-5 pt-4 text-center">
+          <p className="m-0 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Amount to pay</p>
+          <p className="m-0 mt-1 text-3xl font-extrabold tracking-tight text-gray-900 tabular-nums" suppressHydrationWarning>
+            {displayAmount ?? "—"}
+          </p>
+
+          <div
+            className="mt-3 inline-flex rounded-full bg-gray-100 p-1"
+            role="radiogroup"
+            aria-label="Pay in currency"
+          >
+            {(["USD", "KHR"] as const).map((option) => {
+              const selected = currency === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setCurrency(option)}
+                  disabled={!isLive || isChecking}
+                  className={`min-w-[72px] cursor-pointer rounded-full border-none px-3 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed ${
+                    selected ? "bg-white text-gray-900 shadow-sm" : "bg-transparent text-gray-500 hover:text-gray-800"
+                  }`}
+                >
+                  {option === "USD" ? "USD $" : "KHR ៛"}
+                </button>
+              );
+            })}
           </div>
 
-          <div className="relative my-3 flex h-[240px] w-[240px] items-center justify-center rounded-2xl border border-gray-100 bg-white">
-            {currentQr && effectivePhase === "waiting" ? (
+          <div className="relative mt-4 flex h-[240px] w-[240px] items-center justify-center rounded-2xl border border-gray-100 bg-white p-2">
+            {currentQr && isLive ? (
               <Image
                 src={currentQr}
                 alt="Bakong KHQR for this order"
@@ -399,153 +438,64 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
             ) : effectivePhase === "loading" ? (
               <Loader2 className="h-8 w-8 animate-spin text-gray-300" />
             ) : (
-              <div className="px-6">
-                <p className="text-sm font-semibold text-gray-700">
-                  {effectivePhase === "expired" ? "This QR has expired." : "No QR to show."}
+              <div className="flex flex-col items-center gap-3 px-6">
+                <p className="m-0 text-sm font-bold text-gray-800">
+                  {isExpired ? "This QR has expired" : "No QR to show"}
                 </p>
                 {effectiveMessage ? (
-                  <p className="mt-2 text-xs text-red-500">{effectiveMessage}</p>
+                  <p className="m-0 text-xs leading-snug text-red-500">{effectiveMessage}</p>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={retryQr}
+                  disabled={!orderId || isChecking || isGenerating}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border-none bg-[#A1255B] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#881d52] active:scale-95 disabled:opacity-60"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  {isExpired ? "Get a new QR" : "Try again"}
+                </button>
               </div>
             )}
           </div>
 
-          {effectivePhase === "waiting" && onPhone ? (
-            <div className="mb-3 flex w-full flex-col gap-2.5 text-left">
-              <PhonePayGuide
-                bank={guideBank}
-                onBankChange={setGuideBank}
-                onSave={() => { void keepQr("save"); }}
-                onShare={shareSupported ? () => { void keepQr("share"); } : undefined}
-                busy={qrAction}
-                disabled={!currentQr}
-              />
-            </div>
-          ) : null}
+          <p className="m-0 mt-3 text-xs text-gray-500">Scan with ABA, ACLEDA, Bakong or any KHQR banking app</p>
 
-          {effectivePhase === "expired" || effectivePhase === "error" ? (
-            <button
-              type="button"
-              onClick={() => {
-                setFailure(null);
-                setSecondsLeft(null);
-                setQrImage(null);
-                void requestQr(currency);
-              }}
-              disabled={!orderId || isChecking || isGenerating}
-              className="mb-2 inline-flex items-center gap-2 rounded-xl border-none bg-gray-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-gray-700 active:scale-95 cursor-pointer"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              {effectivePhase === "expired" ? "Get a new QR" : "Try again"}
-            </button>
-          ) : null}
-
-          <div className="relative mt-2 inline-block">
-            <button
-              type="button"
-              onClick={() => setIsCurrencyDropdownOpen((prev) => !prev)}
-              disabled={effectivePhase !== "waiting" || isChecking}
-              className="font-extrabold text-gray-900 tracking-tight m-0 text-center flex items-center justify-center gap-1 cursor-pointer bg-transparent border-none p-0 outline-none hover:opacity-85 transition-opacity disabled:opacity-50"
-              style={{ fontSize: "16pt" }}
-              title="Click to select currency (USD / KHR)"
-              suppressHydrationWarning
-            >
-              <span>{displayAmount ?? "—"}</span>
-              <ChevronDown
-                className="w-4 h-4 text-gray-900 shrink-0 transition-transform duration-200"
-                style={{
-                  transform: isCurrencyDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
-                }}
-              />
-            </button>
-
-            {isCurrencyDropdownOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setIsCurrencyDropdownOpen(false)}
-                />
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-44 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 flex flex-col gap-1">
-                  {(["USD", "KHR"] as const).map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => {
-                        setCurrency(option);
-                        setIsCurrencyDropdownOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-colors border-none cursor-pointer ${
-                        currency === option
-                          ? "bg-pink-50 text-gray-900"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      <span>{option === "USD" ? "USD ($)" : "KHR (៛)"}</span>
-                      {currency === option && displayAmount ? (
-                        <span className="font-extrabold">{displayAmount}</span>
-                      ) : null}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {effectivePhase === "waiting" || effectivePhase === "expired" ? (
+          {isLive || isExpired ? (
             <p
               role="status"
               aria-live="polite"
-              className="mt-3 mb-0 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3.5 py-1.5 text-[11px] font-semibold text-emerald-700"
+              className="m-0 mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3.5 py-1.5 text-[11px] font-semibold text-emerald-700"
             >
               <span className="relative flex h-2 w-2" aria-hidden="true">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              {effectivePhase === "waiting"
-                ? "Pay with the QR — we confirm it automatically"
-                : "Already paid? We're still confirming your transfer"}
+              {isLive ? "Waiting for payment — confirms automatically" : "Already paid? We're still confirming it"}
             </p>
           ) : null}
           {verificationError ? (
-            <p role="status" className="mt-3 mb-0 text-xs text-amber-700">{verificationError}</p>
+            <p role="status" className="m-0 mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-snug text-amber-800">
+              {verificationError}
+            </p>
           ) : null}
         </div>
-      </div>
+      </section>
 
-      <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100 text-[10px] text-gray-400 w-full">
-        <div className="bg-[#E21F26] text-white px-2 py-0.5 rounded text-[9px] font-black tracking-wider shrink-0">
-          KHQR
-        </div>
-        <p className="m-0 leading-tight flex-1 truncate">
-          Powered by Bakong · National Bank of Cambodia
-        </p>
-      </div>
+      {isLive && onPhone ? (
+        <PhonePayGuide
+          bank={guideBank}
+          onBankChange={setGuideBank}
+          onSave={() => { void keepQr("save"); }}
+          onShare={shareSupported ? () => { void keepQr("share"); } : undefined}
+          busy={qrAction}
+          disabled={!currentQr}
+        />
+      ) : null}
+
+      <p className="m-0 mt-5 text-center text-[10px] text-gray-400">
+        Powered by Bakong · National Bank of Cambodia
+      </p>
     </div>
-  );
-}
-
-function StepNumber({ n }: { n: number }) {
-  return (
-    <span
-      className="mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-[9px] font-bold text-gray-600"
-      aria-hidden="true"
-    >
-      {n}
-    </span>
-  );
-}
-
-function BankBadge({ app, small = false }: { app: BankApp; small?: boolean }) {
-  return (
-    <span
-      className={`flex shrink-0 items-center justify-center whitespace-nowrap font-black tracking-wide ${
-        small ? "h-8 min-w-8 rounded-lg px-1.5 text-[9px]" : "h-10 min-w-10 rounded-xl px-2.5 text-[10px]"
-      }`}
-      style={{ backgroundColor: app.color, color: app.ink }}
-      aria-hidden="true"
-    >
-      {app.shortName}
-    </span>
   );
 }
 
@@ -566,21 +516,22 @@ function PhonePayGuide({
 }) {
   const app = BANK_APPS[bank];
   const steps = [
-    { title: "Save the QR", detail: "Tap Save QR above, or take a screenshot of this QR." },
-    { title: `Open ${app.name}`, detail: `In the app, ${app.galleryHint}, then pick the saved QR.` },
-    { title: "Check the amount and pay", detail: "Then come back here — we confirm the payment automatically." },
+    { title: "Save the QR", detail: "Tap Save QR, or take a screenshot of it." },
+    { title: `Open ${app.name}`, detail: `${app.galleryHint.charAt(0).toUpperCase()}${app.galleryHint.slice(1)}, then pick the saved QR.` },
+    { title: "Pay and come back", detail: "Check the amount, pay, then return here — we confirm it automatically." },
   ];
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3.5">
-      <p className="m-0 mb-2.5 text-xs font-bold text-gray-800">Paying on this phone?</p>
+    <section className="mt-4 w-full rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
+      <h2 className="m-0 text-sm font-extrabold text-gray-900">Paying on this phone?</h2>
+      <p className="m-0 mt-0.5 text-xs text-gray-500">Save the QR, then scan it from your photos.</p>
 
-      <div className={`grid gap-2 ${onShare ? "grid-cols-2" : "grid-cols-1"}`}>
+      <div className={`mt-3 grid gap-2 ${onShare ? "grid-cols-2" : "grid-cols-1"}`}>
         <button
           type="button"
           onClick={onSave}
           disabled={disabled || busy !== null}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border-none bg-[#A1255B] px-4 text-sm font-bold text-white shadow-md transition hover:bg-[#881d52] active:scale-98 disabled:opacity-60 cursor-pointer"
+          className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full border-none bg-[#A1255B] px-4 text-sm font-bold text-white shadow-md shadow-[#A1255B]/20 transition hover:bg-[#881d52] active:scale-98 disabled:opacity-60"
         >
           {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           Save QR
@@ -590,7 +541,7 @@ function PhonePayGuide({
             type="button"
             onClick={onShare}
             disabled={disabled || busy !== null}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-sm font-bold text-gray-900 transition hover:bg-gray-100 active:scale-98 disabled:opacity-60 cursor-pointer"
+            className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-sm font-bold text-gray-900 transition hover:bg-gray-50 active:scale-98 disabled:opacity-60"
           >
             {busy === "share" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
             Share QR
@@ -598,10 +549,9 @@ function PhonePayGuide({
         ) : null}
       </div>
 
-      <p className="m-0 mt-3.5 mb-2 text-[11px] font-semibold text-gray-500">Which app do you pay with?</p>
-      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Your banking app">
+      <p className="m-0 mt-5 mb-2 text-xs font-bold text-gray-700">Which app do you pay with?</p>
+      <div className="grid grid-cols-4 gap-1 rounded-2xl bg-gray-100 p-1" role="radiogroup" aria-label="Your banking app">
         {(Object.keys(BANK_APPS) as BankAppId[]).map((id) => {
-          const option = BANK_APPS[id];
           const selected = id === bank;
           return (
             <button
@@ -610,29 +560,33 @@ function PhonePayGuide({
               role="radio"
               aria-checked={selected}
               onClick={() => onBankChange(id)}
-              className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-bold transition cursor-pointer ${
-                selected ? "border-gray-900 bg-white text-gray-900 shadow-sm" : "border-gray-200 bg-white/60 text-gray-500"
+              className={`min-h-9 cursor-pointer truncate rounded-xl border-none px-1 text-xs font-bold transition ${
+                selected ? "bg-white text-[#A1255B] shadow-sm" : "bg-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
-              <BankBadge app={option} small />
-              {option.shortName}
+              {BANK_APPS[id].shortName}
             </button>
           );
         })}
       </div>
 
-      <ol className="m-0 mt-3 flex list-none flex-col gap-2.5 p-0" aria-live="polite">
+      <ol className="m-0 mt-4 flex list-none flex-col gap-3 p-0" aria-live="polite">
         {steps.map((step, index) => (
-          <li key={step.title} className="flex items-start gap-2.5">
-            <StepNumber n={index + 1} />
-            <div className="min-w-0">
-              <p className="m-0 text-xs font-bold text-gray-900">{step.title}</p>
-              <p className="m-0 text-[11px] leading-snug text-gray-500">{step.detail}</p>
+          <li key={index} className="flex items-start gap-3">
+            <span
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#A1255B]/10 text-[11px] font-extrabold text-[#A1255B]"
+              aria-hidden="true"
+            >
+              {index + 1}
+            </span>
+            <div className="min-w-0 pt-0.5">
+              <p className="m-0 text-sm font-bold text-gray-900">{step.title}</p>
+              <p className="m-0 mt-0.5 text-xs leading-snug text-gray-500">{step.detail}</p>
             </div>
           </li>
         ))}
       </ol>
-    </div>
+    </section>
   );
 }
 
