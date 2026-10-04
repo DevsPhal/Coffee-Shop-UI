@@ -10,6 +10,7 @@ import { isAuthenticated } from "@/lib/authStorage";
 import { useMounted } from "@/hooks/useMounted";
 import { useListMyOrdersQuery } from "@/store/api/orderApi";
 import { toTitleCase } from "@/lib/utils";
+import { reorderLines } from "@/lib/reorder";
 import type { OrderResponse, OrderStatus } from "@/store/api/types";
 import { OrderEstimateBadge } from "@/components/common/OrderEstimate";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
@@ -47,21 +48,7 @@ export function OrderhistorypageView() {
   const isLoadingOrders = isFetching && currentData === undefined;
 
   const handleReorder = (order: OrderResponse) => {
-    order.items.forEach((item) => {
-      addItem(
-        {
-          productId: item.productId,
-          title: toTitleCase(item.productName),
-          unitPrice: Number(item.unitPrice),
-          quantity: item.quantity,
-          variantName: item.variantName,
-          iceLevel: item.iceLevel ?? undefined,
-          sugarLevel: item.sugarLevel ?? undefined,
-          milkType: item.milkType ?? undefined,
-        },
-        false
-      );
-    });
+    reorderLines(order).forEach((line) => addItem(line, false));
     toast.add({
       type: "success",
       description: `Reordered ${order.items.length} items to your cart!`,

@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { TelegramLinkModal } from "@/components/ui/TelegramLinkModal";
 import { GenderDropdown } from "@/components/ui/GenderDropdown";
 import { toTitleCase } from "@/lib/utils";
+import { reorderLines } from "@/lib/reorder";
 import { VARIANT_LABELS } from "@/store/api/optionMapping";
 import { useContactStore } from "@/store/useContactStore";
 import { isAuthenticated } from "@/lib/authStorage";
@@ -693,21 +694,7 @@ export function UserprofilepageView() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  order.items.forEach((item) => {
-                                    addItem(
-                                      {
-                                        productId: item.productId,
-                                        title: toTitleCase(item.productName),
-                                        unitPrice: Number(item.unitPrice),
-                                        quantity: item.quantity,
-                                        variantName: item.variantName,
-                                        iceLevel: item.iceLevel ?? undefined,
-                                        sugarLevel: item.sugarLevel ?? undefined,
-                                        milkType: item.milkType ?? undefined,
-                                      },
-                                      false
-                                    );
-                                  });
+                                  reorderLines(order).forEach((line) => addItem(line, false));
                                   toast.add({ type: "success", description: "Items reordered into cart!" });
                                   openCart();
                                 }}

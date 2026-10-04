@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
-import { CheckCircle2, Download, Loader2, RefreshCw, Share2 } from "lucide-react";
+import { CheckCircle2, Clock, Download, Loader2, RefreshCw, Share2, XCircle } from "lucide-react";
 
 import { toast } from "@/components/ui/toast";
 import { apiErrorMessage } from "@/store/api/baseApi";
@@ -15,6 +15,8 @@ import {
 } from "@/store/api/orderApi";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { useMounted } from "@/hooks/useMounted";
+import { useCart } from "@/context/CartContext";
+import { reorderLines } from "@/lib/reorder";
 import { BANK_APPS, type BankAppId } from "@/lib/bankApps";
 import type { Currency, OrderResponse } from "@/store/api/types";
 import "@/app/globals.scss";
@@ -47,11 +49,9 @@ function downloadImage(dataUrl: string, fileName: string) {
   link.remove();
 }
 
-type CheckOutcome =
-  | { kind: "settled" | "unpaid" | "skipped" }
-  | { kind: "failed"; message: string };
+type CheckOutcome = "settled" | "unpaid" | "failed" | "skipped";
 
-type Phase = "loading" | "awaiting_fee" | "waiting" | "paid" | "expired" | "error";
+type Phase = "loading" | "awaiting_fee" | "waiting" | "expired" | "paid" | "cancelled" | "error";
 
 export function PaymentpageView() {
   const searchParams = useSearchParams();
@@ -62,13 +62,19 @@ export function PaymentpageView() {
 
 function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const router = useRouter();
+  const { addItem, openCart } = useCart();
   const [currency, setCurrency] = useState<Currency>("USD");
   const [qrImage, setQrImage] = useState<{ currency: Currency; dataUrl: string } | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
-  const [settled, setSettled] = useState<"paid" | null>(null);
+  // The order's payment window has closed: no new QR, we only wait for the final payment check.
+  const [windowClosed, setWindowClosed] = useState(false);
+  const [order, setOrder] = useState<OrderResponse | null>(null);
+  const [settled, setSettled] = useState<"paid" | "cancelled" | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [confirmDelayed, setConfirmDelayed] = useState(false);
   const [awaitingFee, setAwaitingFee] = useState(false);
+  const [guideBank, setGuideBank] = useState<BankAppId>("aba");
+  const [qrAction, setQrAction] = useState<"save" | "share" | null>(null);
 
   const [generateQr, { data: qr, isLoading: isGenerating }] = useGenerateBakongQrMutation();
   const [confirmPayment] = useConfirmBakongPaymentMutation();
@@ -77,42 +83,30 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const onPhone = mounted && isPhone();
 
   const checkInFlightRef = useRef<Promise<CheckOutcome> | null>(null);
-  const pollingRequestRef = useRef<Promise<OrderResponse> | null>(null);
   const isRequestingQrRef = useRef(false);
   const hasAdoptedCurrencyRef = useRef(false);
-  const hasPaidRef = useRef(false);
+  const isDoneRef = useRef(false);
   const isActiveRef = useRef(true);
-  const lastNoticeRef = useRef<string | null>(null);
-  const [guideBank, setGuideBank] = useState<BankAppId>("aba");
-  const [qrAction, setQrAction] = useState<"save" | "share" | null>(null);
-  const [manualCheck, setManualCheck] = useState<"checking" | "not_yet" | null>(null);
-  // Bakong can't be asked (e.g. its daily limit is reached): staff confirm from the customer's receipt instead.
-  const [checksPaused, setChecksPaused] = useState(false);
 
   useEffect(() => {
     isActiveRef.current = true;
     return () => { isActiveRef.current = false; };
   }, []);
 
-  const notify = useCallback((type: "error" | "warning", description: string) => {
-    if (lastNoticeRef.current === description) return;
-    lastNoticeRef.current = description;
-    toast.add({ type, description });
-  }, []);
-
-  const handleOrder = useCallback((order: OrderResponse) => {
-    if (!isActiveRef.current || hasPaidRef.current) return true;
-    if (order.status === "CANCELLED") {
-      setFailure("This order was cancelled.");
+  /** Applies the latest order state; true once the order is paid or cancelled and the page is done. */
+  const handleOrder = useCallback((next: OrderResponse) => {
+    if (!isActiveRef.current || isDoneRef.current) return true;
+    setOrder(next);
+    if (next.status === "CANCELLED") {
+      isDoneRef.current = true;
+      setSettled("cancelled");
       return true;
     }
-    if (order.paidAt != null || PAID_STATUSES.includes(order.status)) {
-      hasPaidRef.current = true;
+    if (next.paidAt != null || PAID_STATUSES.includes(next.status)) {
+      isDoneRef.current = true;
       setSettled("paid");
-      setFailure(null);
-      setVerificationError(null);
       toast.add({ type: "success", description: "Payment received. Thank you!" });
-      router.replace(`/checkoutdone?orderId=${encodeURIComponent(order.id)}`);
+      router.replace(`/checkoutdone?orderId=${encodeURIComponent(next.id)}`);
       return true;
     }
     return false;
@@ -120,56 +114,60 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
 
   const requestQr = useCallback(
     async (chosen: Currency) => {
-      if (!orderId || isRequestingQrRef.current || hasPaidRef.current) return;
+      if (!orderId || isRequestingQrRef.current || isDoneRef.current) return;
       isRequestingQrRef.current = true;
       try {
-        await pollingRequestRef.current?.catch(() => null);
-        if (!isActiveRef.current || hasPaidRef.current) return;
-        const existingOrder = await getOrder(orderId, false).unwrap();
-        if (handleOrder(existingOrder)) return;
-        if (existingOrder.fulfillmentMethod === "DELIVERY" && existingOrder.awaitingDeliveryFee) {
+        await checkInFlightRef.current?.catch(() => null);
+        if (!isActiveRef.current || isDoneRef.current) return;
+        const existing = await getOrder(orderId, false).unwrap();
+        if (handleOrder(existing)) return;
+        if (existing.fulfillmentMethod === "DELIVERY" && existing.awaitingDeliveryFee) {
           setAwaitingFee(true);
           return;
         }
         setAwaitingFee(false);
-        if (existingOrder.bakongMd5Hash) {
-          const checkedOrder = await confirmPayment(orderId).unwrap().catch(() => null);
-          if (checkedOrder && handleOrder(checkedOrder)) return;
-        }
         let wanted = chosen;
         if (!hasAdoptedCurrencyRef.current) {
           hasAdoptedCurrencyRef.current = true;
-          if (existingOrder.bakongMd5Hash && existingOrder.bakongCurrency && existingOrder.bakongCurrency !== chosen) {
-            wanted = existingOrder.bakongCurrency;
+          if (existing.bakongMd5Hash && existing.bakongCurrency && existing.bakongCurrency !== chosen) {
+            wanted = existing.bakongCurrency;
             setCurrency(wanted);
           }
         }
-        const issued = await generateQr({ id: orderId, currency: wanted }).unwrap();
+        let issued;
+        try {
+          issued = await generateQr({ id: orderId, currency: wanted }).unwrap();
+        } catch (err) {
+          // The order already had a QR and the server won't issue another: its payment time is up.
+          if (existing.bakongExpiresAt && (err as { status?: unknown } | null)?.status === 400) {
+            setWindowClosed(true);
+            return;
+          }
+          throw err;
+        }
         const dataUrl = await QRCode.toDataURL(issued.qrString, {
           errorCorrectionLevel: "M",
           margin: 1,
           width: 512,
           color: { dark: "#000000", light: "#ffffff" },
         });
-        if (!isActiveRef.current || hasPaidRef.current) return;
+        if (!isActiveRef.current || isDoneRef.current) return;
         setQrImage({ currency: issued.currency, dataUrl });
         setSecondsLeft(Math.max(0, Math.floor(issued.expiresInSeconds)));
         setFailure(null);
-        setVerificationError(null);
-        lastNoticeRef.current = null;
       } catch (err) {
-        if (!isActiveRef.current || hasPaidRef.current) return;
+        if (!isActiveRef.current || isDoneRef.current) return;
         const message = apiErrorMessage(
           err as Parameters<typeof apiErrorMessage>[0],
-          "Could not generate the payment QR."
+          "Could not load the payment QR."
         );
         setFailure(message);
-        notify("error", message);
+        toast.add({ type: "error", description: message });
       } finally {
         isRequestingQrRef.current = false;
       }
     },
-    [orderId, generateQr, getOrder, confirmPayment, handleOrder, notify]
+    [orderId, generateQr, getOrder, handleOrder]
   );
 
   useEffect(() => {
@@ -196,21 +194,15 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
 
   const effectivePhase: Phase = !orderId
     ? "error"
-    : settled === "paid"
-      ? "paid"
-      : failure
-        ? "error"
-        : awaitingFee
-          ? "awaiting_fee"
+    : settled ?? (failure
+      ? "error"
+      : awaitingFee
+        ? "awaiting_fee"
+        : windowClosed || (currentQr && secondsLeft !== null && secondsLeft <= 0)
+          ? "expired"
           : !currentQr || isGenerating
             ? "loading"
-            : secondsLeft !== null && secondsLeft <= 0
-              ? "expired"
-              : "waiting";
-
-  const effectiveMessage = !orderId
-    ? "This payment link is missing its order. Please start from the checkout."
-    : failure;
+            : "waiting");
 
   useEffect(() => {
     if (effectivePhase !== "waiting" || secondsLeft === null || secondsLeft <= 0) return;
@@ -218,91 +210,51 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     return () => clearTimeout(timer);
   }, [effectivePhase, secondsLeft]);
 
-  useEffect(() => {
-    if (effectivePhase === "expired") {
-      notify("warning", "This QR has expired. Tap “Get a new QR” — if you already paid, we're still checking.");
-    }
-  }, [effectivePhase, notify]);
-
-  const runCheck = useCallback(async (manual = false): Promise<CheckOutcome> => {
-    if (!orderId) return { kind: "skipped" };
-    try {
-      const request = confirmPayment({ id: orderId, manual }).unwrap();
-      pollingRequestRef.current = request;
-      const order = await request;
-      if (handleOrder(order)) return { kind: "settled" };
-      setVerificationError(null);
-      setChecksPaused(false);
-      return { kind: "unpaid" };
-    } catch (err) {
+  // Asks the server whether Bakong has the payment. The server paces the real Bakong calls, so this is cheap;
+  // `promptly` (customer just came back from their bank app) lets it look again sooner.
+  const checkPayment = useCallback(async (promptly = false) => {
+    if (!orderId || isRequestingQrRef.current || isDoneRef.current || checkInFlightRef.current) return;
+    const check = (async (): Promise<CheckOutcome> => {
       try {
-        if (handleOrder(await getOrder(orderId, false).unwrap())) return { kind: "settled" };
-      } catch {
+        const latest = await confirmPayment({ id: orderId, manual: promptly }).unwrap();
+        if (handleOrder(latest)) return "settled";
+        setConfirmDelayed(false);
+        return "unpaid";
+      } catch (err) {
+        try {
+          if (handleOrder(await getOrder(orderId, false).unwrap())) return "settled";
+        } catch {
+          // Offline or the API is down — the next poll tries again.
+        }
+        if (isActiveRef.current) setConfirmDelayed((err as { status?: unknown } | null)?.status === 502);
+        return "failed";
       }
-      const bankUnavailable = (err as { status?: unknown } | null)?.status === 502;
-      const message = bankUnavailable
-        ? "Automatic confirmation is paused right now."
-        : "We couldn't verify your payment yet. We'll keep checking automatically.";
-      if (isActiveRef.current && !hasPaidRef.current) {
-        setVerificationError(message);
-        setChecksPaused(bankUnavailable);
-      }
-      return { kind: "failed", message };
-    } finally {
-      pollingRequestRef.current = null;
-    }
-  }, [orderId, confirmPayment, getOrder, handleOrder]);
-
-  const checkPayment = useCallback(async () => {
-    if (!orderId || isRequestingQrRef.current || hasPaidRef.current || checkInFlightRef.current) return;
-    const check = runCheck();
+    })();
     checkInFlightRef.current = check;
     try {
       await check;
     } finally {
       checkInFlightRef.current = null;
     }
-  }, [orderId, runCheck]);
-
-  // "I've paid" — waits for any background check, then asks once more with priority.
-  const checkNow = useCallback(async () => {
-    if (!orderId || hasPaidRef.current) return;
-    setManualCheck("checking");
-    await checkInFlightRef.current?.catch(() => null);
-    if (hasPaidRef.current) return;
-    const check = runCheck(true);
-    checkInFlightRef.current = check;
-    try {
-      const outcome = await check;
-      if (isActiveRef.current) setManualCheck(outcome.kind === "unpaid" ? "not_yet" : null);
-    } finally {
-      checkInFlightRef.current = null;
-    }
-  }, [orderId, runCheck]);
-
-  useEffect(() => {
-    if (manualCheck !== "not_yet") return;
-    const timer = setTimeout(() => setManualCheck(null), 8000);
-    return () => clearTimeout(timer);
-  }, [manualCheck]);
+  }, [orderId, confirmPayment, getOrder, handleOrder]);
 
   useEffect(() => {
     if (effectivePhase !== "waiting" && effectivePhase !== "expired") return;
     const poll = () => { void checkPayment(); };
-    const onVisible = () => {
-      if (document.visibilityState === "visible") poll();
+    const onReturn = () => {
+      if (document.visibilityState === "visible") void checkPayment(true);
     };
 
     poll();
     const interval = setInterval(poll, POLL_MS);
-    window.addEventListener("focus", poll);
+    window.addEventListener("focus", onReturn);
     window.addEventListener("online", poll);
-    document.addEventListener("visibilitychange", onVisible);
+    document.addEventListener("visibilitychange", onReturn);
     return () => {
       clearInterval(interval);
-      window.removeEventListener("focus", poll);
+      window.removeEventListener("focus", onReturn);
       window.removeEventListener("online", poll);
-      document.removeEventListener("visibilitychange", onVisible);
+      document.removeEventListener("visibilitychange", onReturn);
     };
   }, [effectivePhase, checkPayment]);
 
@@ -330,62 +282,78 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     }
   }, [currentQr, orderId]);
 
+  const orderAgain = () => {
+    if (!order) return;
+    reorderLines(order).forEach((line) => addItem(line, false));
+    openCart();
+    router.push("/menu");
+  };
+
   const shareSupported =
     mounted && typeof navigator !== "undefined" && typeof navigator.canShare === "function";
 
   const formattedTime =
     secondsLeft === null
       ? "--:--"
-      : `${String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:${String(
-          secondsLeft % 60
-        ).padStart(2, "0")}`;
+      : `${String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:${String(secondsLeft % 60).padStart(2, "0")}`;
 
+  const amount = qr
+    ? { value: qr.amount, currency }
+    : order?.bakongAmount != null
+      ? { value: order.bakongAmount, currency: order.bakongCurrency ?? "USD" }
+      : null;
   const displayAmount =
-    qr == null
+    amount == null
       ? null
-      : currency === "USD"
-        ? `$${Number(qr.amount).toFixed(2)}`
-        : `${Number(qr.amount).toLocaleString()} ៛`;
+      : amount.currency === "USD"
+        ? `$${Number(amount.value).toFixed(2)}`
+        : `${Number(amount.value).toLocaleString()} ៛`;
 
   if (effectivePhase === "paid") {
     return (
-      <div className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col items-center justify-center gap-4 px-4 text-center" role="status" aria-live="polite">
-        <CheckCircle2 className="h-16 w-16 text-green-600" />
-        <h1 className="text-2xl font-extrabold text-gray-900">Payment received</h1>
-        <p className="text-sm text-gray-600">Opening your order progress...</p>
-        <button type="button" onClick={() => router.replace(`/checkoutdone?orderId=${encodeURIComponent(orderId!)}`)} className="cursor-pointer rounded-full border-none bg-[#A1255B] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#881d52]">
-          Track my order
-        </button>
-      </div>
+      <StatusScreen
+        icon={<CheckCircle2 className="h-16 w-16 text-green-600" />}
+        title="Payment received"
+        message="Opening your order progress…"
+        primary={{
+          label: "Track my order",
+          onClick: () => router.replace(`/checkoutdone?orderId=${encodeURIComponent(orderId!)}`),
+        }}
+      />
+    );
+  }
+
+  if (effectivePhase === "cancelled") {
+    const timedOut = windowClosed || (secondsLeft !== null && secondsLeft <= 0);
+    return (
+      <StatusScreen
+        icon={<XCircle className="h-16 w-16 text-red-500" />}
+        title="Order cancelled"
+        message={
+          timedOut
+            ? "The payment time ran out before we received your payment, so this order was cancelled."
+            : "This order was cancelled."
+        }
+        primary={order ? { label: "Order again", onClick: orderAgain } : undefined}
+        secondary={{ label: "Back to menu", onClick: () => router.push("/menu") }}
+      />
     );
   }
 
   if (effectivePhase === "awaiting_fee") {
     return (
-      <div className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col items-center justify-center gap-4 px-4 text-center" role="status" aria-live="polite">
-        <Loader2 className="h-12 w-12 animate-spin text-[#A1255B]" />
-        <h1 className="text-xl font-extrabold text-gray-900">Confirming your delivery fee</h1>
-        <p className="text-sm text-gray-600">
-          The shop is reviewing your pinned location and pricing the delivery. Your payment QR
-          will appear here automatically — no need to refresh.
-        </p>
-        <button type="button" onClick={() => router.push("/checkout")} className="cursor-pointer rounded-full border-none bg-gray-100 px-5 py-3 text-sm font-bold text-gray-700 transition hover:bg-gray-200">
-          Back to checkout
-        </button>
-      </div>
+      <StatusScreen
+        icon={<Loader2 className="h-12 w-12 animate-spin text-[#A1255B]" />}
+        title="Confirming your delivery fee"
+        message="The shop is reviewing your pinned location and pricing the delivery. Your payment QR will appear here automatically — no need to refresh."
+        secondary={{ label: "Back to checkout", onClick: () => router.push("/checkout") }}
+      />
     );
   }
 
   const isLive = effectivePhase === "waiting";
   const isExpired = effectivePhase === "expired";
   const isUrgent = isLive && secondsLeft !== null && secondsLeft <= 60;
-
-  const retryQr = () => {
-    setFailure(null);
-    setSecondsLeft(null);
-    setQrImage(null);
-    void requestQr(currency);
-  };
 
   return (
     <div className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col px-4 py-4 font-sans sm:py-6">
@@ -417,7 +385,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
               }`}
               suppressHydrationWarning
             >
-              {isExpired ? "Expired" : `Expires in ${formattedTime}`}
+              {isExpired ? "Time's up" : `Pay within ${formattedTime}`}
             </span>
           ) : null}
         </div>
@@ -428,30 +396,28 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
             {displayAmount ?? "—"}
           </p>
 
-          <div
-            className="mt-3 inline-flex rounded-full bg-gray-100 p-1"
-            role="radiogroup"
-            aria-label="Pay in currency"
-          >
-            {(["USD", "KHR"] as const).map((option) => {
-              const selected = currency === option;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => setCurrency(option)}
-                  disabled={!isLive}
-                  className={`min-w-[72px] cursor-pointer rounded-full border-none px-3 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed ${
-                    selected ? "bg-white text-gray-900 shadow-sm" : "bg-transparent text-gray-500 hover:text-gray-800"
-                  }`}
-                >
-                  {option === "USD" ? "USD $" : "KHR ៛"}
-                </button>
-              );
-            })}
-          </div>
+          {!isExpired ? (
+            <div className="mt-3 inline-flex rounded-full bg-gray-100 p-1" role="radiogroup" aria-label="Pay in currency">
+              {(["USD", "KHR"] as const).map((option) => {
+                const selected = currency === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setCurrency(option)}
+                    disabled={!isLive}
+                    className={`min-w-[72px] cursor-pointer rounded-full border-none px-3 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed ${
+                      selected ? "bg-white text-gray-900 shadow-sm" : "bg-transparent text-gray-500 hover:text-gray-800"
+                    }`}
+                  >
+                    {option === "USD" ? "USD $" : "KHR ៛"}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
 
           <div className="relative mt-4 flex h-[240px] w-[240px] items-center justify-center rounded-2xl border border-gray-100 bg-white p-2">
             {currentQr && isLive ? (
@@ -466,78 +432,77 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
               />
             ) : effectivePhase === "loading" ? (
               <Loader2 className="h-8 w-8 animate-spin text-gray-300" />
+            ) : isExpired ? (
+              <div className="flex flex-col items-center gap-2 px-6">
+                <Clock className="h-10 w-10 text-gray-300" />
+                <p className="m-0 text-sm font-bold text-gray-800">Payment time is up</p>
+                <p className="m-0 text-xs leading-snug text-gray-500">This QR can no longer be paid.</p>
+              </div>
             ) : (
               <div className="flex flex-col items-center gap-3 px-6">
-                <p className="m-0 text-sm font-bold text-gray-800">
-                  {isExpired ? "This QR has expired" : "No QR to show"}
-                </p>
-                {effectiveMessage ? (
-                  <p className="m-0 text-xs leading-snug text-red-500">{effectiveMessage}</p>
+                <p className="m-0 text-sm font-bold text-gray-800">Couldn&apos;t load the QR</p>
+                {failure || !orderId ? (
+                  <p className="m-0 text-xs leading-snug text-red-500">
+                    {orderId ? failure : "This payment link is missing its order. Please start from the checkout."}
+                  </p>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={retryQr}
-                  disabled={!orderId || isGenerating}
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border-none bg-[#A1255B] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#881d52] active:scale-95 disabled:opacity-60"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  {isExpired ? "Get a new QR" : "Try again"}
-                </button>
+                {orderId ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFailure(null);
+                      setQrImage(null);
+                      void requestQr(currency);
+                    }}
+                    disabled={isGenerating}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-full border-none bg-[#A1255B] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#881d52] active:scale-95 disabled:opacity-60"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Try again
+                  </button>
+                ) : null}
               </div>
             )}
           </div>
 
-          <p className="m-0 mt-3 text-xs text-gray-500">Scan with ABA, ACLEDA, Bakong or any KHQR banking app</p>
+          {isLive ? (
+            <p className="m-0 mt-3 text-xs text-gray-500">Scan with ABA, ACLEDA, Bakong or any KHQR banking app</p>
+          ) : null}
 
-          {(isLive || isExpired) && !checksPaused ? (
+          {isLive || isExpired ? (
             <p
               role="status"
               aria-live="polite"
-              className="m-0 mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3.5 py-1.5 text-[11px] font-semibold text-emerald-700"
+              className={`m-0 mt-4 inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-semibold ${
+                isExpired || confirmDelayed ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-700"
+              }`}
             >
               <span className="relative flex h-2 w-2" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                <span
+                  className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${
+                    isExpired || confirmDelayed ? "bg-amber-400" : "bg-emerald-400"
+                  }`}
+                />
+                <span
+                  className={`relative inline-flex h-2 w-2 rounded-full ${
+                    isExpired || confirmDelayed ? "bg-amber-500" : "bg-emerald-500"
+                  }`}
+                />
               </span>
-              {isLive ? "Waiting for payment — confirms automatically" : "Already paid? We're still confirming it"}
+              {isExpired
+                ? "Checking for a last-minute payment…"
+                : confirmDelayed
+                  ? "Paid? Confirmation is taking a little longer"
+                  : "Waiting for payment — confirms automatically"}
             </p>
           ) : null}
-          {(isLive || isExpired) && !checksPaused ? (
-            <div className="mt-3 flex flex-col items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => { void checkNow(); }}
-                disabled={manualCheck === "checking"}
-                className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-5 text-xs font-bold text-gray-900 transition hover:bg-gray-50 active:scale-95 disabled:cursor-wait disabled:opacity-70"
-              >
-                {manualCheck === "checking" ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                )}
-                {manualCheck === "checking" ? "Checking with your bank…" : "I've paid — check now"}
-              </button>
-              {manualCheck === "not_yet" ? (
-                <p role="status" className="m-0 text-[11px] leading-snug text-gray-500">
-                  Not received yet. Transfers can take a few seconds — we&apos;ll keep checking.
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-          {checksPaused && orderId ? (
-            <div role="status" aria-live="polite" className="mt-4 w-full rounded-2xl bg-amber-50 px-4 py-3 text-left">
-              <p className="m-0 text-sm font-bold text-amber-900">Already paid? Show your receipt at the counter</p>
-              <p className="m-0 mt-1 text-xs leading-snug text-amber-800">
-                We can&apos;t confirm payments automatically right now. Show staff your bank receipt and this
-                order number — this page updates by itself once they confirm.
-              </p>
-              <p className="m-0 mt-2 inline-block rounded-lg bg-white px-2.5 py-1 font-mono text-sm font-bold tracking-wider text-gray-900">
-                #{orderId.slice(0, 8).toUpperCase()}
-              </p>
-            </div>
-          ) : verificationError ? (
-            <p role="status" className="m-0 mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-snug text-amber-800">
-              {verificationError}
+          {isExpired ? (
+            <p className="m-0 mt-2 text-xs leading-snug text-gray-500">
+              If you paid, your order continues automatically. If not, it will be cancelled.
+            </p>
+          ) : isLive && confirmDelayed ? (
+            <p className="m-0 mt-2 text-xs leading-snug text-gray-500">
+              Keep this page open — your order continues automatically once the payment is confirmed.
             </p>
           ) : null}
         </div>
@@ -557,6 +522,52 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
       <p className="m-0 mt-5 text-center text-[10px] text-gray-400">
         Powered by Bakong · National Bank of Cambodia
       </p>
+    </div>
+  );
+}
+
+function StatusScreen({
+  icon,
+  title,
+  message,
+  primary,
+  secondary,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  message: string;
+  primary?: { label: string; onClick: () => void };
+  secondary?: { label: string; onClick: () => void };
+}) {
+  return (
+    <div
+      className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col items-center justify-center gap-4 px-4 text-center"
+      role="status"
+      aria-live="polite"
+    >
+      {icon}
+      <h1 className="m-0 text-2xl font-extrabold text-gray-900">{title}</h1>
+      <p className="m-0 text-sm leading-relaxed text-gray-600">{message}</p>
+      <div className="mt-2 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+        {primary ? (
+          <button
+            type="button"
+            onClick={primary.onClick}
+            className="cursor-pointer rounded-full border-none bg-[#A1255B] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#881d52] active:scale-95"
+          >
+            {primary.label}
+          </button>
+        ) : null}
+        {secondary ? (
+          <button
+            type="button"
+            onClick={secondary.onClick}
+            className="cursor-pointer rounded-full border-none bg-gray-100 px-6 py-3 text-sm font-bold text-gray-700 transition hover:bg-gray-200 active:scale-95"
+          >
+            {secondary.label}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

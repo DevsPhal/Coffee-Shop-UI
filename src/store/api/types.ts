@@ -297,6 +297,8 @@ export interface OrderItemResponse {
   iceLevel: IceLevel | null;
   milkType: MilkType | null;
   extras: OrderItemExtraResponse[];
+  variantId: UUID | null;
+  productImageUrl: string | null;
 }
 
 export interface OrderResponse {
@@ -321,6 +323,8 @@ export interface OrderResponse {
   bakongMd5Hash: string | null;
   bakongCurrency: Currency | null;
   bakongAmount: Numeric | null;
+  /** When the order's QR payment window closes; the order is cancelled if unpaid by then. */
+  bakongExpiresAt: string | null;
   note: string | null;
   paidAt: string | null;
   createdAt: string;
