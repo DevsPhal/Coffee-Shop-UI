@@ -15,6 +15,16 @@ import { shippingInformationSchema } from "@/lib/authSchema";
 import { cleanPhoneInput, phoneInputProps } from "@/lib/phoneUtils";
 import { AlertCircle, Armchair, Check, MapPin, Navigation, Compass, Search, Loader2 } from "lucide-react";
 import { isAuthenticated } from "@/lib/authStorage";
+import {
+  isShortMapsLink,
+  locateMe,
+  parseCoordinates,
+  reverseGeocode,
+  searchPlaces,
+  type LatLng,
+  type PlaceResult,
+} from "@/lib/geoSearch";
+import type { MapFocus } from "@/components/ui/DeliveryMapPicker";
 import { normalizeTableNumber, setDineInTable, TABLE_NUMBER_PATTERN, useDineIn } from "@/lib/dineIn";
 import { useLazyGetTableQuery } from "@/store/api/tableApi";
 import { apiErrorMessage } from "@/store/api/baseApi";
@@ -80,7 +90,12 @@ export function CheckoutpageView() {
   });
   const [tempAddress, setTempAddress] = useState("");
   const [isLocating, setIsLocating] = useState(false);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [searchLocationQuery, setSearchLocationQuery] = useState("");
+  const [locationResults, setLocationResults] = useState<PlaceResult[]>([]);
+  const [locationNotice, setLocationNotice] = useState<{ tone: "info" | "error"; text: string } | null>(null);
+  const [mapFocus, setMapFocus] = useState<MapFocus | null>(null);
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
 
   const [errors, setErrors] = useState<{
     fullName?: string;
@@ -94,89 +109,93 @@ export function CheckoutpageView() {
   const handleOpenMapModal = () => {
     setIsMapModalOpen(true);
     setTempAddress(address || capital);
-    if (navigator.geolocation && !address) {
-      handleDetectCurrentLocation();
-    }
+    setLocationResults([]);
+    setLocationNotice(null);
+    setMapFocus(null);
+    if (!address) void handleDetectCurrentLocation();
   };
 
-  const reverseGeocodeToAddress = async (lat: number, lng: number) => {
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
-      );
-      const data = await res.json();
-      if (data && data.display_name) {
-        const formatted = data.display_name.split(",").slice(0, 4).join(", ");
-        setTempAddress(formatted);
-      } else {
-        setTempAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)} (Phnom Penh)`);
-      }
-    } catch {
-      setTempAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
-    }
-  };
-
-  const handlePickOnMap = (lat: number, lng: number) => {
-    setMapCoords({ lat, lng });
-    reverseGeocodeToAddress(lat, lng);
-  };
-
-  const handleDetectCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      toast.add({
-        type: "warning",
-        description: "Location isn't supported on this browser.",
-      });
+  const placeDeliveryPin = (point: LatLng, options: { fly?: boolean; label?: string } = {}) => {
+    setMapCoords(point);
+    if (options.fly) setMapFocus({ ...point, zoom: 17, key: Date.now() });
+    if (options.label) {
+      setTempAddress(options.label);
       return;
     }
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        setMapCoords({ lat: latitude, lng: longitude });
-        await reverseGeocodeToAddress(latitude, longitude);
-        setIsLocating(false);
-      },
-      () => {
-        setIsLocating(false);
-        toast.add({
-          type: "warning",
-          description: "Couldn't get your location — using Phnom Penh.",
-        });
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
+    void reverseGeocode(point).then((label) =>
+      setTempAddress(label || `Lat: ${point.lat.toFixed(4)}, Lng: ${point.lng.toFixed(4)}`)
     );
   };
 
-  const handleSearchLocation = async () => {
-    if (!searchLocationQuery.trim()) return;
+  const handlePickOnMap = (lat: number, lng: number) => {
+    setLocationAccuracy(null);
+    setLocationResults([]);
+    placeDeliveryPin({ lat, lng });
+  };
+
+  const handleDetectCurrentLocation = async () => {
     setIsLocating(true);
+    setLocationNotice(null);
+    setLocationResults([]);
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(
-          searchLocationQuery + ", Cambodia"
-        )}`
-      );
-      const data = await res.json();
-      if (data && data.length > 0) {
-        const first = data[0];
-        const newLat = parseFloat(first.lat);
-        const newLng = parseFloat(first.lon);
-        setMapCoords({ lat: newLat, lng: newLng });
-        setTempAddress(first.display_name.split(",").slice(0, 4).join(", "));
-      } else {
-        toast.add({
-          type: "warning",
-          description: "Location not found. Please try another query.",
-        });
-      }
-    } catch {
-      toast.add({
-        type: "error",
-        description: "Error searching location.",
+      const position = await locateMe();
+      setLocationAccuracy(position.accuracy);
+      placeDeliveryPin(position, { fly: true });
+      setLocationNotice({
+        tone: "info",
+        text: `${t("Pinned your current location")} (±${Math.round(position.accuracy)} m)`,
       });
+    } catch (err) {
+      setLocationNotice({ tone: "error", text: t((err as Error).message) });
     } finally {
       setIsLocating(false);
+    }
+  };
+
+  const chooseLocationResult = (place: PlaceResult) => {
+    setLocationResults([]);
+    setLocationAccuracy(null);
+    setLocationNotice(null);
+    placeDeliveryPin(place, { fly: true, label: [place.name, place.detail].filter(Boolean).join(", ") });
+  };
+
+  const handleSearchLocation = async () => {
+    const query = searchLocationQuery.trim();
+    if (!query) return;
+    setLocationNotice(null);
+    setLocationResults([]);
+
+    const pasted = parseCoordinates(query);
+    if (pasted) {
+      setLocationAccuracy(null);
+      placeDeliveryPin(pasted, { fly: true });
+      return;
+    }
+    if (isShortMapsLink(query)) {
+      setLocationNotice({
+        tone: "error",
+        text: t("Short Google Maps links can't be read here. Open the link, then copy the full link or the coordinates."),
+      });
+      return;
+    }
+
+    setIsSearchingLocation(true);
+    try {
+      const found = await searchPlaces(query, mapCoords);
+      if (found.length === 0) {
+        setLocationNotice({
+          tone: "error",
+          text: t("No places found. Try a street, area or landmark — or paste a Google Maps link."),
+        });
+      } else if (found.length === 1) {
+        chooseLocationResult(found[0]);
+      } else {
+        setLocationResults(found);
+      }
+    } catch {
+      setLocationNotice({ tone: "error", text: t("Search isn't reachable right now. Drag the pin or tap the map instead.") });
+    } finally {
+      setIsSearchingLocation(false);
     }
   };
 
@@ -914,43 +933,80 @@ export function CheckoutpageView() {
               <MapPin className="w-5 h-5 text-amber-300" />
               <div>
                 <h3 className="text-base font-bold leading-tight">{t("Select Delivery Location")}</h3>
-                <p className="text-xs text-white/80">{t("Drag the pin or tap anywhere on the map")}</p>
+                <p className="text-xs text-white/80">{t("Drag the pin or tap the map. Scroll or pinch to zoom.")}</p>
               </div>
             </div>
           </div>
 
-          <div className="p-3 bg-gray-50 border-b border-gray-100 flex flex-wrap sm:flex-nowrap gap-2 items-center">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchLocationQuery}
-                onChange={(e) => setSearchLocationQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearchLocation()}
-                placeholder={t("Search street, landmark, or area...")}
-                className="w-full pl-9 pr-3 py-2 rounded-full bg-white text-xs sm:text-sm  border border-gray-200 outline-none focus:border-[#A1255B] transition-colors"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={handleSearchLocation}
-              className="px-3 py-2 rounded-full bg-gray-800 hover:bg-gray-900 text-white text-xs font-semibold  border-none cursor-pointer transition-all"
+          <div className="p-3 bg-gray-50 border-b border-gray-100 space-y-2">
+            <form
+              className="flex flex-wrap sm:flex-nowrap gap-2 items-center"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleSearchLocation();
+              }}
             >
-              {t("Search")}
-            </button>
-            <button
-              type="button"
-              onClick={handleDetectCurrentLocation}
-              disabled={isLocating}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold  border-none cursor-pointer transition-all shadow-xs disabled:opacity-50"
-            >
-              {isLocating ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Navigation className="w-3.5 h-3.5" />
-              )}
-              <span>{t("Locate Me")}</span>
-            </button>
+              <div className="relative min-w-0 flex-1 basis-full sm:basis-auto">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="search"
+                  value={searchLocationQuery}
+                  onChange={(e) => setSearchLocationQuery(e.target.value)}
+                  placeholder={t("Street, landmark, area, or paste a Google Maps link")}
+                  aria-label={t("Search for a place")}
+                  enterKeyHint="search"
+                  className="w-full h-10 pl-9 pr-3 rounded-full bg-white text-sm border border-gray-200 outline-none focus:border-[#A1255B] transition-colors"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSearchingLocation || !searchLocationQuery.trim()}
+                className="flex-1 sm:flex-none h-10 flex items-center justify-center gap-1.5 px-4 rounded-full bg-gray-900 hover:bg-black text-white text-sm font-semibold border-none cursor-pointer transition-colors disabled:opacity-50"
+              >
+                {isSearchingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {t("Search")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDetectCurrentLocation()}
+                disabled={isLocating}
+                className="flex-1 sm:flex-none h-10 flex items-center justify-center gap-1.5 whitespace-nowrap px-4 rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white text-sm font-semibold border-none cursor-pointer transition-colors disabled:opacity-50"
+              >
+                {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+                <span>{t("Use my location")}</span>
+              </button>
+            </form>
+
+            {locationResults.length > 0 ? (
+              <ul className="max-h-44 overflow-y-auto rounded-xl border border-gray-200 bg-white" aria-label={t("Search results")}>
+                {locationResults.map((place) => (
+                  <li key={place.id} className="border-b border-gray-100 last:border-0">
+                    <button
+                      type="button"
+                      onClick={() => chooseLocationResult(place)}
+                      className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left hover:bg-gray-50 cursor-pointer"
+                    >
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#A1255B]" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-gray-900">{place.name}</span>
+                        {place.detail ? <span className="block truncate text-xs text-gray-500">{place.detail}</span> : null}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {locationNotice ? (
+              <p
+                role={locationNotice.tone === "error" ? "alert" : "status"}
+                className={`rounded-lg px-3 py-2 text-xs ${
+                  locationNotice.tone === "error" ? "bg-red-50 text-red-700" : "bg-pink-50 text-[#A1255B]"
+                }`}
+              >
+                {locationNotice.text}
+              </p>
+            ) : null}
           </div>
 
           <div className="relative w-full h-72 sm:h-80 bg-gray-100">
@@ -959,13 +1015,15 @@ export function CheckoutpageView() {
                 lat={mapCoords.lat}
                 lng={mapCoords.lng}
                 onPick={handlePickOnMap}
+                focus={mapFocus}
+                accuracy={locationAccuracy}
               />
             )}
 
             <div className="absolute top-3 left-3 z-1000 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-md text-xs font-medium text-gray-800 flex items-center gap-1.5 border border-white pointer-events-none">
-              <Compass className="w-4 h-4 text-[#A1255B] animate-spin" style={{ animationDuration: '8s' }} />
-              <span>
-                {mapCoords.lat.toFixed(4)}, {mapCoords.lng.toFixed(4)}
+              <Compass className="w-4 h-4 text-[#A1255B]" />
+              <span className="tabular-nums">
+                {mapCoords.lat.toFixed(5)}, {mapCoords.lng.toFixed(5)}
               </span>
             </div>
           </div>

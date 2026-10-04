@@ -129,16 +129,6 @@ export function Card({
                 {discountInfo.badgeText}
               </span>
             )}
-            {showCountdown && (
-              <div
-                className={`promo_clock_badge promo_clock_badge_phone promo_clock_${promoStatus}`}
-                title={`Promotion ends in ${displayPromoTime}`}
-                suppressHydrationWarning
-              >
-                <Clock className="w-3 h-3 shrink-0" />
-                <span className="promo_clock_text" suppressHydrationWarning>{displayPromoTime}</span>
-              </div>
-            )}
           </Link>
 
           <div className="flex-1 min-w-0 px-3 sm:px-4 overflow-hidden card-info">
@@ -168,8 +158,15 @@ export function Card({
               </button>
             </div>
 
-            <div className="text-xs font-normal text-gray-400 mt-1 mb-0.5 price-label">
+            <div className="text-xs font-normal text-gray-400 mt-1 mb-0.5 price-label flex flex-wrap items-center gap-x-1.5 gap-y-1">
               {t("Price")}
+              {/* The thumbnail is too small for the expanding clock badge, so the countdown sits here. */}
+              {showCountdown && (
+                <span className={`promo_time_inline promo_time_${promoStatus}`} suppressHydrationWarning>
+                  <Clock className="w-3 h-3 shrink-0" aria-hidden />
+                  {displayPromoTime}
+                </span>
+              )}
             </div>
 
             <div className="price_container shrink-0 flex items-center gap-1.5 flex-wrap">

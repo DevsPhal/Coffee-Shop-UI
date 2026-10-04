@@ -460,7 +460,7 @@ export function CheckoutdonepageView() {
               <span className="value_dark">{t(order?.paymentMethod === "BAKONG" ? "Bakong QR" : order?.paymentMethod === "CASH" ? "Cash" : "Not selected")}</span>
             </div>
 
-            <div className="meta_row">
+            <div className="meta_row is_block">
               <span className="label_muted">{t("Location:")}</span>
               <span className="value_brand" suppressHydrationWarning>
                 {displayLocation}

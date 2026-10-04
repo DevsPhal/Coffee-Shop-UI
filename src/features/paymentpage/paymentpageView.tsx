@@ -4,19 +4,18 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
-import { CheckCircle2, ChevronDown, Download, ExternalLink, Loader2, RefreshCw, Smartphone } from "lucide-react";
+import { CheckCircle2, ChevronDown, Download, Loader2, RefreshCw, Share2 } from "lucide-react";
 
 import { toast } from "@/components/ui/toast";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import {
   useConfirmBakongPaymentMutation,
-  useGenerateBakongDeeplinkMutation,
   useGenerateBakongQrMutation,
   useLazyGetMyOrderQuery,
 } from "@/store/api/orderApi";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { useMounted } from "@/hooks/useMounted";
-import { BANK_APPS, bankAppLaunch, bankAppPayLaunch, storeUrl, type BankApp, type BankAppId } from "@/lib/bankApps";
+import { BANK_APPS, type BankApp, type BankAppId } from "@/lib/bankApps";
 import type { Currency, OrderResponse } from "@/store/api/types";
 import "@/app/globals.scss";
 
@@ -29,26 +28,23 @@ const PAID_STATUSES: OrderResponse["status"][] = ["PAID", "PREPARING", "OUT_FOR_
 
 const POLL_MS = 4000;
 
-const APP_OPEN_TIMEOUT_MS = 2500;
-
-async function saveQrImage(dataUrl: string, fileName: string, preferDownload = false): Promise<boolean> {
+function qrFile(dataUrl: string, fileName: string) {
   const bytes = Uint8Array.from(atob(dataUrl.split(",")[1]), (c) => c.charCodeAt(0));
-  const file = new File([bytes], fileName, { type: "image/png" });
-  if (!preferDownload && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file] });
-      return true;
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") return false;
-    }
-  }
+  return new File([bytes], fileName, { type: "image/png" });
+}
+
+/** True when the phone can hand the QR image to other apps (iOS/Android share sheet). */
+function canShareImage(file: File) {
+  return typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
+}
+
+function downloadImage(dataUrl: string, fileName: string) {
   const link = document.createElement("a");
   link.href = dataUrl;
   link.download = fileName;
   document.body.appendChild(link);
   link.click();
   link.remove();
-  return true;
 }
 
 type CheckOutcome =
@@ -68,7 +64,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const router = useRouter();
   const [currency, setCurrency] = useState<Currency>("USD");
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
-  const [qrImage, setQrImage] = useState<{ currency: Currency; dataUrl: string; khqr: string } | null>(null);
+  const [qrImage, setQrImage] = useState<{ currency: Currency; dataUrl: string } | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [settled, setSettled] = useState<"paid" | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -78,7 +74,6 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const [generateQr, { data: qr, isLoading: isGenerating }] = useGenerateBakongQrMutation();
   const [confirmPayment, { isLoading: isChecking }] = useConfirmBakongPaymentMutation();
   const [getOrder] = useLazyGetMyOrderQuery();
-  const [generateDeeplink, { isLoading: isOpeningBakong }] = useGenerateBakongDeeplinkMutation();
   const mounted = useMounted();
   const onPhone = mounted && isPhone();
 
@@ -89,8 +84,8 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const hasPaidRef = useRef(false);
   const isActiveRef = useRef(true);
   const lastNoticeRef = useRef<string | null>(null);
-  const [savingFor, setSavingFor] = useState<BankAppId | "other" | null>(null);
-  const [savedFor, setSavedFor] = useState<{ bank: BankAppId; qr: string } | null>(null);
+  const [guideBank, setGuideBank] = useState<BankAppId>("aba");
+  const [qrAction, setQrAction] = useState<"save" | "share" | null>(null);
 
   useEffect(() => {
     isActiveRef.current = true;
@@ -155,7 +150,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
           color: { dark: "#000000", light: "#ffffff" },
         });
         if (!isActiveRef.current || hasPaidRef.current) return;
-        setQrImage({ currency: issued.currency, dataUrl, khqr: issued.qrString });
+        setQrImage({ currency: issued.currency, dataUrl });
         setSecondsLeft(Math.max(0, Math.floor(issued.expiresInSeconds)));
         setFailure(null);
         setVerificationError(null);
@@ -196,9 +191,6 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   });
 
   const currentQr = qrImage && qrImage.currency === currency ? qrImage.dataUrl : null;
-  const currentKhqr = qrImage && qrImage.currency === currency ? qrImage.khqr : null;
-  const savedForBank = savedFor && savedFor.qr === currentQr ? savedFor.bank : null;
-  const savedQrIsStale = savedFor !== null && currentQr !== null && savedFor.qr !== currentQr;
 
   const effectivePhase: Phase = !orderId
     ? "error"
@@ -286,101 +278,32 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
     };
   }, [effectivePhase, checkPayment]);
 
-  const launchApp = useCallback((url: string, appName: string, installUrl?: string) => {
-    let leftPage = false;
-    const onLeave = () => { leftPage = true; };
-    const onVisibility = () => { if (document.visibilityState === "hidden") leftPage = true; };
-    window.addEventListener("pagehide", onLeave);
-    window.addEventListener("blur", onLeave);
-    document.addEventListener("visibilitychange", onVisibility);
-    window.location.href = url;
-    window.setTimeout(() => {
-      window.removeEventListener("pagehide", onLeave);
-      window.removeEventListener("blur", onLeave);
-      document.removeEventListener("visibilitychange", onVisibility);
-      if (leftPage || !isActiveRef.current || hasPaidRef.current) return;
-      toast.add({
-        type: "warning",
-        title: `${appName} didn't open`,
-        description: "Make sure it's installed, or open it and scan the QR.",
-        ...(installUrl
-          ? { actionProps: { children: "Get the app", onClick: () => { window.open(installUrl, "_blank", "noopener"); } } }
-          : {}),
-      });
-    }, APP_OPEN_TIMEOUT_MS);
-  }, []);
-
-  const openBakongApp = useCallback(async () => {
-    if (!orderId) return;
-    try {
-      const { deeplink } = await generateDeeplink(orderId).unwrap();
-      launchApp(deeplink, "Bakong");
-    } catch (err) {
-      toast.add({
-        type: "warning",
-        description: apiErrorMessage(
-          err as Parameters<typeof apiErrorMessage>[0],
-          "Could not open Bakong. Please pay with your bank app instead."
-        ),
-      });
-    }
-  }, [orderId, generateDeeplink, launchApp]);
-
-  const openBankApp = useCallback((bank: BankAppId) => {
-    const app = BANK_APPS[bank];
-    const payUrl = currentKhqr ? bankAppPayLaunch(app, currentKhqr) : null;
-    if (payUrl) {
-      launchApp(payUrl, app.name, storeUrl(app));
-      return;
-    }
-    const { url, storePage } = bankAppLaunch(app);
-    if (storePage) {
-      window.open(url, "_blank", "noopener");
-      return;
-    }
-    launchApp(url, app.name, storeUrl(app));
-  }, [launchApp, currentKhqr]);
-
-  const chooseBank = useCallback((bank: BankAppId) => {
+  // No deep links: the customer keeps the QR (Photos, or straight into an app via the share sheet)
+  // and scans it from their photos in their bank app. This page then confirms the payment by itself.
+  const keepQr = useCallback(async (mode: "save" | "share") => {
     if (!currentQr || !orderId) return;
-    setSavedFor({ bank, qr: currentQr });
-    if (BANK_APPS[bank].khqrLink) {
-      openBankApp(bank);
-      return;
-    }
-    if (/Android/i.test(navigator.userAgent)) {
-      void saveQrImage(currentQr, `590st-cafe-khqr-${orderId.slice(0, 8)}.png`, true).catch(() => undefined);
-      window.setTimeout(() => openBankApp(bank), 400);
-      return;
-    }
-    openBankApp(bank);
-  }, [currentQr, orderId, openBankApp]);
-
-  const saveQrFor = useCallback(async (bank: BankAppId | null) => {
-    if (!currentQr || !orderId) return;
-    setSavingFor(bank ?? "other");
+    const fileName = `590st-cafe-khqr-${orderId.slice(0, 8)}.png`;
+    const file = qrFile(currentQr, fileName);
+    setQrAction(mode);
     try {
-      const saved = await saveQrImage(
-        currentQr,
-        `590st-cafe-khqr-${orderId.slice(0, 8)}.png`,
-        /Android/i.test(navigator.userAgent)
-      );
-      if (saved) {
-        toast.add({
-          type: "success",
-          description: "QR saved — scan it from your gallery in your bank app.",
-        });
+      // iPhone saves to Photos from the share sheet ("Save Image"); Android and desktop download it.
+      const useShareSheet = canShareImage(file) && (mode === "share" || !/Android/i.test(navigator.userAgent));
+      if (useShareSheet) {
+        await navigator.share({ files: [file], title: "590st Cafe payment QR" });
+      } else {
+        downloadImage(currentQr, fileName);
+        toast.add({ type: "success", description: "QR saved — now scan it from your photos in your bank app." });
       }
-    } catch {
-      toast.add({ type: "error", description: "Couldn't save the QR. Take a screenshot and scan that instead." });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      toast.add({ type: "error", description: "Couldn't save the QR. Take a screenshot of it instead." });
     } finally {
-      setSavingFor(null);
+      setQrAction(null);
     }
   }, [currentQr, orderId]);
 
-  const openSavedBankApp = useCallback(() => {
-    if (savedForBank) openBankApp(savedForBank);
-  }, [savedForBank, openBankApp]);
+  const shareSupported =
+    mounted && typeof navigator !== "undefined" && typeof navigator.canShare === "function";
 
   const formattedTime =
     secondsLeft === null
@@ -489,69 +412,14 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
 
           {effectivePhase === "waiting" && onPhone ? (
             <div className="mb-3 flex w-full flex-col gap-2.5 text-left">
-              {savedForBank ? (
-                <BankSteps
-                  app={BANK_APPS[savedForBank]}
-                  onOpen={openSavedBankApp}
-                  onSaveQr={() => { void saveQrFor(savedForBank); }}
-                  isSaving={savingFor === savedForBank}
-                  onBack={() => setSavedFor(null)}
-                />
-              ) : (
-                <>
-                  <p className="m-0 text-xs font-bold text-gray-800">Paying on this phone?</p>
-                  {savedQrIsStale ? (
-                    <p role="status" className="m-0 rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800">
-                      The QR changed. If you took a screenshot, take a new one before paying.
-                    </p>
-                  ) : null}
-                  <p className="m-0 rounded-xl bg-gray-50 px-3 py-2.5 text-[11px] leading-snug text-gray-600">
-                    <b className="text-gray-900">ABA</b> opens straight on this payment — just choose your
-                    account and confirm. For <b className="text-gray-900">ACLEDA</b>, screenshot this QR
-                    first, then scan it from your gallery in the app.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(Object.keys(BANK_APPS) as BankAppId[]).map((bank) => {
-                      const app = BANK_APPS[bank];
-                      return (
-                        <button
-                          key={bank}
-                          type="button"
-                          onClick={() => chooseBank(bank)}
-                          disabled={!currentQr}
-                          aria-label={`Open ${app.name}`}
-                          className="flex flex-col items-center gap-1.5 rounded-2xl border border-gray-200 bg-white px-2 py-3 transition hover:border-gray-300 hover:bg-gray-50 active:scale-98 disabled:opacity-60 cursor-pointer"
-                        >
-                          <BankBadge app={app} />
-                          <span className="text-sm font-bold text-gray-900">{app.shortName}</span>
-                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-500">
-                            <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                            {app.khqrLink ? "Opens on payment" : "Open app & scan"}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => { void openBakongApp(); }}
-                    disabled={isOpeningBakong}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-800 transition hover:bg-gray-50 active:scale-98 disabled:opacity-60 cursor-pointer"
-                  >
-                    {isOpeningBakong ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-                    {isOpeningBakong ? "Opening Bakong..." : "Bakong app — no screenshot needed"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { void saveQrFor(null); }}
-                    disabled={savingFor !== null || !currentQr}
-                    className="inline-flex w-full items-center justify-center gap-1.5 border-none bg-transparent py-1 text-[11px] font-semibold text-gray-500 underline disabled:opacity-60 cursor-pointer"
-                  >
-                    {savingFor === "other" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                    Save QR image instead of a screenshot
-                  </button>
-                </>
-              )}
+              <PhonePayGuide
+                bank={guideBank}
+                onBankChange={setGuideBank}
+                onSave={() => { void keepQr("save"); }}
+                onShare={shareSupported ? () => { void keepQr("share"); } : undefined}
+                busy={qrAction}
+                disabled={!currentQr}
+              />
             </div>
           ) : null}
 
@@ -681,42 +549,79 @@ function BankBadge({ app, small = false }: { app: BankApp; small?: boolean }) {
   );
 }
 
-function BankSteps({
-  app,
-  onOpen,
-  onSaveQr,
-  isSaving,
-  onBack,
+function PhonePayGuide({
+  bank,
+  onBankChange,
+  onSave,
+  onShare,
+  busy,
+  disabled,
 }: {
-  app: BankApp;
-  onOpen: () => void;
-  onSaveQr: () => void;
-  isSaving: boolean;
-  onBack: () => void;
+  bank: BankAppId;
+  onBankChange: (bank: BankAppId) => void;
+  onSave: () => void;
+  onShare?: () => void;
+  busy: "save" | "share" | null;
+  disabled: boolean;
 }) {
-  const steps = app.khqrLink
-    ? [
-        { title: `Confirm in ${app.name}`, detail: "The payment opens with the amount filled in. Choose your account and confirm." },
-        { title: "Come back here", detail: "This page confirms the payment on its own." },
-        {
-          title: "Payment didn't show up?",
-          detail: `Screenshot this QR, then in the app ${app.galleryHint} and pick it.`,
-        },
-      ]
-    : [
-        { title: "Have the QR in your photos", detail: "A screenshot of this page works, or use Save QR image below." },
-        { title: `Scan it in ${app.name}`, detail: `In the app, ${app.galleryHint}, then pick the QR and pay.` },
-        { title: "Come back here", detail: "This page confirms the payment on its own." },
-      ];
+  const app = BANK_APPS[bank];
+  const steps = [
+    { title: "Save the QR", detail: "Tap Save QR above, or take a screenshot of this QR." },
+    { title: `Open ${app.name}`, detail: `In the app, ${app.galleryHint}, then pick the saved QR.` },
+    { title: "Check the amount and pay", detail: "Then come back here — we confirm the payment automatically." },
+  ];
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3.5" role="status" aria-live="polite">
-      <div className="mb-3 flex items-center gap-2.5">
-        <BankBadge app={app} small />
-        <p className="m-0 text-sm font-extrabold text-gray-900">Pay with {app.name}</p>
+    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3.5">
+      <p className="m-0 mb-2.5 text-xs font-bold text-gray-800">Paying on this phone?</p>
+
+      <div className={`grid gap-2 ${onShare ? "grid-cols-2" : "grid-cols-1"}`}>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={disabled || busy !== null}
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border-none bg-[#A1255B] px-4 text-sm font-bold text-white shadow-md transition hover:bg-[#881d52] active:scale-98 disabled:opacity-60 cursor-pointer"
+        >
+          {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          Save QR
+        </button>
+        {onShare ? (
+          <button
+            type="button"
+            onClick={onShare}
+            disabled={disabled || busy !== null}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-sm font-bold text-gray-900 transition hover:bg-gray-100 active:scale-98 disabled:opacity-60 cursor-pointer"
+          >
+            {busy === "share" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+            Share QR
+          </button>
+        ) : null}
       </div>
 
-      <ol className="m-0 mb-3.5 flex list-none flex-col gap-2.5 p-0">
+      <p className="m-0 mt-3.5 mb-2 text-[11px] font-semibold text-gray-500">Which app do you pay with?</p>
+      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Your banking app">
+        {(Object.keys(BANK_APPS) as BankAppId[]).map((id) => {
+          const option = BANK_APPS[id];
+          const selected = id === bank;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onBankChange(id)}
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-bold transition cursor-pointer ${
+                selected ? "border-gray-900 bg-white text-gray-900 shadow-sm" : "border-gray-200 bg-white/60 text-gray-500"
+              }`}
+            >
+              <BankBadge app={option} small />
+              {option.shortName}
+            </button>
+          );
+        })}
+      </div>
+
+      <ol className="m-0 mt-3 flex list-none flex-col gap-2.5 p-0" aria-live="polite">
         {steps.map((step, index) => (
           <li key={step.title} className="flex items-start gap-2.5">
             <StepNumber n={index + 1} />
@@ -727,34 +632,6 @@ function BankSteps({
           </li>
         ))}
       </ol>
-
-      <button
-        type="button"
-        onClick={onOpen}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-full border-none px-4 py-3 text-sm font-bold shadow-md transition hover:opacity-90 active:scale-98 cursor-pointer"
-        style={{ backgroundColor: app.color, color: app.ink }}
-      >
-        <ExternalLink className="h-4 w-4" />
-        {app.khqrLink ? `Pay in ${app.name}` : `Open ${app.name}`}
-      </button>
-      <div className="mt-2 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="border-none bg-transparent p-1 text-[11px] font-semibold text-gray-500 underline cursor-pointer"
-        >
-          Choose another bank
-        </button>
-        <button
-          type="button"
-          onClick={onSaveQr}
-          disabled={isSaving}
-          className="inline-flex items-center gap-1 border-none bg-transparent p-1 text-[11px] font-semibold text-gray-500 underline disabled:opacity-60 cursor-pointer"
-        >
-          {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
-          Save QR image
-        </button>
-      </div>
     </div>
   );
 }

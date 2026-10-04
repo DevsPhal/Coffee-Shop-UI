@@ -113,15 +113,6 @@ export function PhoneCard({
               {discountInfo.badgeText}
             </span>
           )}
-          {showCountdown && (
-            <div
-              className={`promo_clock_badge promo_clock_badge_phone promo_clock_${promoStatus}`}
-              title={`Promotion ends in ${displayPromoTime}`}
-            >
-              <Clock className="w-3 h-3 shrink-0" />
-              <span className="promo_clock_text">{displayPromoTime}</span>
-            </div>
-          )}
         </div>
 
         <div className="card-info flex-1 min-w-0 overflow-hidden">
@@ -143,11 +134,18 @@ export function PhoneCard({
             </button>
           </div>
 
-          <div className="price-label flex items-center gap-1.5">
+          <div className="price-label flex flex-wrap items-center gap-x-1.5 gap-y-1">
             {t("Price")}
             {isPromotion && (
               <span className="bg-[#A1255B] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
                 PROMO
+              </span>
+            )}
+            {/* The thumbnail is too small for the expanding clock badge, so the countdown sits here. */}
+            {showCountdown && (
+              <span className={`promo_time_inline promo_time_${promoStatus}`}>
+                <Clock className="w-3 h-3 shrink-0" aria-hidden />
+                {displayPromoTime}
               </span>
             )}
           </div>

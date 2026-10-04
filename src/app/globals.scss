@@ -117,6 +117,9 @@
 .discount_badge { position: absolute; top: 0.625rem; left: 0.625rem; z-index: 10; background-color: var(--secondary-color); color: #FFFFFF; font-size: 0.6875rem; font-weight: 500; padding: 0.25rem 0.625rem; border-radius: 9999px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   &.discount_badge_phone { top: auto; bottom: 0.35rem; left: 0.35rem; font-size: 0.5625rem; padding: 0.15rem 0.45rem; line-height: 1; }
 }
+.promo_time_inline { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.6875rem; font-weight: 700; white-space: nowrap; color: #b45309;
+  &.promo_time_danger { color: #dc2626; }
+}
 .promo_clock_badge { position: absolute;  top: 0.625rem; right: 0.625rem;  z-index: 10;  display: inline-flex;  align-items: center;  justify-content: flex-start;  gap: 0;  backdrop-filter: blur(8px); padding: 0.3rem 0.35rem; border-radius: 9999px; cursor: pointer; overflow: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); max-width: 1.7rem;
   .promo_clock_text {  font-size: 0.6875rem;  font-weight: 700;  white-space: nowrap;  opacity: 0;  max-width: 0;  overflow: hidden;  transform: translateX(-4px);  transition: opacity 0.25s ease, max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s ease; letter-spacing: 0.01em;
 }
@@ -1182,7 +1185,12 @@ input[type="tel"] { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; 
 .text_active { font-size: 0.9375rem; font-weight: 700; color: var(--primary-color); @media (min-width: 640px) { font-size: 1.125rem; } }
 .text_done { font-size: 0.9375rem; font-weight: 600; color: #4b5563; @media (min-width: 640px) { font-size: 1.125rem; } }
 .meta_row_group { display: flex; flex-direction: column; gap: 12px; font-size: 0.8125rem; @media (min-width: 640px) { font-size: 1rem; } }
-.meta_row { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 8px; min-width: 0; }
+.meta_row { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: nowrap; gap: 12px; min-width: 0; line-height: 1.4;
+  > :first-child { flex-shrink: 0; white-space: nowrap; }
+  > :last-child { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+  // Long values (an address): label on its own line, value underneath at full width.
+  &.is_block { flex-direction: column; gap: 4px; > :last-child { text-align: left; } }
+}
 .label_muted { color: #6b7280; font-weight: 500; }
 .value_brand { color: var(--primary-color); font-weight: 700; }
 .value_brand_lg { color: var(--primary-color); font-weight: 700; font-size: 1rem; @media (min-width: 640px) { font-size: 1.125rem; } }

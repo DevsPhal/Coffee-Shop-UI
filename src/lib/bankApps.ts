@@ -1,15 +1,15 @@
-export type BankAppId = "aba" | "acleda";
+// Banking apps customers pay our Bakong KHQR with. We don't deep-link into them: the customer
+// saves or shares the QR, then scans it from their photos in whichever app they use.
+
+export type BankAppId = "aba" | "acleda" | "bakong" | "other";
 
 export interface BankApp {
   name: string;
   shortName: string;
   color: string;
   ink: string;
-  androidPackage: string;
-  iosScheme?: string;
-  appStoreUrl: string;
+  /** Where the "scan from photos" button is, finishing "Open <app>, …". */
   galleryHint: string;
-  khqrLink?: (khqr: string) => string;
 }
 
 export const BANK_APPS: Record<BankAppId, BankApp> = {
@@ -18,47 +18,27 @@ export const BANK_APPS: Record<BankAppId, BankApp> = {
     shortName: "ABA",
     color: "#005D7E",
     ink: "#ffffff",
-    androidPackage: "com.paygo24.ibank",
-    iosScheme: "abamobilebank://ababank.com",
-    appStoreUrl: "https://apps.apple.com/app/id968860649",
     galleryHint: "tap Scan QR, then the gallery icon",
-    khqrLink: (khqr) =>
-      `abamobilebank://ababank.com?${new URLSearchParams({ type: "payway", qrcode: khqr }).toString()}`,
   },
   acleda: {
     name: "ACLEDA mobile",
     shortName: "ACLEDA",
     color: "#173F73",
     ink: "#ffffff",
-    androidPackage: "com.domain.acledabankqr",
-    appStoreUrl: "https://apps.apple.com/app/id1196285236",
     galleryHint: "tap Scan QR, then Select QR",
   },
+  bakong: {
+    name: "Bakong",
+    shortName: "Bakong",
+    color: "#E21F26",
+    ink: "#ffffff",
+    galleryHint: "tap Scan, then the photo icon",
+  },
+  other: {
+    name: "your bank app",
+    shortName: "Other",
+    color: "#374151",
+    ink: "#ffffff",
+    galleryHint: "open its KHQR scanner and choose a photo",
+  },
 };
-
-const isAndroid = () => /Android/i.test(navigator.userAgent);
-
-export const storeUrl = (app: BankApp) =>
-  isAndroid() ? `https://play.google.com/store/apps/details?id=${app.androidPackage}` : app.appStoreUrl;
-
-export function bankAppLaunch(app: BankApp): { url: string; storePage: boolean } {
-  if (isAndroid()) {
-    const fallback = encodeURIComponent(storeUrl(app));
-    return {
-      url:
-        "intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;" +
-        `package=${app.androidPackage};S.browser_fallback_url=${fallback};end`,
-      storePage: false,
-    };
-  }
-  return app.iosScheme ? { url: app.iosScheme, storePage: false } : { url: app.appStoreUrl, storePage: true };
-}
-
-export function bankAppPayLaunch(app: BankApp, khqr: string): string | null {
-  if (!app.khqrLink) return null;
-  const link = app.khqrLink(khqr);
-  if (!isAndroid()) return link;
-  const [scheme, rest] = link.split("://");
-  const fallback = encodeURIComponent(storeUrl(app));
-  return `intent://${rest}#Intent;scheme=${scheme};package=${app.androidPackage};S.browser_fallback_url=${fallback};end`;
-}
