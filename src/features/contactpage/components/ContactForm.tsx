@@ -121,7 +121,7 @@ export function ContactForm() {
               aria-invalid={!!errors.fullName}
             />
           </div>
-          {errors.fullName && <TooltipAlert message={t(errors.fullName)} />}
+          {errors.fullName && <TooltipAlert message={errors.fullName} />}
         </div>
 
         <div className="contact_form_row">
@@ -144,7 +144,7 @@ export function ContactForm() {
                 aria-invalid={!!errors.email}
               />
             </div>
-            {errors.email && <TooltipAlert message={t(errors.email)} />}
+            {errors.email && <TooltipAlert message={errors.email} />}
           </div>
 
           <div>
@@ -165,7 +165,7 @@ export function ContactForm() {
                 aria-invalid={!!errors.phone}
               />
             </div>
-            {errors.phone && <TooltipAlert message={t(errors.phone)} />}
+            {errors.phone && <TooltipAlert message={errors.phone} />}
           </div>
         </div>
 
@@ -188,7 +188,7 @@ export function ContactForm() {
               );
             })}
           </div>
-          {errors.topic && <TooltipAlert message={t(errors.topic)} />}
+          {errors.topic && <TooltipAlert message={errors.topic} />}
         </div>
 
         <div>
@@ -210,7 +210,7 @@ export function ContactForm() {
               aria-invalid={!!errors.message}
             />
           </div>
-          {errors.message && <TooltipAlert message={t(errors.message)} />}
+          {errors.message && <TooltipAlert message={errors.message} />}
         </div>
 
         <div className="contact_form_submit_wrapper">

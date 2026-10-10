@@ -11,7 +11,7 @@ import { toast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
-import { shippingInformationSchema } from "@/lib/authSchema";
+import { shippingInformationSchema, tableNumberSchema } from "@/lib/authSchema";
 import { cleanPhoneInput, phoneInputProps } from "@/lib/phoneUtils";
 import { AlertCircle, Armchair, Check, MapPin, Navigation, Compass, Search, Loader2 } from "lucide-react";
 import { isAuthenticated } from "@/lib/authStorage";
@@ -25,7 +25,8 @@ import {
   type PlaceResult,
 } from "@/lib/geoSearch";
 import type { MapFocus } from "@/components/ui/DeliveryMapPicker";
-import { normalizeTableNumber, setDineInTable, TABLE_NUMBER_PATTERN, useDineIn } from "@/lib/dineIn";
+import { normalizeTableNumber, setDineInTable, useDineIn } from "@/lib/dineIn";
+import { validateForm } from "@/lib/formValidation";
 import { useLazyGetTableQuery } from "@/store/api/tableApi";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import { useGetCurrentUserQuery } from "@/store/api/authApi";
@@ -242,10 +243,9 @@ export function CheckoutpageView() {
 
   // Confirms the typed table exists before the order is placed, and remembers it for this visit.
   const confirmTable = async (): Promise<boolean> => {
-    if (!TABLE_NUMBER_PATTERN.test(tableNumber)) {
-      const message = tableNumber ? t("Use the number shown on your table, e.g. 05") : t("Enter your table number");
-      setErrors((prev) => ({ ...prev, table: message }));
-      toast.add({ type: "warning", description: message });
+    const check = validateForm(tableNumberSchema, { tableNumber });
+    if (!check.ok) {
+      setErrors((prev) => ({ ...prev, table: t(check.errors.tableNumber ?? "") }));
       return false;
     }
     try {

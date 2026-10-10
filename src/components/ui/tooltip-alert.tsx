@@ -2,13 +2,17 @@
 
 import React from "react";
 import { AlertCircle } from "lucide-react";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 
 interface TooltipAlertProps {
   message?: string;
 }
 
 export function TooltipAlert({ message }: TooltipAlertProps) {
+  const { t } = useLanguage();
   if (!message) return null;
+  // Messages are written in English; ones that are already Khmer are shown as-is.
+  const text = /[A-Za-z]/.test(message) ? t(message) : message;
 
   return (
     <div className="relative z-30 mt-2 mb-1 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
@@ -19,7 +23,7 @@ export function TooltipAlert({ message }: TooltipAlertProps) {
           <AlertCircle className="w-3.5 h-3.5 stroke-[2.5]" />
         </div>
         <span className="text-xs font-semibold text-gray-800 tracking-tight leading-tight">
-          {message}
+          {text}
         </span>
       </div>
     </div>

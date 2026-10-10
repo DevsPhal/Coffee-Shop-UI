@@ -16,7 +16,7 @@ import { isAuthenticated } from "@/lib/authStorage";
 import { useMounted } from "@/hooks/useMounted";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import {
-  useForgotPasswordMutation,
+  useChangePasswordMutation,
   useGetCurrentUserQuery,
   useUpdateProfileMutation,
   useUploadAvatarMutation,
@@ -28,7 +28,9 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
-import { cleanPhoneInput, formatPhone, phoneInputProps, PHONE_PATTERN, samePhone } from "@/lib/phoneUtils";
+import { validateForm } from "@/lib/formValidation";
+import { changePasswordSchema, profileSchema, verifyPasswordSchema } from "@/lib/authSchema";
+import { cleanPhoneInput, formatPhone, phoneInputProps, samePhone } from "@/lib/phoneUtils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { OrderEstimateBadge } from "@/components/common/OrderEstimate";
 import {
@@ -81,7 +83,7 @@ export function UserprofilepageView() {
   const { logout, user } = useAuth();
   const { messagesHistory, clearHistory: clearContactHistory } = useContactStore();
   const { addItem, openCart } = useCart();
-  const [forgotPassword] = useForgotPasswordMutation();
+  const [changePassword, { isLoading: isChangingPassword }] = useChangePasswordMutation();
   const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation();
   const [uploadAvatar, { isLoading: isUploadingAvatar }] = useUploadAvatarMutation();
   const isSavingProfile = isUpdatingProfile || isUploadingAvatar;
@@ -151,13 +153,9 @@ export function UserprofilepageView() {
 
   const handleVerifyPasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!verifyPassword.trim()) {
-      const err = "Password is required.";
-      setVerifyError(err);
-      toast.add({
-        type: "warning",
-        description: err,
-      });
+    const check = validateForm(verifyPasswordSchema, { password: verifyPassword });
+    if (!check.ok) {
+      setVerifyError(check.errors.password ?? "");
       return;
     }
 
@@ -169,8 +167,8 @@ export function UserprofilepageView() {
       setPassError("");
       setIsResetPasswordOpen(true);
       toast.add({
-        type: "success",
-        description: "Password verified — enter your new password.",
+        type: "info",
+        description: "Now enter your new password. Your current password is checked when you save.",
       });
     }
 
@@ -238,59 +236,28 @@ export function UserprofilepageView() {
 
   const handleResetPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!passwords.newPass.trim()) {
-      const err = "New password is required.";
-      setPassError(err);
-      toast.add({
-        type: "warning",
-        description: err,
-      });
+    if (isChangingPassword) return;
+    const check = validateForm(changePasswordSchema, passwords);
+    if (!check.ok) {
+      setPassError(check.errors.newPass ?? check.errors.confirmPass ?? check.errors.current ?? "");
       return;
     }
-    if (passwords.newPass.length < 3) {
-      const err = "New password must be at least 3 characters.";
-      setPassError(err);
-      toast.add({
-        type: "warning",
-        description: err,
-      });
-      return;
-    }
-    if (!passwords.confirmPass.trim()) {
-      const err = "Confirm password is required.";
-      setPassError(err);
-      toast.add({
-        type: "warning",
-        description: err,
-      });
-      return;
-    }
-    if (passwords.newPass !== passwords.confirmPass) {
-      const err = "New password and confirm password do not match.";
-      setPassError(err);
-      toast.add({
-        type: "warning",
-        description: err,
-      });
-      return;
-    }
-
     setPassError("");
 
     try {
-      await forgotPassword({ email: profile.email }).unwrap();
+      await changePassword({ currentPassword: passwords.current, newPassword: passwords.newPass }).unwrap();
       setIsResetPasswordOpen(false);
       setPasswords({ current: "", newPass: "", confirmPass: "" });
       toast.add({
         type: "success",
-        description: `Reset code sent to ${profile.email}.`,
+        description: "Password changed. Other devices will need to sign in again.",
       });
     } catch (err) {
       toast.add({
-        type: "warning",
+        type: "error",
         description: apiErrorMessage(
           err as Parameters<typeof apiErrorMessage>[0],
-          "Could not start a password reset."
+          "Could not change your password. Check your current password and try again."
         ),
       });
     }
@@ -306,20 +273,9 @@ export function UserprofilepageView() {
     e.preventDefault();
     if (isSavingProfile) return;
 
-    const name = editForm.name.trim();
-    if (name.length < 2 || name.length > 100) {
-      toast.add({ type: "warning", description: "Your name must be between 2 and 100 characters." });
-      return;
-    }
-
-    const phone = (editForm.phone ?? "").trim();
-    if (phone && !PHONE_PATTERN.test(phone)) {
-      toast.add({
-        type: "warning",
-        description: "Enter a valid phone number, e.g. 012 345 6789.",
-      });
-      return;
-    }
+    const check = validateForm(profileSchema, { name: editForm.name, phone: editForm.phone ?? "" });
+    if (!check.ok) return;
+    const { name, phone } = check.data;
 
     const changes: UpdateProfileRequest = {};
     if (name !== profile.name) changes.fullName = name;
@@ -762,7 +718,7 @@ export function UserprofilepageView() {
           <form onSubmit={handleResetPasswordSubmit} className="space-y-4 pt-2 text-left" noValidate>
             <div className="modal_notice_success">
               <Check className="w-4 h-4 stroke-[2.5]" />
-              <span>Current password verified successfully</span>
+              <span>Choose a new password</span>
             </div>
 
             <div className="modal_input_group">
@@ -776,7 +732,7 @@ export function UserprofilepageView() {
                   setPasswords({ ...passwords, newPass: e.target.value });
                   if (passError) setPassError("");
                 }}
-                placeholder="Enter new password (at least 3 characters)"
+                placeholder="Enter a new password"
                 className={`modal_input_control ${passError ? "modal_input_control_error" : ""}`}
               />
             </div>
@@ -796,6 +752,9 @@ export function UserprofilepageView() {
                 className={`modal_input_control ${passError ? "modal_input_control_error" : ""}`}
               />
               {passError && <TooltipAlert message={passError} />}
+              <p className="mt-1 text-xs text-gray-500">
+                {t("Use at least 8 characters with an uppercase letter, a lowercase letter, a number and a symbol.")}
+              </p>
             </div>
 
             <div className="modal_footer_actions">
@@ -808,9 +767,10 @@ export function UserprofilepageView() {
               </button>
               <button
                 type="submit"
+                disabled={isChangingPassword}
                 className="btn_modal_submit"
               >
-                Save Password
+                {isChangingPassword ? "Saving..." : "Save Password"}
               </button>
             </div>
           </form>

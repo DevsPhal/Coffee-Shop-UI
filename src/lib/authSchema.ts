@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PHONE_PATTERN } from "@/lib/phoneUtils";
+import { TABLE_NUMBER_PATTERN } from "@/lib/dineIn";
 
 export const cambodianPhone = z
   .string()
@@ -140,3 +141,58 @@ export const shippingInformationSchema = z.object({
 });
 
 export type ShippingInformationValues = z.infer<typeof shippingInformationSchema>;
+
+export const otpCode = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, { message: "Enter the 6-digit code." });
+
+export const otpSchema = z.object({ otp: otpCode });
+
+export const resetPasswordSchema = z
+  .object({
+    otp: otpCode,
+    password: strongPassword,
+    confirm: z.string().min(1, { message: "Please confirm your new password." }),
+  })
+  .refine((v) => v.password === v.confirm, { message: "Passwords do not match.", path: ["confirm"] });
+
+export const verifyPasswordSchema = z.object({
+  password: z.string().min(1, { message: "Password is required." }),
+});
+
+export const changePasswordSchema = z
+  .object({
+    current: z.string().min(1, { message: "Enter your current password." }),
+    newPass: strongPassword,
+    confirmPass: z.string().min(1, { message: "Please confirm your new password." }),
+  })
+  .refine((v) => v.newPass === v.confirmPass, {
+    message: "New password and confirm password do not match.",
+    path: ["confirmPass"],
+  })
+  .refine((v) => v.newPass !== v.current, {
+    message: "The new password must be different from the current one.",
+    path: ["newPass"],
+  });
+
+export const profileSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, { message: "Your name must be between 2 and 100 characters." })
+    .max(100, { message: "Your name must be between 2 and 100 characters." }),
+  phone: z
+    .string()
+    .trim()
+    .refine((value) => !value || PHONE_PATTERN.test(value), {
+      message: "Enter a valid phone number, e.g. 012 345 6789.",
+    }),
+});
+
+export const tableNumberSchema = z.object({
+  tableNumber: z
+    .string()
+    .min(1, { message: "Enter your table number" })
+    .regex(TABLE_NUMBER_PATTERN, { message: "Use the number shown on your table, e.g. 05" }),
+});

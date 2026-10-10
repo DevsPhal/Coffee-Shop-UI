@@ -5,6 +5,7 @@ import Image from "next/image"
 import { Toast as ToastPrimitive } from "@base-ui/react/toast"
 
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/components/ui/translatetokhmer"
 import { BellIcon, XIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 import "@/app/globals.scss"
 
@@ -164,7 +165,11 @@ function ToastProgress({ timeout }: { timeout: number | undefined }) {
 
 function ToastList() {
   const { toasts } = ToastPrimitive.useToastManager()
+  const { t } = useLanguage()
   const activeToasts = toasts.slice(-MAX_VISIBLE)
+  // Callers pass English; text that is already Khmer (or has no letters) is shown as-is.
+  const translate = (text: React.ReactNode) =>
+    typeof text === "string" && /[A-Za-z]/.test(text) ? t(text) : text
 
   return activeToasts.map((toastItem) =>
     toastItem.type === "welcome" && toastItem.data ? (
@@ -176,8 +181,8 @@ function ToastList() {
         <ToastContent>
           <ToastIcon type={toastItem.type} />
           <div className="toast_details">
-            <ToastTitle />
-            <ToastDescription />
+            {toastItem.title ? <ToastTitle>{translate(toastItem.title)}</ToastTitle> : null}
+            {toastItem.description ? <ToastDescription>{translate(toastItem.description)}</ToastDescription> : null}
             <ToastAction />
           </div>
           <ToastClose />

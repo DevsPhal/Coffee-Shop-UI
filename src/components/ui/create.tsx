@@ -1,5 +1,6 @@
 "use client";
 
+import { validateForm } from "@/lib/formValidation";
 import React, { useState } from "react";
 import { User, Mail, Eye, EyeOff, UserPlus, Phone, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import type { Gender } from "@/store/api/types";
 
 import "@/app/globals.scss";
 
-import { signUpSchema } from "@/lib/authSchema";
+import { otpSchema, signUpSchema } from "@/lib/authSchema";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { cleanPhoneInput, phoneInputProps } from "@/lib/phoneUtils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
@@ -86,17 +87,10 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
 
     const formData = { username, gender, email, phone, password };
 
-    const validationResult = signUpSchema.safeParse(formData);
+    const check = validateForm(signUpSchema, formData);
 
-    if (!validationResult.success) {
-      const fieldErrors = validationResult.error.flatten().fieldErrors;
-      const newErrors: FormErrors = {
-        username: fieldErrors.username?.[0],
-        gender: fieldErrors.gender?.[0],
-        email: fieldErrors.email?.[0],
-        phone: fieldErrors.phone?.[0],
-        password: fieldErrors.password?.[0],
-      };
+    if (!check.ok) {
+      const newErrors = check.errors as FormErrors;
       setErrors(newErrors);
       if (newErrors.username) setActiveInput("username");
       else if (newErrors.gender) setActiveInput("gender");
@@ -127,14 +121,16 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
         "Could not create your account."
       );
       setSubmitError(message);
-      toast.add({ type: "warning", description: message });
+      toast.add({ type: "error", description: message });
     }
   };
 
   const handleVerifyRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
+    const check = validateForm(otpSchema, { otp });
+    if (!check.ok) return;
     try {
-      await verifyRegistration({ email: email.trim(), otp: otp.trim() }).unwrap();
+      await verifyRegistration({ email: email.trim(), otp: check.data.otp }).unwrap();
       ["username", "gender", "email", "phone", "awaitingOtp"].forEach((field) => clearPersistentState(`signup:${field}`));
       toast.add({
         type: "success",
@@ -143,7 +139,7 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
       onBackToLogin();
     } catch (err) {
       toast.add({
-        type: "warning",
+        type: "error",
         description: apiErrorMessage(
           err as Parameters<typeof apiErrorMessage>[0],
           "That code was not accepted."
@@ -192,7 +188,7 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
                 toast.add({ type: "success", description: "New code sent — check your email." });
               } catch (err) {
                 toast.add({
-                  type: "warning",
+                  type: "error",
                   description: apiErrorMessage(
                     err as Parameters<typeof apiErrorMessage>[0],
                     "Could not resend the code. Please try again."

@@ -83,6 +83,11 @@ export interface RegisterRequest {
   gender?: Gender;
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface UpdateProfileRequest {
   fullName?: string;
   phoneNumber?: string;

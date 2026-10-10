@@ -1,5 +1,6 @@
 "use client";
 
+import { validateForm } from "@/lib/formValidation";
 import React, { useState } from "react";
 import { BrandLogo } from "@/components/common/BrandLogo";
 import Link from "next/link";
@@ -20,7 +21,7 @@ import {
 import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 
-import { userLoginSchema } from "@/lib/authSchema";
+import { otpSchema, userLoginSchema } from "@/lib/authSchema";
 
 type FormErrors = {
   email?: string;
@@ -105,27 +106,17 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const validationResult = userLoginSchema.safeParse({ email, password });
-
-    if (!validationResult.success) {
-      const fieldErrors = validationResult.error.flatten().fieldErrors;
-      const newErrors: FormErrors = {
-        email: fieldErrors.email?.[0],
-        password: fieldErrors.password?.[0],
-      };
-      setErrors(newErrors);
-      toast.add({
-        type: "warning",
-        description: newErrors.email || newErrors.password || "Please fix validation errors.",
-      });
+    const check = validateForm(userLoginSchema, { email, password });
+    if (!check.ok) {
+      setErrors(check.errors as FormErrors);
       return;
     }
 
     setErrors({});
-    setEmail(validationResult.data.email);
+    setEmail(check.data.email);
 
     try {
-      const result = await login(validationResult.data).unwrap();
+      const result = await login(check.data).unwrap();
 
       if (result.otpRequired && result.loginTicket) {
         setLoginTicket(result.loginTicket);
@@ -142,19 +133,21 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
         "Login failed. Check your email and password."
       );
       setErrors({ email: message });
-      toast.add({ type: "warning", description: message });
+      toast.add({ type: "error", description: message });
     }
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginTicket) return;
+    const check = validateForm(otpSchema, { otp });
+    if (!check.ok) return;
     try {
-      await verifyOtp({ loginTicket, otp: otp.trim() }).unwrap();
+      await verifyOtp({ loginTicket, otp: check.data.otp }).unwrap();
       await finishSignIn();
     } catch (err) {
       toast.add({
-        type: "warning",
+        type: "error",
         description: apiErrorMessage(
           err as Parameters<typeof apiErrorMessage>[0],
           "That code was not accepted."

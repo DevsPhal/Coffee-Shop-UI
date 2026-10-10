@@ -4,6 +4,7 @@ import { baseApi, unwrap } from "./baseApi";
 import type {
   ApiEnvelope,
   AuthTokenResponse,
+  ChangePasswordRequest,
   LoginRequest,
   LoginResponse,
   RegisterRequest,
@@ -104,6 +105,10 @@ export const authApi = baseApi.injectEndpoints({
       invalidatesTags: ["Auth"],
     }),
 
+    changePassword: builder.mutation<void, ChangePasswordRequest>({
+      query: (body) => ({ url: "/api/users/me/change-password", method: "POST", body }),
+    }),
+
     uploadAvatar: builder.mutation<UserResponse, File>({
       query: (file) => {
         const formData = new FormData();
@@ -128,6 +133,7 @@ export const authApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useChangePasswordMutation,
   useRegisterMutation,
   useVerifyRegistrationMutation,
   useLoginMutation,

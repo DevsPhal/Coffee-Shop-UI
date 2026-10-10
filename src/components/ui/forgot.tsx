@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 
-import { forgotPasswordSchema, strongPassword } from "@/lib/authSchema";
+import { forgotPasswordSchema, resetPasswordSchema } from "@/lib/authSchema";
+import { validateForm } from "@/lib/formValidation";
+import { toast } from "@/components/ui/toast";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import {
@@ -39,8 +41,6 @@ export function Forgot({ onBackToLogin: leave }: ForgotProps) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetErrors, setResetErrors] = useState<{ otp?: string; password?: string; confirm?: string }>({});
-  const [requestError, setRequestError] = useState("");
-  const [notice, setNotice] = useState("");
   const isBusy = isRequesting || isResetting || isResending;
 
   const validateField = (val: string) => {
@@ -59,42 +59,32 @@ export function Forgot({ onBackToLogin: leave }: ForgotProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isBusy) return;
-    setRequestError("");
-    const result = forgotPasswordSchema.safeParse({ email: email.trim() });
-    if (!result.success) {
-      const errMsg = result.error.issues[0]?.message || "Please enter a valid email address.";
-      setError(errMsg);
+    const check = validateForm(forgotPasswordSchema, { email });
+    if (!check.ok) {
+      setError(check.errors.email);
       return;
     }
 
     setError(undefined);
-    const accountEmail = result.data.email.toLowerCase();
+    const accountEmail = check.data.email.toLowerCase();
     try {
       await forgotPassword({ email: accountEmail }).unwrap();
       setResetEmail(accountEmail);
-      setNotice("");
       setStep("reset");
     } catch (err) {
-      setRequestError(apiErrorMessage(
-        err as Parameters<typeof apiErrorMessage>[0],
-        "Could not request a reset code. Please try again."
-      ));
+      toast.add({
+        type: "error",
+        description: apiErrorMessage(err as Parameters<typeof apiErrorMessage>[0], "Could not request a reset code. Please try again."),
+      });
     }
   };
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isBusy) return;
-    setRequestError("");
-    setNotice("");
-    const passwordResult = strongPassword.safeParse(newPassword);
-    const fieldErrors = {
-      otp: /^\d{6}$/.test(otp) ? undefined : "Enter the 6-digit code from your email.",
-      password: passwordResult.success ? undefined : passwordResult.error.issues[0]?.message,
-      confirm: newPassword === confirmPassword ? undefined : "Passwords do not match.",
-    };
-    setResetErrors(fieldErrors);
-    if (fieldErrors.otp || fieldErrors.password || fieldErrors.confirm) return;
+    const check = validateForm(resetPasswordSchema, { otp, password: newPassword, confirm: confirmPassword });
+    setResetErrors(check.errors);
+    if (!check.ok) return;
 
     try {
       await resetPassword({ email: resetEmail, otp, newPassword }).unwrap();
@@ -103,27 +93,28 @@ export function Forgot({ onBackToLogin: leave }: ForgotProps) {
       setConfirmPassword("");
       setStep("done");
     } catch (err) {
-      setRequestError(apiErrorMessage(
-        err as Parameters<typeof apiErrorMessage>[0],
-        "Could not reset your password. Check the code and try again."
-      ));
+      toast.add({
+        type: "error",
+        description: apiErrorMessage(err as Parameters<typeof apiErrorMessage>[0], "Could not reset your password. Check the code and try again."),
+      });
     }
   };
 
   const handleResend = async () => {
     if (isBusy) return;
-    setRequestError("");
-    setNotice("");
     try {
       await resendOtp({ purpose: "RESET_PASSWORD", email: resetEmail }).unwrap();
       setOtp("");
       setResetErrors({});
-      setNotice("If an account exists for this email, a new reset code has been requested. Check your inbox and spam folder.");
+      toast.add({
+        type: "success",
+        description: "If an account exists for this email, a new reset code has been requested. Check your inbox and spam folder.",
+      });
     } catch (err) {
-      setRequestError(apiErrorMessage(
-        err as Parameters<typeof apiErrorMessage>[0],
-        "Could not resend the code. Please try again."
-      ));
+      toast.add({
+        type: "error",
+        description: apiErrorMessage(err as Parameters<typeof apiErrorMessage>[0], "Could not resend the code. Please try again."),
+      });
     }
   };
 
@@ -144,8 +135,6 @@ export function Forgot({ onBackToLogin: leave }: ForgotProps) {
           : t("Your password has been updated. Sign in with your new password.")}
       </p>
 
-      {requestError && <p role="alert" className="text-sm text-red-700">{requestError}</p>}
-      {notice && <p role="status" className="text-sm text-teal-700">{t(notice)}</p>}
 
       {step === "done" ? (
         <div className="p-4 rounded-lg bg-teal-50 border border-teal-200 text-center space-y-3">
@@ -218,8 +207,6 @@ export function Forgot({ onBackToLogin: leave }: ForgotProps) {
               setNewPassword("");
               setConfirmPassword("");
               setResetErrors({});
-              setRequestError("");
-              setNotice("");
             }} className="login_forgot_link bg-transparent border-none cursor-pointer disabled:opacity-60">
               {t("Use a different email")}
             </button>

@@ -18,12 +18,14 @@ export const contactMessageSchema = z.object({
     .string()
     .trim()
     .min(1, { message: "Please enter your full name." })
-    .min(2, { message: "Full Name must be at least 2 characters." }).max(120),
+    .min(2, { message: "Full Name must be at least 2 characters." })
+    .max(120, { message: "Full name must be 120 characters or fewer." }),
   email: z
     .string()
     .trim()
     .min(1, { message: "Please enter your email address." })
-    .email({ message: "Please enter a valid email address." }).max(254),
+    .email({ message: "Please enter a valid email address." })
+    .max(254, { message: "Email must be 254 characters or fewer." }),
   phone: z
     .string()
     .trim()
@@ -36,7 +38,8 @@ export const contactMessageSchema = z.object({
     .string()
     .trim()
     .min(1, { message: "Please enter your message." })
-    .min(5, { message: "Message must be at least 5 characters long." }).max(5000),
+    .min(5, { message: "Message must be at least 5 characters long." })
+    .max(2000, { message: "Message must be 2000 characters or fewer." }),
   userId: z.string().optional(),
 });
 
