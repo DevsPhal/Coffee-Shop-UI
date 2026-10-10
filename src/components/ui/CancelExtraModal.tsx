@@ -40,7 +40,7 @@ export function CancelExtraModal({
         </h3>
 
         <p className="text-xs text-gray-500 font-medium mb-5 px-2">
-          {t("Do you want to remove")} <span className="font-bold text-gray-800">{t(productTitle)}</span> {t("from your cart?")}
+          {t("Do you want to remove")} <span className="font-bold text-gray-800">{productTitle}</span> {t("from your cart?")}
         </p>
 
         <div className="flex items-center gap-2">

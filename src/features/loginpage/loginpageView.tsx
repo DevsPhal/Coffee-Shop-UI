@@ -82,7 +82,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
     setOtp("");
     setPassword("");
     setErrors({ email: t(STAFF_ACCOUNT_MESSAGE) });
-    toast.add({ type: "warning", description: t(STAFF_ACCOUNT_MESSAGE) });
+    toast.add({ type: "warning", description: STAFF_ACCOUNT_MESSAGE });
     return false;
   };
 

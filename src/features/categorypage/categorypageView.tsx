@@ -127,7 +127,7 @@ export function CategorypageView() {
                         <Icon className="w-5 h-5" />
                       </span>
                       <h2 className="truncate text-base font-extrabold text-gray-900">
-                        {t(category.name)}
+                        {category.name}
                       </h2>
                     </div>
                     <ArrowUpRight className="w-4 h-4 shrink-0 text-gray-300 transition-colors group-hover:text-[#A1255B]" />

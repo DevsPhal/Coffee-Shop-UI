@@ -69,7 +69,7 @@ export function ContactForm() {
         <div>
           <h3 className="contact_form_success_title">{t("Message Sent!")}</h3>
           <p className="contact_form_success_desc">
-            {t("Thank you,")} <strong suppressHydrationWarning>{formData.fullName}</strong>. {t("We've received your message regarding")} <span suppressHydrationWarning>&quot;{t(formData.topic)}&quot;</span> {t("and will respond to")} <u suppressHydrationWarning>{formData.email}</u> {t("shortly.")}
+            {t("Thank you,")} <strong suppressHydrationWarning>{formData.fullName}</strong>. {t("We've received your message regarding")} <span suppressHydrationWarning>&quot;{formData.topic}&quot;</span> {t("and will respond to")} <u suppressHydrationWarning>{formData.email}</u> {t("shortly.")}
           </p>
         </div>
         <div className="contact_form_submit_wrapper">
@@ -183,7 +183,7 @@ export function ContactForm() {
                   onClick={() => setTopic(sub)}
                   className={`contact_form_topic_btn ${active ? "active" : ""}`}
                 >
-                  {t(sub)}
+                  {sub}
                 </button>
               );
             })}

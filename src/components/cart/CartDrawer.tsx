@@ -26,100 +26,24 @@ function extrasUnitTotal(item: Pick<CartItem, "selectedExtras">): number {
   return (item.selectedExtras ?? []).reduce((sum, extra) => sum + extra.price, 0);
 }
 
-function CustomDrawerSizeDropdown({
-  value,
-  options = ["M", "L"],
-  onChange,
-}: {
-  value: string;
-  options?: string[];
-  onChange: (newSize: string) => void;
-}) {
-  const { t } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen]);
-
-  const labels: Record<string, string> = {
-    S: "S (Small)",
-    M: "M (Medium)",
-    L: "L (Large)",
-    "1": "Single Portion",
-    Double: "Double Portion",
-    "1000ml": "1000ml",
-    "1500ml": "1500ml",
-  };
-
-  return (
-    <div ref={ref} className="relative inline-block text-left">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center justify-between gap-1 px-2.5 py-0.5 rounded-full border border-pink-200 bg-pink-50 hover:bg-pink-100 text-[#A1255B] font-bold text-xs shadow-2xs transition-all cursor-pointer select-none"
-        aria-expanded={isOpen}
-      >
-        <span>{value}</span>
-        <ChevronDown
-          className={`w-3 h-3 text-[#A1255B] shrink-0 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        />
-      </button>
-
-      {isOpen && (
-        <div className="absolute left-0 top-[calc(100%+4px)] z-50 min-w-[115px] bg-white border border-gray-100 rounded-2xl shadow-xl p-1 space-y-0.5 animate-in fade-in duration-150">
-          {options.map((sizeOption) => {
-            const isSelected = value === sizeOption;
-            return (
-              <button
-                key={sizeOption}
-                type="button"
-                onClick={() => {
-                  onChange(sizeOption);
-                  setIsOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border-none text-left select-none ${
-                  isSelected
-                    ? "bg-[#A1255B] text-white shadow-2xs"
-                    : "hover:bg-gray-100 text-gray-800"
-                }`}
-              >
-                <span>{t(labels[sizeOption] || sizeOption)}</span>
-                {isSelected && <Check className="w-3.5 h-3.5 text-white shrink-0 ml-1" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CustomDrawerOptionDropdown({
+/**
+ * Dropdown for an API enum (size, ice, sugar, milk). The value and options are the raw enum
+ * values the API expects; `labels` only changes how each value is shown. Enum labels are not
+ * translated, so what the customer picks always maps 1:1 to what the API receives.
+ */
+function EnumDropdown<T extends string>({
   value,
   options,
+  labels,
   onChange,
-  labelPrefix,
-  placeholder = "Select",
+  prefix,
 }: {
-  value: string;
-  options: string[];
-  onChange: (val: string) => void;
-  labelPrefix?: string;
-  placeholder?: string;
+  value: T;
+  options: readonly T[];
+  labels: Record<T, string>;
+  onChange: (value: T) => void;
+  /** UI label shown before the value, e.g. "Ice" — translated once here. */
+  prefix?: string;
 }) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
@@ -138,8 +62,6 @@ function CustomDrawerOptionDropdown({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen]);
-
-  const displayLabel = labelPrefix ? `${t(labelPrefix)}: ${t(value || placeholder)}` : t(value || placeholder);
 
   return (
     <div ref={ref} className="relative inline-block text-left">
@@ -149,7 +71,7 @@ function CustomDrawerOptionDropdown({
         className="inline-flex items-center justify-between gap-1 px-2.5 py-0.5 rounded-full border border-pink-200 bg-pink-50 hover:bg-pink-100 text-[#A1255B] font-bold text-[11px] shadow-2xs transition-all cursor-pointer select-none whitespace-nowrap"
         aria-expanded={isOpen}
       >
-        <span>{displayLabel}</span>
+        <span>{prefix ? `${t(prefix)}: ${labels[value]}` : labels[value]}</span>
         <ChevronDown
           className={`w-3 h-3 text-[#A1255B] shrink-0 transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
@@ -159,14 +81,14 @@ function CustomDrawerOptionDropdown({
 
       {isOpen && (
         <div className="absolute left-0 top-[calc(100%+4px)] z-50 min-w-[125px] max-w-[170px] bg-white border border-gray-100 rounded-2xl shadow-xl p-1 space-y-0.5 animate-in fade-in duration-150">
-          {options.map((opt) => {
-            const isSelected = value === opt;
+          {options.map((option) => {
+            const isSelected = value === option;
             return (
               <button
-                key={opt}
+                key={option}
                 type="button"
                 onClick={() => {
-                  onChange(opt);
+                  onChange(option);
                   setIsOpen(false);
                 }}
                 className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border-none text-left select-none ${
@@ -175,7 +97,7 @@ function CustomDrawerOptionDropdown({
                     : "hover:bg-gray-100 text-gray-800"
                 }`}
               >
-                <span className="truncate">{t(opt)}</span>
+                <span className="truncate">{labels[option]}</span>
                 {isSelected && <Check className="w-3.5 h-3.5 text-white shrink-0 ml-1" />}
               </button>
             );
@@ -294,7 +216,7 @@ export function CartDrawer() {
                       <div className="cart_item_thumbnail">
                         <Image
                           src={resolveProductImage(item.image)}
-                          alt={t(toTitleCase(item.title))}
+                          alt={toTitleCase(item.title)}
                           fill
                           unoptimized
                           className="object-cover"
@@ -302,25 +224,18 @@ export function CartDrawer() {
                       </div>
 
                       <div className="cart_item_details">
-                        <h3 className="cart_item_title">{t(toTitleCase(item.title))}</h3>
+                        <h3 className="cart_item_title">{toTitleCase(item.title)}</h3>
 
                         <div className="flex flex-wrap items-center gap-1.5 my-1.5">
                           {variants.length > 1 && (
                             <div className="flex items-center gap-1">
-                              <span className="text-[11px] font-semibold text-gray-500">
-                                {t("Size:")}
-                              </span>
-                              <CustomDrawerSizeDropdown
-                                value={t(
-                                  VARIANT_LABELS[
-                                    (item.variantName as VariantName) ?? variants[0].name
-                                  ]
-                                )}
-                                options={variants.map((v) => t(VARIANT_LABELS[v.name]))}
-                                onChange={(label) => {
-                                  const variant = variants.find(
-                                    (v) => t(VARIANT_LABELS[v.name]) === label
-                                  );
+                              <EnumDropdown<VariantName>
+                                prefix="Size"
+                                value={(item.variantName as VariantName) ?? variants[0].name}
+                                options={variants.map((v) => v.name)}
+                                labels={VARIANT_LABELS}
+                                onChange={(name) => {
+                                  const variant = variants.find((v) => v.name === name);
                                   if (!variant || !product) return;
                                   updateVariant(
                                     item.lineId,
@@ -334,42 +249,32 @@ export function CartDrawer() {
                           )}
 
                           {drinkOptions.ice && (
-                            <CustomDrawerOptionDropdown
-                              labelPrefix={t("Ice")}
-                              value={ICE_LABELS[item.iceLevel ?? "NORMAL"]}
-                              options={ICE_CHOICES.map((c) => ICE_LABELS[c])}
-                              onChange={(label) => {
-                                const level = ICE_CHOICES.find((c) => ICE_LABELS[c] === label);
-                                if (level) updateIceLevel(item.lineId, level);
-                              }}
+                            <EnumDropdown
+                              prefix="Ice"
+                              value={item.iceLevel ?? "NORMAL"}
+                              options={ICE_CHOICES}
+                              labels={ICE_LABELS}
+                              onChange={(level) => updateIceLevel(item.lineId, level)}
                             />
                           )}
 
                           {drinkOptions.sugar && (
-                            <CustomDrawerOptionDropdown
-                              labelPrefix={t("Sugar")}
-                              value={SUGAR_LABELS[item.sugarLevel ?? "NORMAL"]}
-                              options={SUGAR_CHOICES.map((c) => SUGAR_LABELS[c])}
-                              onChange={(label) => {
-                                const level = SUGAR_CHOICES.find(
-                                  (c) => SUGAR_LABELS[c] === label
-                                );
-                                if (level) updateSugarLevel(item.lineId, level);
-                              }}
+                            <EnumDropdown
+                              prefix="Sugar"
+                              value={item.sugarLevel ?? "NORMAL"}
+                              options={SUGAR_CHOICES}
+                              labels={SUGAR_LABELS}
+                              onChange={(level) => updateSugarLevel(item.lineId, level)}
                             />
                           )}
 
                           {drinkOptions.milk && (
-                            <CustomDrawerOptionDropdown
-                              labelPrefix={t("Milk")}
-                              value={MILK_LABELS[item.milkType ?? "NORMAL"]}
-                              options={MILK_CHOICES.map((c) => MILK_LABELS[c])}
-                              onChange={(label) => {
-                                const kind = MILK_CHOICES.find(
-                                  (c) => MILK_LABELS[c] === label
-                                );
-                                if (kind) updateMilkType(item.lineId, kind);
-                              }}
+                            <EnumDropdown
+                              prefix="Milk"
+                              value={item.milkType ?? "NORMAL"}
+                              options={MILK_CHOICES}
+                              labels={MILK_LABELS}
+                              onChange={(kind) => updateMilkType(item.lineId, kind)}
                             />
                           )}
 
@@ -378,7 +283,7 @@ export function CartDrawer() {
                               key={extra.extraId}
                               className="rounded-full text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5"
                             >
-                              + {t(extra.name)}
+                              + {extra.name}
                             </span>
                           ))}
                         </div>

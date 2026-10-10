@@ -135,7 +135,8 @@ export function ProductpageView({
       return;
     }
     if (!addCurrentSelection()) return;
-    toast.add({ type: "success", description: `${displayTitle} added to your cart.` });
+    // Product name is API data (not translated); only the sentence around it is.
+    toast.add({ type: "success", description: `${displayTitle} ${t("added to your cart.")}` });
   };
 
   const handleBuyNowClick = () => {
@@ -191,10 +192,10 @@ export function ProductpageView({
             href={`${menuBaseUrl}?category=${encodeURIComponent(product?.categoryId ?? displayCategory)}`}
             className="breadcrumb_link"
           >
-            {t(displayCategory)}
+            {displayCategory}
           </Link>
           <span className="breadcrumb_separator">»</span>
-          <span className="breadcrumb_current">{t(displayTitle)}</span>
+          <span className="breadcrumb_current">{displayTitle}</span>
         </nav>
       </div>
       <div className="product_detail_grid">
@@ -202,7 +203,7 @@ export function ProductpageView({
           {displayImage ? (
             <Image
               src={displayImage}
-              alt={t(displayTitle)}
+              alt={displayTitle}
               fill
               unoptimized
               className="object-cover"
@@ -210,7 +211,7 @@ export function ProductpageView({
             />
           ) : (
             <div className="product_image_placeholder">
-              {t(displayTitle)}
+              {displayTitle}
             </div>
           )}
           {discountInfo.hasDiscount && discountInfo.badgeText && isPromotion && (
@@ -231,12 +232,12 @@ export function ProductpageView({
         <div className="product_info_box" suppressHydrationWarning>
           <div className="product_info_header">
             <div>
-              <h2 className="product_name">{t(displayTitle)}</h2>
+              <h2 className="product_name">{displayTitle}</h2>
 
               <div className="category_badge_wrapper">
                 <Link href={`${menuBaseUrl}?category=${encodeURIComponent(product?.categoryId ?? displayCategory)}`}>
                   <span className="category_badge">
-                    {t(displayCategory)}
+                    {displayCategory}
                   </span>
                 </Link>
               </div>
@@ -251,7 +252,7 @@ export function ProductpageView({
             </div>
           </div>
 
-          <p className="product_description">{t(displayDescription)}</p>
+          <p className="product_description">{displayDescription}</p>
 
           {(variants.length > 1 || hasCustomization) && (
             <div className="my-4 space-y-3">

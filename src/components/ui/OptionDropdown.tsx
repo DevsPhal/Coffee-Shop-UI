@@ -42,7 +42,7 @@ export function OptionDropdown<T extends string>({
       onValueChange={(next) => {
         if (next != null) onChange(next);
       }}
-      items={options.map((option) => ({ value: option.value, label: t(option.label) }))}
+      items={options.map((option) => ({ value: option.value, label: option.label }))}
     >
       <Select.Trigger
         aria-label={t(label)}
@@ -56,7 +56,7 @@ export function OptionDropdown<T extends string>({
       >
         <span className="flex min-w-0 items-center gap-1.5">
           {compact && <span className="font-medium text-[#A1255B]/70">{t(label)}:</span>}
-          <span className="truncate">{selected ? t(selected.label) : ""}</span>
+          <span className="truncate">{selected ? selected.label : ""}</span>
           {!compact && selected?.hint && (
             <span className="text-xs font-bold text-[#A1255B]">{selected.hint}</span>
           )}
@@ -93,7 +93,7 @@ export function OptionDropdown<T extends string>({
                   "data-[selected]:bg-[#A1255B] data-[selected]:text-white"
                 )}
               >
-                <Select.ItemText>{t(option.label)}</Select.ItemText>
+                <Select.ItemText>{option.label}</Select.ItemText>
                 <span className="flex shrink-0 items-center gap-2">
                   {option.hint && <span className="text-xs font-bold opacity-80">{option.hint}</span>}
                   <Select.ItemIndicator>

@@ -58,7 +58,7 @@ export function GenderDropdown({
         <div className="flex items-center gap-2.5 min-w-0">
           <Users className="w-4 h-4 text-gray-400 shrink-0" />
           <span className={selected ? "text-gray-900 font-semibold" : "text-gray-400"}>
-            {selected ? t(selected.label) : t(placeholder)}
+            {selected ? selected.label : t(placeholder)}
           </span>
         </div>
         <ChevronDown
@@ -91,7 +91,7 @@ export function GenderDropdown({
                     : "hover:bg-gray-100 text-gray-800"
                 }`}
               >
-                <span>{t(label)}</span>
+                <span>{label}</span>
                 {isSelected && <Check className="w-4 h-4 text-white shrink-0 ml-1" />}
               </button>
             );

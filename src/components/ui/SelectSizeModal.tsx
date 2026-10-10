@@ -116,7 +116,7 @@ export function SelectSizeModal({
           <div className="box_product relative w-12 h-12 rounded-xl overflow-hidden shrink-0">
             <Image
               src={resolveProductImage(product.image)}
-              alt={t(product.title)}
+              alt={product.title}
               fill
               unoptimized
               className="object-cover img"
@@ -124,7 +124,7 @@ export function SelectSizeModal({
           </div>
           <div className="min-w-0 flex-1">
             <h4 className="text-sm font-bold text-gray-900 truncate">
-              {t(product.title)}
+              {product.title}
             </h4>
             <p className="text-xs font-extrabold text-[#A1255B] mt-0.5">
               ${(unitPrice + extrasTotal).toFixed(2)}

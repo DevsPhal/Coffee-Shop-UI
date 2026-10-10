@@ -17,8 +17,10 @@ import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { EmptyState, ErrorState, LoadingRegion, OrderCardSkeleton } from "@/components/ui/states";
 import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { useLanguage } from "@/components/ui/translatetokhmer";
 
 export function OrderhistorypageView() {
+  const { t } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
   const { addItem, openCart } = useCart();
@@ -51,7 +53,7 @@ export function OrderhistorypageView() {
     reorderLines(order).forEach((line) => addItem(line, false));
     toast.add({
       type: "success",
-      description: `Reordered ${order.items.length} items to your cart!`,
+      description: `${t("Reordered items to your cart:")} ${order.items.length}`,
     });
     openCart();
   };

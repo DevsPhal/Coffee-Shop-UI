@@ -94,7 +94,7 @@ export function OrderpageView() {
                         />
                       </div>
                       <div className="order_page_item_details">
-                        <h3 className="order_page_item_title">{t(toTitleCase(item.title))}</h3>
+                        <h3 className="order_page_item_title">{toTitleCase(item.title)}</h3>
                         <div className="flex flex-col items-start gap-1 mt-1 w-full max-w-full">
                           {variants.length > 1 && (
                             <OptionDropdown
@@ -152,7 +152,7 @@ export function OrderpageView() {
                                   key={extra.extraId}
                                   className="rounded-full text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5"
                                 >
-                                  + {t(extra.name)}
+                                  + {extra.name}
                                 </span>
                               ))}
                             </div>

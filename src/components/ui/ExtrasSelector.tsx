@@ -59,7 +59,7 @@ export function ExtrasSelector({ extras, selected, onChange }: ExtrasSelectorPro
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-gray-900 truncate">{t(extra.name)}</p>
+                <p className="text-xs font-bold text-gray-900 truncate">{extra.name}</p>
                 <p className="text-[11px] text-[#A1255B] font-semibold">
                   +${Number(extra.price).toFixed(2)}
                 </p>

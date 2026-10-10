@@ -118,7 +118,7 @@ export function Card({
           <Link href={targetHref} className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden shrink-0 bg-gray-100 block image-container">
             <Image
               src={imgSrc}
-              alt={t(title)}
+              alt={title}
               fill
               unoptimized
               sizes="(max-width: 640px) 80px, 88px"
@@ -136,9 +136,9 @@ export function Card({
               <Link
                 href={targetHref}
                 className="text-[#111827] font-bold text-base sm:text-[17px] leading-snug tracking-tight truncate min-w-0 flex-initial hover:underline item-title"
-                title={t(title)}
+                title={title}
               >
-                {t(title)}
+                {title}
               </Link>
               {isPromotion && (
                 <span className="bg-[#A1255B] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
@@ -211,7 +211,7 @@ export function Card({
         <div className="card_image_box group-hover:opacity-90 transition-opacity relative w-full overflow-hidden">
           <Image
             src={imgSrc}
-            alt={t(title)}
+            alt={title}
             fill
             unoptimized
             className="card_image object-cover"
@@ -236,8 +236,8 @@ export function Card({
         </div>
 
         <div className="flex flex-col items-start gap-1 mb-4 w-full min-w-0">
-          <h3 className="card_title product_card_title group-hover:underline mb-0 w-full" title={t(title)}>
-            {t(title)}
+          <h3 className="card_title product_card_title group-hover:underline mb-0 w-full" title={title}>
+            {title}
           </h3>
 
           <div className="price_container shrink-0">

@@ -165,11 +165,10 @@ function ToastProgress({ timeout }: { timeout: number | undefined }) {
 
 function ToastList() {
   const { toasts } = ToastPrimitive.useToastManager()
-  const { t } = useLanguage()
+  const { tStatic } = useLanguage()
   const activeToasts = toasts.slice(-MAX_VISIBLE)
-  // Callers pass English; text that is already Khmer (or has no letters) is shown as-is.
-  const translate = (text: React.ReactNode) =>
-    typeof text === "string" && /[A-Za-z]/.test(text) ? t(text) : text
+  // Known UI messages are translated; API data in a toast (names, order ids, server text) is shown as-is.
+  const translate = (text: React.ReactNode) => (typeof text === "string" ? tStatic(text) : text)
 
   return activeToasts.map((toastItem) =>
     toastItem.type === "welcome" && toastItem.data ? (

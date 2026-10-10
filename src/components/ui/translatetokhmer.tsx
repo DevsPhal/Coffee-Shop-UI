@@ -7,7 +7,13 @@ export type Language = "en" | "km";
 export interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
+  /** Translates site UI text; unknown strings are machine-translated in the background. */
   t: (key: string) => string;
+  /**
+   * Dictionary-only translation for text that may contain API data (toasts, field hints):
+   * known UI messages are translated, anything else is shown exactly as given.
+   */
+  tStatic: (key: string) => string;
 }
 
 export const staticTranslations: Record<Language, Record<string, string>> = {
@@ -507,6 +513,9 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "Choose a new password": "ជ្រើសរើសពាក្យសម្ងាត់ថ្មី",
     "Enter a new password": "បញ្ចូលពាក្យសម្ងាត់ថ្មី",
     "Saving...": "កំពុងរក្សាទុក...",
+    "added to your cart.": "ត្រូវបានបញ្ចូលទៅក្នុងរទេះរបស់អ្នកហើយ។",
+    "Reordered items to your cart:": "បានកម្ម៉ង់ម្តងទៀត ហើយបញ្ចូលទៅរទេះ៖",
+    "Staff accounts sign in on the admin dashboard.": "គណនីបុគ្គលិកត្រូវចូលនៅលើផ្ទាំងគ្រប់គ្រង (admin dashboard)។",
   },
 };
 
@@ -525,12 +534,14 @@ for (const [key, value] of Object.entries(staticTranslations.km)) {
   if (!staticKmByLowerKey.has(lower)) staticKmByLowerKey.set(lower, value);
 }
 
-const OPTION_PREFIXES: { prefix: string; label: string; translateValue: boolean }[] = [
-  { prefix: "Size:", label: "ទំហំ", translateValue: false },
-  { prefix: "Quantity:", label: "ចំនួន", translateValue: false },
-  { prefix: "Ice:", label: "ទឹកកក", translateValue: true },
-  { prefix: "Sugar:", label: "ស្ករ", translateValue: true },
-  { prefix: "Milk:", label: "ទឹកដោះគោ", translateValue: true },
+// "Ice: Less" style summaries: the prefix is UI text and gets translated; the value is an
+// API enum label (size, ice, sugar, milk) and is always shown as-is so it matches the API.
+const OPTION_PREFIXES: { prefix: string; label: string }[] = [
+  { prefix: "Size:", label: "ទំហំ" },
+  { prefix: "Quantity:", label: "ចំនួន" },
+  { prefix: "Ice:", label: "ទឹកកក" },
+  { prefix: "Sugar:", label: "ស្ករ" },
+  { prefix: "Milk:", label: "ទឹកដោះគោ" },
 ];
 
 function subscribeLanguage(onChange: () => void) {
@@ -659,11 +670,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         staticKmByLowerKey.get(trimmedKey.toLowerCase());
       if (staticMatch) return staticMatch;
 
-      for (const { prefix, label, translateValue } of OPTION_PREFIXES) {
+      for (const { prefix, label } of OPTION_PREFIXES) {
         if (!trimmedKey.startsWith(prefix)) continue;
-        const value = trimmedKey.slice(prefix.length).trim();
-        const shown = translateValue ? staticTranslations.km[value] || autoTranslations[value] || value : value;
-        return `${label}: ${shown}`;
+        return `${label}: ${trimmedKey.slice(prefix.length).trim()}`;
       }
 
       const autoMatch = autoTranslations[trimmedKey] || autoTranslations[key];
@@ -675,8 +684,22 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     [language, autoTranslations]
   );
 
+  const tStatic = useCallback(
+    (key: string): string => {
+      if (!key || language === "en") return key;
+      const trimmedKey = key.trim();
+      return (
+        staticTranslations.km[trimmedKey] ||
+        staticTranslations.km[key] ||
+        staticKmByLowerKey.get(trimmedKey.toLowerCase()) ||
+        key
+      );
+    },
+    [language]
+  );
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, tStatic }}>
       {children}
     </LanguageContext.Provider>
   );
@@ -689,6 +712,7 @@ export function useLanguage() {
       language: "en" as Language,
       setLanguage: () => {},
       t: (key: string) => key,
+      tStatic: (key: string) => key,
     };
   }
   return context;

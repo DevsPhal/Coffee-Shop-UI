@@ -80,7 +80,7 @@ export function MenupageView() {
     if (selectedCategory === ALL_CATEGORIES) return t("All Products");
     if (selectedCategory === FEATURED) return t("Featured Products");
     const matched = categories.find((category) => category.id === selectedCategory);
-    return matched ? t(matched.name) : t("Menu");
+    return matched ? matched.name : t("Menu");
   };
 
   return (

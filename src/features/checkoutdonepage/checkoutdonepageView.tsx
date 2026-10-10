@@ -497,7 +497,7 @@ export function CheckoutdonepageView() {
                         sizeLabel ? ` (Size: ${sizeLabel})` : ""
                       }`}
                     >
-                      {item.quantity}x {t(toTitleCase(item.productName))}{" "}
+                      {item.quantity}x {toTitleCase(item.productName)}{" "}
                       {sizeLabel ? `(${t("Size")}: ${sizeLabel})` : ""}
                     </span>
                     <span className="value_brand font-bold text-xs sm:text-sm shrink-0 whitespace-nowrap pl-1" suppressHydrationWarning>

@@ -134,7 +134,7 @@ export function CategoryDropdown({
       >
         <div className="flex items-center gap-2 min-w-0 pr-2">
           <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-white" : "text-[#A1255B]"}`} />
-          <span className="truncate">{t(entry.name)}</span>
+          <span className="truncate">{entry.id === ALL_CATEGORIES ? t(ALL_CATEGORIES) : entry.name}</span>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -174,7 +174,7 @@ export function CategoryDropdown({
       >
         <div className="category_drawer_item_left flex items-center gap-2">
           <Icon className="category_drawer_item_icon h-5 w-5 text-[#A1255B]" />
-          <span className="category_drawer_item_name">{t(entry.name)}</span>
+          <span className="category_drawer_item_name">{entry.id === ALL_CATEGORIES ? t(ALL_CATEGORIES) : entry.name}</span>
         </div>
 
         <div className="category_drawer_item_right flex items-center gap-2">
@@ -195,7 +195,7 @@ export function CategoryDropdown({
         aria-haspopup="listbox"
       >
         {renderCurrentIcon()}
-        <span>{t(current?.name ?? ALL_CATEGORIES)}</span>
+        <span>{!current || current.id === ALL_CATEGORIES ? t(ALL_CATEGORIES) : current.name}</span>
         <span className="text-gray-700 text-[10px] sm:text-[11px] font-medium px-1.5 sm:px-2 py-0.5 shrink-0">
           {isLoading ? "…" : current?.count ?? 0}
         </span>

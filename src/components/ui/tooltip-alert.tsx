@@ -9,10 +9,9 @@ interface TooltipAlertProps {
 }
 
 export function TooltipAlert({ message }: TooltipAlertProps) {
-  const { t } = useLanguage();
+  const { tStatic } = useLanguage();
   if (!message) return null;
-  // Messages are written in English; ones that are already Khmer are shown as-is.
-  const text = /[A-Za-z]/.test(message) ? t(message) : message;
+  const text = tStatic(message);
 
   return (
     <div className="relative z-30 mt-2 mb-1 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">

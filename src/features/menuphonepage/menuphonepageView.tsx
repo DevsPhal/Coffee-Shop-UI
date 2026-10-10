@@ -102,7 +102,7 @@ export function PhoneCard({
         <div className="image-container relative shrink-0">
           <Image
             src={imgSrc}
-            alt={t(product.title)}
+            alt={product.title}
             fill
             unoptimized
             sizes="(max-width: 640px) 80px, 88px"
@@ -117,13 +117,13 @@ export function PhoneCard({
 
         <div className="card-info flex-1 min-w-0 overflow-hidden">
           <div className="title-row flex items-start gap-1.5 min-w-0">
-            <h3 className="item-title line-clamp-2 break-words min-w-0 flex-1" title={t(product.title)}>
-              {t(product.title)}
+            <h3 className="item-title line-clamp-2 break-words min-w-0 flex-1" title={product.title}>
+              {product.title}
             </h3>
             <button
               type="button"
               title="Product Details"
-              aria-label={`${t("Product Details")}: ${t(product.title)}`}
+              aria-label={`${t("Product Details")}: ${product.title}`}
               onClick={(e) => {
                 e.stopPropagation();
                 if (onOpenInfo) onOpenInfo(product);
@@ -434,8 +434,8 @@ export function MenupageView() {
 
               <div>
                 <div className="modal-header-row items-baseline min-w-0 w-full overflow-hidden">
-                  <h3 className="modal-item-title truncate min-w-0 flex-1" title={t(activeModalProduct.title)}>
-                    {t(activeModalProduct.title)}
+                  <h3 className="modal-item-title truncate min-w-0 flex-1" title={activeModalProduct.title}>
+                    {activeModalProduct.title}
                   </h3>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {activeModalProduct.originalPrice && activeModalProduct.originalPrice > activeModalProduct.price && isModalPromotion && (
@@ -449,7 +449,7 @@ export function MenupageView() {
                   </div>
                 </div>
                 <p className="modal-item-desc">
-                  {t(activeModalProduct.description)}
+                  {activeModalProduct.description}
                 </p>
               </div>
 

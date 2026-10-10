@@ -756,7 +756,7 @@ export function CheckoutpageView() {
                         />
                       </div>
                       <div className="checkout_item_details">
-                        <h3 className="checkout_item_title">{t(toTitleCase(item.title))}</h3>
+                        <h3 className="checkout_item_title">{toTitleCase(item.title)}</h3>
                         <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                           <p className="checkout_item_price font-extrabold text-[#A1255B]" suppressHydrationWarning>
                             ${((item.unitPrice + extrasTotal) * item.quantity).toFixed(2)}
@@ -779,7 +779,7 @@ export function CheckoutpageView() {
                               key={extra.extraId}
                               className="rounded-full text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5 "
                             >
-                              + {t(extra.name)}
+                              + {extra.name}
                             </span>
                           ))}
                         </div>
