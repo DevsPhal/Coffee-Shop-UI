@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Forgot } from "@/components/ui/forgot";
 import { Create } from "@/components/ui/create";
 import { TelegramLoginWidget } from "@/components/ui/TelegramLoginWidget";
+import { TelegramVerificationCard } from "@/components/ui/TelegramVerificationCard";
+import { useTelegramLogin } from "@/hooks/useTelegramLogin";
 import { apiErrorMessage } from "@/store/api/baseApi";
 import {
   useLoginMutation,
@@ -85,6 +87,8 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
     toast.add({ type: "warning", description: STAFF_ACCOUNT_MESSAGE });
     return false;
   };
+  const telegram = useTelegramLogin(finishSignIn);
+  const showTelegramStep = viewMode === "login" && !loginTicket && telegram.isActive;
 
   const validateField = (field: keyof FormErrors, value: string) => {
     const fieldSchema = userLoginSchema.shape[field];
@@ -170,7 +174,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
         </div>
         <div className="login_form_area">
           <div className="login_logo-container">
-            <div className="absolute -inset-6 pointer-events-none">
+            <div className="login_logo_hearts absolute -inset-6 pointer-events-none">
               <Heart className="absolute top-0 left-2 w-4 h-4 text-pink-500 fill-pink-500 rotate-[-15deg] animate-pulse" />
               <Heart className="absolute top-2 right-1 w-3.5 h-3.5 text-red-500 fill-red-500 rotate-[20deg]" />
               <Heart className="absolute top-8 -left-4 w-4 h-4 text-red-600 fill-red-600 rotate-[-30deg]" />
@@ -209,7 +213,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
               <Button
                 type="submit"
                 disabled={isVerifying || otp.length !== 6}
-                className="mt-6 w-full"
+                className="login_submit_button mt-6"
               >
                 {isVerifying ? t("Verifying...") : t("Verify and sign in")}
               </Button>
@@ -249,6 +253,8 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
             <Forgot onBackToLogin={() => setViewMode("login")} />
           ) : viewMode === "create" ? (
             <Create onBackToLogin={() => setViewMode("login")} />
+          ) : showTelegramStep ? (
+            <TelegramVerificationCard login={telegram} />
           ) : (
             <>
               <div className="login_avatar_circle">
@@ -260,14 +266,14 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
               <p className="login_subtitle">
                 {t("Enter your registered email address and password.")}
               </p>
-              <form onSubmit={handleSubmit} className="w-full space-y-4" noValidate>
+              <form onSubmit={handleSubmit} className="w-full space-y-[clamp(0.75rem,2vh,1rem)]" noValidate>
                 <div>
                   <label htmlFor="login-email" className="login_input_label">
                     {t("Email Address")}
                   </label>
                   <div className="relative flex items-center">
-                    <span className="absolute left-3 text-gray-400 pointer-events-none">
-                      <Mail className="w-4 h-4" />
+                    <span className="absolute left-4 text-gray-400 pointer-events-none">
+                      <Mail className="w-4.5 h-4.5" />
                     </span>
                     <Input
                       id="login-email"
@@ -319,12 +325,12 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                       type="button"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                      className="absolute right-1.5 grid size-9 place-items-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
                     >
                       {showPassword ? (
-                        <EyeOff className="w-4 h-4" />
+                        <EyeOff className="w-5 h-5" />
                       ) : (
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-5 h-5" />
                       )}
                     </button>
                   </div>
@@ -344,7 +350,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                     >
                       {keepLoggedIn && <Check className="w-3 h-3 stroke-[3]" />}
                     </div>
-                    <span className="text-xs text-gray-700 font-medium">
+                    <span className="login_checkbox_label">
                       {t("Keep me logged in")}
                     </span>
                   </label>
@@ -366,10 +372,10 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                   {isLoggingIn ? t("Signing in...") : t("Login")}
                 </Button>
 
-                <TelegramLoginWidget onSuccess={finishSignIn} />
+                <TelegramLoginWidget login={telegram} />
 
                 <div className="text-center">
-                  <span className="text-sm text-gray-600">
+                  <span className="login_footer_text">
                     {t("Don't have an account?")}
                   </span>
                   &nbsp;
@@ -389,7 +395,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
         <div />
       </div>
       <div className="login_slideshow_side hidden lg:flex">
-        <div className="relative w-full h-full min-h-[500px] flex items-center justify-center">
+        <div className="relative w-full h-full flex items-center justify-center">
           <Image
             src="/images/slideshowloginscreen.svg"
             alt="590st Cafe Login Slideshow"

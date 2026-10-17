@@ -25,7 +25,7 @@ import {
   type PlaceResult,
 } from "@/lib/geoSearch";
 import type { MapFocus } from "@/components/ui/DeliveryMapPicker";
-import { normalizeTableNumber, setDineInTable, useDineIn } from "@/lib/dineIn";
+import { clearDineInTable, normalizeTableNumber, setDineInTable, useDineIn } from "@/lib/dineIn";
 import { validateForm } from "@/lib/formValidation";
 import { useLazyGetTableQuery } from "@/store/api/tableApi";
 import { apiErrorMessage } from "@/store/api/baseApi";
@@ -75,9 +75,9 @@ export function CheckoutpageView() {
   const [capital, setCapital] = usePersistentState("checkout:capital", "Phnom Penh");
   const [address, setAddress] = usePersistentState("checkout:address", "");
   const dineIn = useDineIn();
-  // Until the customer picks a method, scanning a shop QR makes dine-in the default.
+  // A visit from the shop's menu or table QR is dine-in only; ordering on the website is pickup or delivery.
   const [chosenMethod, setDeliveryMethod] = usePersistentState<"pickup" | "grab" | "dinein" | null>("checkout:deliveryMethod", null);
-  const deliveryMethod = chosenMethod ?? (dineIn.active ? "dinein" : "pickup");
+  const deliveryMethod = dineIn.active ? "dinein" : chosenMethod === "grab" ? "grab" : "pickup";
   const [tableInput, setTableInput] = useState<string | null>(null);
   const tableNumber = normalizeTableNumber(tableInput ?? dineIn.tableNumber ?? "");
   const [lookupTable, { isFetching: isCheckingTable }] = useLazyGetTableQuery();
@@ -617,6 +617,7 @@ export function CheckoutpageView() {
             <h2 className="checkout_section_title">{t("Delivery Method")}</h2>
 
             <div className="checkout_delivery_options">
+              {dineIn.active && (
               <div
                 onClick={() => handleSelectDeliveryMethod("dinein")}
                 className={`checkout_delivery_card ${
@@ -642,6 +643,9 @@ export function CheckoutpageView() {
                   }`}
                 />
               </div>
+              )}
+              {!dineIn.active && (
+              <>
               <div
                 onClick={() => handleSelectDeliveryMethod("pickup")}
                 className={`checkout_delivery_card ${
@@ -694,6 +698,8 @@ export function CheckoutpageView() {
                   }`}
                 />
               </div>
+              </>
+              )}
               {deliveryMethod === "dinein" ? (
                 <div className="checkout_table_field">
                   <label htmlFor="checkout-table-number" className="checkout_field_label">
@@ -719,6 +725,17 @@ export function CheckoutpageView() {
                   ) : (
                     <p id="checkout-table-hint" className="checkout_table_hint">{t("You'll find the number on your table.")}</p>
                   )}
+                  <button
+                    type="button"
+                    className="table_scan_leave self-start"
+                    onClick={() => {
+                      clearDineInTable();
+                      setTableInput(null);
+                      setErrors((prev) => ({ ...prev, table: undefined }));
+                    }}
+                  >
+                    {t("Not at the shop? Order for pickup or delivery")}
+                  </button>
                 </div>
               ) : null}
             </div>
