@@ -14,13 +14,11 @@ export interface AuthUser {
   email: string;
   phone?: string;
   gender?: string;
-  avatarUrl: string;
+  /** Null when there's no photo; `UserAvatar` then shows the person's initials. */
+  avatarUrl: string | null;
   telegramLinked: boolean;
   role: Role;
 }
-
-const DEFAULT_AVATAR =
-  "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png";
 
 function toAuthUser(user: UserResponse): AuthUser {
   return {
@@ -29,7 +27,7 @@ function toAuthUser(user: UserResponse): AuthUser {
     email: user.email,
     phone: user.phoneNumber ?? undefined,
     gender: user.gender ?? undefined,
-    avatarUrl: user.avatarUrl ?? DEFAULT_AVATAR,
+    avatarUrl: user.avatarUrl,
     telegramLinked: user.telegramLinked,
     role: user.role,
   };
@@ -46,7 +44,13 @@ export function useAuth() {
   const mounted = useMounted();
   const signedIn = mounted && isAuthenticated();
 
-  const { data, isLoading, isFetching } = useGetCurrentUserQuery(undefined, { skip: !signedIn });
+  // Refetch when the tab regains focus or the network returns, so edits made elsewhere (the admin dashboard, a
+  // Telegram login on another device) show up without a reload.
+  const { data, isLoading, isFetching } = useGetCurrentUserQuery(undefined, {
+    skip: !signedIn,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  });
 
   const status: AuthStatus = !mounted
     ? "checking"

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
@@ -17,6 +17,7 @@ import { getDrinkCustomization, resolveProductImage } from "@/store/api/productA
 import { toTitleCase } from "@/lib/utils";
 import { useCatalog } from "@/store/api/useCatalog";
 import { useLanguage } from "@/components/ui/translatetokhmer";
+import { useDropdown } from "@/hooks/useDropdown";
 import type { VariantName } from "@/store/api/types";
 import type { CartItem } from "@/store/useCartStore";
 import { ChevronDown, Check } from "lucide-react";
@@ -46,37 +47,19 @@ function EnumDropdown<T extends string>({
   prefix?: string;
 }) {
   const { t } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen]);
+  const { isOpen, rootRef, toggle, close } = useDropdown();
 
   return (
-    <div ref={ref} className="relative inline-block text-left">
+    <div ref={rootRef} className="relative inline-block text-left">
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggle}
         className="inline-flex items-center justify-between gap-1 px-2.5 py-0.5 rounded-full border border-pink-200 bg-pink-50 hover:bg-pink-100 text-[#A1255B] font-bold text-[11px] shadow-2xs transition-all cursor-pointer select-none whitespace-nowrap"
         aria-expanded={isOpen}
+        aria-haspopup="listbox"
       >
         <span>{prefix ? `${t(prefix)}: ${labels[value]}` : labels[value]}</span>
-        <ChevronDown
-          className={`w-3 h-3 text-[#A1255B] shrink-0 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        />
+        <ChevronDown className="dropdown_chevron w-3 h-3 text-[#A1255B]" aria-hidden />
       </button>
 
       {isOpen && (
@@ -89,7 +72,7 @@ function EnumDropdown<T extends string>({
                 type="button"
                 onClick={() => {
                   onChange(option);
-                  setIsOpen(false);
+                  close();
                 }}
                 className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border-none text-left select-none ${
                   isSelected

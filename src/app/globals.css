@@ -366,3 +366,20 @@ header.navbar_header {
 
 
 
+
+/* Dropdown arrows turn with their trigger's aria-expanded, so an arrow always matches whether its menu is open. */
+.dropdown_chevron {
+  flex-shrink: 0;
+  transition:
+    rotate 200ms ease-out,
+    color 150ms ease;
+}
+[aria-expanded="true"] > .dropdown_chevron {
+  rotate: 180deg;
+  color: var(--primary-color, #a1255b);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dropdown_chevron {
+    transition: none;
+  }
+}

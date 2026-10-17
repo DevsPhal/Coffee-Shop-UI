@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
 import {
   ChevronDown,
   Home,
@@ -23,9 +22,11 @@ import "@/app/globals.scss";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage, Language } from "@/components/ui/translatetokhmer";
+import { useDropdown } from "@/hooks/useDropdown";
 import { useMounted } from "@/hooks/useMounted";
 import { Skeleton } from "@/components/ui/states";
 import { BrandLogo } from "@/components/common/BrandLogo";
+import { UserAvatar } from "@/components/common/UserAvatar";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -45,36 +46,23 @@ export function Navbar() {
   const mounted = useMounted();
   const pathname = usePathname();
   const { language, setLanguage, t } = useLanguage();
-  const [isLangOpen, setIsLangOpen] = useState(false);
-  const langRef = useRef<HTMLDivElement>(null);
+  const { isOpen: isLangOpen, rootRef: langRef, toggle: toggleLang, close: closeLang } = useDropdown();
 
   const currentLangCode = mounted ? language : "en";
   const selectedLanguage = languages.find((l) => l.code === currentLangCode) || languages[0];
   const { openCart, totalCount } = useCart();
-  const { status: authStatus } = useAuth();
+  const { status: authStatus, user: authUser } = useAuth();
 
   const userIsLoggedIn = authStatus === "signedIn";
   const isCheckingAuth = authStatus === "checking";
   const displayTotalCount = mounted ? totalCount : 0;
   const displayT = (key: string) => (mounted ? t(key) : key);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (langRef.current && !langRef.current.contains(event.target as Node)) {
-        setIsLangOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
   if (pathname === "/payment" || pathname?.startsWith("/payment")) {
     return null;
   }
 
-  const mobileNavItems: { key: string; href: string; icon: LucideIcon; pending?: boolean }[] = [
+  const mobileNavItems: { key: string; href: string; icon: LucideIcon; pending?: boolean; avatar?: boolean }[] = [
     { key: "Home", href: "/", icon: Home },
     { key: "Menu", href: "/menuphone", icon: UtensilsCrossed },
     { key: "Category", href: "/category", icon: LayoutGrid },
@@ -86,6 +74,7 @@ export function Navbar() {
       href: userIsLoggedIn ? "/userprofile" : "/login",
       icon: userIsLoggedIn ? User : LogIn,
       pending: isCheckingAuth,
+      avatar: userIsLoggedIn,
     },
   ];
 
@@ -127,9 +116,11 @@ export function Navbar() {
             <div ref={langRef} className="relative">
               <button
                 type="button"
-                onClick={() => setIsLangOpen((prev) => !prev)}
+                onClick={toggleLang}
                 className="nav_lang_btn flex items-center gap-1.5 cursor-pointer border border-gray-200 rounded-lg px-2 py-1 bg-white hover:bg-gray-50 transition-colors text-xs sm:text-sm"
                 aria-label="Select language"
+                aria-expanded={isLangOpen}
+                aria-haspopup="menu"
               >
                 <Image
                   src={selectedLanguage.flag}
@@ -138,7 +129,7 @@ export function Navbar() {
                   height={20}
                   className="h-4 w-4 sm:h-5 sm:w-5 rounded-lg object-cover"
                 />
-                <ChevronDown className={`h-3 w-3 text-gray-700 transition-transform ${isLangOpen ? "rotate-180" : ""}`} />
+                <ChevronDown className="dropdown_chevron h-3 w-3 text-gray-700" aria-hidden />
               </button>
 
               {isLangOpen && (
@@ -149,7 +140,7 @@ export function Navbar() {
                       type="button"
                       onClick={() => {
                         setLanguage(languageItem.code as Language);
-                        setIsLangOpen(false);
+                        closeLang();
                       }}
                       className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors cursor-pointer text-left ${
                         language === languageItem.code
@@ -192,10 +183,16 @@ export function Navbar() {
             ) : userIsLoggedIn ? (
               <Link
                 href="/userprofile"
-                className="nav_desktop_only items-center justify-center p-2 rounded-full hover:bg-gray-100 transition-colors"
+                className="nav_desktop_only items-center justify-center p-1 rounded-full hover:bg-gray-100 transition-colors"
                 title="User Profile"
+                aria-label={displayT("User Profile")}
               >
-                <User className="h-6 w-6 text-gray-700" />
+                <UserAvatar
+                  src={authUser?.avatarUrl}
+                  name={authUser?.name}
+                  sizes="32px"
+                  className="h-8 w-8 text-xs ring-1 ring-gray-200"
+                />
               </Link>
             ) : (
               <Link href="/login" className="nav_desktop_only">
@@ -243,11 +240,22 @@ export function Navbar() {
                       active ? "bg-[#A1255B]/15 scale-110" : "hover:bg-gray-100"
                     }`}
                   >
-                    <Icon
-                      className={`nav-icon h-6 w-6 transition-all duration-200 ${
-                        active ? "text-[#A1255B]" : "text-gray-500 opacity-60 hover:opacity-100"
-                      }`}
-                    />
+                    {item.avatar ? (
+                      <UserAvatar
+                        src={authUser?.avatarUrl}
+                        name={authUser?.name}
+                        sizes="28px"
+                        className={`h-7 w-7 text-[10px] transition-all duration-200 ${
+                          active ? "ring-2 ring-[#A1255B]" : "ring-1 ring-gray-200 opacity-80 hover:opacity-100"
+                        }`}
+                      />
+                    ) : (
+                      <Icon
+                        className={`nav-icon h-6 w-6 transition-all duration-200 ${
+                          active ? "text-[#A1255B]" : "text-gray-500 opacity-60 hover:opacity-100"
+                        }`}
+                      />
+                    )}
                   </div>
                 </Link>
               );

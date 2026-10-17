@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { ArrowUpDown, Check, ChevronDown } from "lucide-react";
 import { useLanguage } from "@/components/ui/translatetokhmer";
+import { useDropdown } from "@/hooks/useDropdown";
 
 export interface SortOption {
   value: string;
@@ -18,35 +18,22 @@ export interface SortDropdownProps {
 
 export function SortDropdown({ value, options, onChange, className = "" }: SortDropdownProps) {
   const { t } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false);
-    };
-    if (isOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  const { isOpen, rootRef, toggle, close } = useDropdown();
 
   const selected = options.find((option) => option.value === value) ?? options[0];
 
   return (
-    <div ref={ref} className={`relative ${className}`}>
+    <div ref={rootRef} className={`relative ${className}`}>
       <button
         type="button"
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={toggle}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         className="flex items-center gap-1.5 rounded-full bg-white border border-gray-300 px-3 py-1.5 text-xs sm:text-sm font-semibold text-gray-800 hover:border-[#A1255B] focus:outline-none focus:ring-1 focus:ring-[#A1255B] cursor-pointer transition-all select-none"
       >
         <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
         <span>{t(selected?.label ?? "")}</span>
-        <ChevronDown
-          className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform duration-200 ${
-            isOpen ? "rotate-180 text-[#A1255B]" : ""
-          }`}
-        />
+        <ChevronDown className="dropdown_chevron w-3.5 h-3.5 text-gray-400" aria-hidden />
       </button>
 
       {isOpen && (
@@ -64,7 +51,7 @@ export function SortDropdown({ value, options, onChange, className = "" }: SortD
                 aria-selected={isSelected}
                 onClick={() => {
                   onChange(option.value);
-                  setIsOpen(false);
+                  close();
                 }}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer border-none text-left select-none ${
                   isSelected

@@ -62,10 +62,8 @@ export function OptionDropdown<T extends string>({
           )}
         </span>
         <ChevronDown
-          className={cn(
-            "shrink-0 transition-transform duration-200 group-data-[popup-open]:rotate-180",
-            compact ? "h-3.5 w-3.5 text-[#A1255B]" : "h-4 w-4 text-gray-400 group-data-[popup-open]:text-[#A1255B]"
-          )}
+          className={cn("dropdown_chevron", compact ? "h-3.5 w-3.5 text-[#A1255B]" : "h-4 w-4 text-gray-400")}
+          aria-hidden
         />
       </Select.Trigger>
 

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ExternalLink, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move, Trash2, Send } from "lucide-react";
@@ -33,6 +32,7 @@ import { changePasswordSchema, profileSchema, verifyPasswordSchema } from "@/lib
 import { cleanPhoneInput, formatPhone, phoneInputProps, samePhone } from "@/lib/phoneUtils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { OrderEstimateBadge } from "@/components/common/OrderEstimate";
+import { UserAvatar } from "@/components/common/UserAvatar";
 import {
   ErrorState,
   LoadingRegion,
@@ -130,9 +130,8 @@ export function UserprofilepageView() {
     email: currentUser?.email || "N/A",
     phone: formatPhone(currentUser?.phoneNumber),
     gender: currentUser?.gender ?? "",
-    avatarUrl:
-      currentUser?.avatarUrl ||
-      "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
+    // Empty when there's no photo yet (or Telegram has none); UserAvatar falls back to initials.
+    avatarUrl: currentUser?.avatarUrl ?? "",
     capital: "Phnom Penh",
     district: "Khan Boeng Keng Kang",
     zipCode: "120000",
@@ -347,16 +346,16 @@ export function UserprofilepageView() {
         ) : (
         <div className="user_profile_card">
           <div className="user_profile_avatar_side">
-            <div className="user_profile_avatar_box group">
-              <Image
-                src={profile.avatarUrl}
-                alt={profile.name}
-                fill
-                priority
-                unoptimized
-                className="user_profile_avatar_img"
-                style={{ objectPosition: `${avatarPos.x}% ${avatarPos.y}%` }}
-              />
+            <UserAvatar
+              src={profile.avatarUrl}
+              name={currentUser?.fullName}
+              alt={profile.name}
+              sizes="140px"
+              priority
+              className="user_profile_avatar_box group text-4xl"
+              imageClassName="user_profile_avatar_img"
+              imageStyle={{ objectPosition: `${avatarPos.x}% ${avatarPos.y}%` }}
+            >
               <button
                 type="button"
                 onClick={openEditProfile}
@@ -366,7 +365,7 @@ export function UserprofilepageView() {
                 <Edit3 className="w-5 h-5 mb-1" />
                 <span>{t("Edit Photo")}</span>
               </button>
-            </div>
+            </UserAvatar>
           </div>
 
           <div className="user_profile_content_side">
@@ -807,14 +806,15 @@ export function UserprofilepageView() {
                   onTouchEnd={handleAvatarMouseUp}
                   title="Click & drag to adjust image position"
                 >
-                  <Image
+                  <UserAvatar
                     src={avatarFile ? editForm.avatarUrl : profile.avatarUrl}
+                    name={currentUser?.fullName}
                     alt="Avatar Preview"
-                    fill
+                    sizes="100px"
                     priority
-                    unoptimized
-                    className="object-cover pointer-events-none transition-none"
-                    style={{ objectPosition: `${avatarPos.x}% ${avatarPos.y}%` }}
+                    className="absolute inset-0 text-2xl"
+                    imageClassName="pointer-events-none transition-none"
+                    imageStyle={{ objectPosition: `${avatarPos.x}% ${avatarPos.y}%` }}
                   />
                   <div className="avatar_drag_hint_overlay">
                     <Move className="w-4 h-4 text-white mb-0.5" />

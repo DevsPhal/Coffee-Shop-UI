@@ -1,9 +1,9 @@
 "use client"
 
 import * as React from "react"
-import Image from "next/image"
 import { Toast as ToastPrimitive } from "@base-ui/react/toast"
 
+import { UserAvatar } from "@/components/common/UserAvatar"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/components/ui/translatetokhmer"
 import { BellIcon, XIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
@@ -127,7 +127,7 @@ function ToastIcon({ type }: { type: string | undefined }) {
 
 export interface WelcomeToastData {
   greeting: string
-  initials: string
+  fullName: string
   avatarUrl?: string | null
   duration: number
 }
@@ -135,12 +135,14 @@ export interface WelcomeToastData {
 function WelcomeToastBody({ data }: { data: WelcomeToastData }) {
   return (
     <ToastContent className="welcome_toast">
-      <span className="welcome_toast_avatar" aria-hidden="true">
-        {data.avatarUrl ? (
-          <Image src={data.avatarUrl} alt="" fill sizes="44px" unoptimized className="welcome_toast_avatar_img" />
-        ) : (
-          data.initials
-        )}
+      <span aria-hidden="true" className="contents">
+        <UserAvatar
+          src={data.avatarUrl}
+          name={data.fullName}
+          sizes="44px"
+          className="welcome_toast_avatar"
+          imageClassName="welcome_toast_avatar_img"
+        />
       </span>
       <div className="welcome_toast_text">
         <p className="welcome_toast_eyebrow">{data.greeting}</p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useDropdown } from "@/hooks/useDropdown";
 import { ChevronDown, Check, Users } from "lucide-react";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import type { Gender } from "@/store/api/types";
@@ -29,25 +29,16 @@ export function GenderDropdown({
   id,
 }: GenderDropdownProps) {
   const { t } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false);
-    };
-    if (isOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  const { isOpen, rootRef, toggle, close } = useDropdown();
 
   const selected = GENDER_CHOICES.find((g) => g.value === value);
 
   return (
-    <div ref={ref} className={`relative ${className}`}>
+    <div ref={rootRef} className={`relative ${className}`}>
       <button
         id={id}
         type="button"
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={toggle}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         className={
@@ -61,11 +52,7 @@ export function GenderDropdown({
             {selected ? selected.label : t(placeholder)}
           </span>
         </div>
-        <ChevronDown
-          className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${
-            isOpen ? "rotate-180 text-[#A1255B]" : ""
-          }`}
-        />
+        <ChevronDown className="dropdown_chevron w-4 h-4 text-gray-400" aria-hidden />
       </button>
 
       {isOpen && (
@@ -83,7 +70,7 @@ export function GenderDropdown({
                 aria-selected={isSelected}
                 onClick={() => {
                   onChange(choiceValue);
-                  setIsOpen(false);
+                  close();
                 }}
                 className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer border-none text-left select-none ${
                   isSelected

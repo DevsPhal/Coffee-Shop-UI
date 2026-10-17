@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ChevronDown,
@@ -22,6 +22,7 @@ import {
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { useCategories, type CatalogCategory } from "@/store/api/useCatalog";
 import "@/app/globals.scss";
+import { useDropdown } from "@/hooks/useDropdown";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useMounted } from "@/hooks/useMounted";
 
@@ -76,26 +77,14 @@ export function CategoryDropdown({
   leadingEntries = [],
   className = "",
 }: CategoryDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const isMobile = useIsMobile();
+  // On phones the list is a drawer in a portal with its own backdrop, so a press outside the trigger is not "outside".
+  const { isOpen, rootRef, toggle, close } = useDropdown({ closeOnOutsidePress: !isMobile });
   const mounted = useMounted();
   const [touchActiveCat, setTouchActiveCat] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
 
   const { categories, isLoading } = useCategories();
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen && !isMobile) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, isMobile]);
 
   const totalCount = categories.reduce((sum, c) => sum + c.count, 0);
 
@@ -126,7 +115,7 @@ export function CategoryDropdown({
         aria-selected={isSelected}
         onClick={() => {
           onSelectCategory(entry.id);
-          setIsOpen(false);
+          close();
         }}
         className={`w-full flex items-center justify-between py-2 px-3 rounded-xl text-xs sm:text-sm font-bold text-gray-900 hover:bg-gray-100 transition-all cursor-pointer border-none text-left select-none ${
           isSelected ? "bg-[#A1255B] !text-white shadow-2xs" : ""
@@ -166,7 +155,7 @@ export function CategoryDropdown({
         onTouchCancel={() => setTouchActiveCat(null)}
         onClick={() => {
           onSelectCategory(entry.id);
-          setIsOpen(false);
+          close();
         }}
         className={`category_drawer_item font-extrabold ${
           isSelected ? "selected" : ""
@@ -186,10 +175,10 @@ export function CategoryDropdown({
   };
 
   return (
-    <div ref={dropdownRef} className={`relative inline-block text-left ${className}`}>
+    <div ref={rootRef} className={`relative inline-block text-left ${className}`}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggle}
         className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full border border-gray-200 bg-white hover:border-[#A1255B] text-gray-900 font-bold text-xs sm:text-sm shadow-2xs transition-all cursor-pointer select-none"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
@@ -199,11 +188,7 @@ export function CategoryDropdown({
         <span className="text-gray-700 text-[10px] sm:text-[11px] font-medium px-1.5 sm:px-2 py-0.5 shrink-0">
           {isLoading ? "…" : current?.count ?? 0}
         </span>
-        <ChevronDown
-          className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0 transition-transform duration-200 ${
-            isOpen ? "rotate-180 text-[#A1255B]" : ""
-          }`}
-        />
+        <ChevronDown className="dropdown_chevron w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" aria-hidden />
       </button>
 
       {isOpen && !isMobile && (
@@ -226,12 +211,12 @@ export function CategoryDropdown({
           <div className="cart_drawer_wrapper">
             <div
               className="cart_drawer_backdrop"
-              onClick={() => setIsOpen(false)}
+              onClick={() => close()}
               aria-hidden="true"
             />
             <div
               className="cart_drawer_panel_container"
-              onClick={() => setIsOpen(false)}
+              onClick={() => close()}
             >
               <div
                 className="category_drawer_panel"
@@ -241,7 +226,7 @@ export function CategoryDropdown({
                   <h2 className="category_drawer_title">{t("CATEGORIES")}</h2>
                   <button
                     type="button"
-                    onClick={() => setIsOpen(false)}
+                    onClick={() => close()}
                     className="cart_drawer_close_btn"
                     aria-label="Close categories"
                   >

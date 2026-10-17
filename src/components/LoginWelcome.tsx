@@ -7,7 +7,7 @@ import { toast, type WelcomeToastData } from "@/components/ui/toast";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { useMounted } from "@/hooks/useMounted";
 import { isAuthenticated } from "@/lib/authStorage";
-import { consumeWelcomePending, firstName, initials, timeOfDayGreeting } from "@/lib/welcomeToast";
+import { consumeWelcomePending, firstName, timeOfDayGreeting } from "@/lib/welcomeToast";
 import { isStaffRole } from "@/lib/staffAccess";
 import { useGetCurrentUserQuery } from "@/store/api/authApi";
 
@@ -26,7 +26,7 @@ export default function LoginWelcome() {
     const name = firstName(user.fullName);
     const data: WelcomeToastData = {
       greeting: t(timeOfDayGreeting()),
-      initials: initials(user.fullName),
+      fullName: user.fullName,
       avatarUrl: user.avatarUrl,
       duration: WELCOME_DURATION,
     };
