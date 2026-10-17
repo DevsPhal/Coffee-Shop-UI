@@ -135,6 +135,31 @@ export interface TelegramLinkCodeResponse {
   deepLink: string;
 }
 
+export interface TelegramLoginChallenge {
+  requestId: string;
+  pollToken: string;
+  deepLink: string;
+  botUsername: string;
+  expiresInSeconds: number;
+}
+
+export type TelegramLoginStatus =
+  | "PENDING"
+  | "AWAITING_CONFIRMATION"
+  | "APPROVED"
+  | "REJECTED"
+  | "EXPIRED";
+
+export interface TelegramLoginStatusRequest {
+  requestId: string;
+  pollToken: string;
+}
+
+export interface TelegramLoginStatusResponse {
+  status: TelegramLoginStatus;
+  tokens: AuthTokenResponse | null;
+}
+
 export interface UserResponse {
   id: UUID;
   fullName: string;

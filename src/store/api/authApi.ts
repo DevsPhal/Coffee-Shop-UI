@@ -11,6 +11,9 @@ import type {
   ResendOtpRequest,
   ResetPasswordRequest,
   TelegramLinkCodeResponse,
+  TelegramLoginChallenge,
+  TelegramLoginStatusRequest,
+  TelegramLoginStatusResponse,
   TelegramWidgetConfigResponse,
   TelegramWidgetAuthRequest,
   UpdateProfileRequest,
@@ -71,6 +74,24 @@ export const authApi = baseApi.injectEndpoints({
         return tokens;
       },
       invalidatesTags: ["Auth", "Cart", "Order"],
+    }),
+
+    startTelegramLogin: builder.mutation<TelegramLoginChallenge, void>({
+      query: () => ({ url: "/api/auth/telegram/login-requests", method: "POST" }),
+      transformResponse: unwrap<TelegramLoginChallenge>,
+    }),
+
+    checkTelegramLogin: builder.mutation<TelegramLoginStatusResponse, TelegramLoginStatusRequest>({
+      query: (body) => ({ url: "/api/auth/telegram/login-requests/status", method: "POST", body }),
+      transformResponse: (response: ApiEnvelope<TelegramLoginStatusResponse>) => {
+        const result = unwrap(response);
+        if (result.tokens) {
+          setTokens(result.tokens);
+          markWelcomePending();
+        }
+        return result;
+      },
+      invalidatesTags: (result) => (result?.tokens ? ["Auth", "Cart", "Order"] : []),
     }),
 
     forgotPassword: builder.mutation<void, { email: string }>({
@@ -141,6 +162,8 @@ export const {
   useResendOtpMutation,
   useLoginTelegramMutation,
   useGetTelegramWidgetConfigQuery,
+  useStartTelegramLoginMutation,
+  useCheckTelegramLoginMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
   useLogoutMutation,
