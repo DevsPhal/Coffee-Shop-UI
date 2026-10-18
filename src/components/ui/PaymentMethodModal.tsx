@@ -12,6 +12,11 @@ export interface PaymentMethodModalProps {
   onConfirm: (paymentMethod: "QR Scan" | "Cash") => void | Promise<void>;
 }
 
+const PAYMENT_OPTIONS = [
+  { method: "QR Scan", Icon: QrCode, title: "Bakong / KHQR", description: "Scan & pay via Bakong / Mobile Banking" },
+  { method: "Cash", Icon: Banknote, title: "Cash", description: "Pay cash upon pickup" },
+] as const;
+
 export function PaymentMethodModal({
   open,
   onOpenChange,
@@ -54,6 +59,7 @@ export function PaymentMethodModal({
             <button
               type="button"
               onClick={() => onOpenChange(false)}
+              aria-label={t("Close")}
               className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors cursor-pointer border-none"
             >
               <X className="w-4 h-4" />
@@ -68,84 +74,48 @@ export function PaymentMethodModal({
           </span>
         </div>
 
-        <div className="space-y-3 mb-6">
-          <div
-            onClick={() => !isSubmitting && setSelectedMethod("QR Scan")}
-            className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none ${
-              selectedMethod === "QR Scan"
-                ? "border-[#A1255B] bg-pink-50/40 shadow-sm ring-1 ring-[#A1255B]"
-                : "border-gray-200 hover:border-gray-300 bg-white"
-            } ${isSubmitting ? "opacity-60 cursor-not-allowed" : ""}`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  selectedMethod === "QR Scan"
-                    ? "bg-[#A1255B] text-white"
-                    : "bg-gray-100 text-gray-600"
-                }`}
+        {/* Real buttons, so the choice can be made with Tab + Enter/Space as well as a tap. */}
+        <div role="group" aria-label={t("Select Payment Method")} className="space-y-3 mb-6">
+          {PAYMENT_OPTIONS.map(({ method, Icon, title, description }) => {
+            const selected = selectedMethod === method;
+            return (
+              <button
+                key={method}
+                type="button"
+                aria-pressed={selected}
+                disabled={isSubmitting}
+                onClick={() => setSelectedMethod(method)}
+                className={`w-full text-left flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-[#A1255B] focus-visible:ring-offset-2 ${
+                  selected
+                    ? "border-[#A1255B] bg-pink-50/40 shadow-sm ring-1 ring-[#A1255B]"
+                    : "border-gray-200 hover:border-gray-300 bg-white"
+                } ${isSubmitting ? "opacity-60 cursor-not-allowed" : ""}`}
               >
-                <QrCode className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-gray-900 leading-tight">
-                  {t("Bakong / KHQR")}
-                </h4>
-                <p className="text-[11px] text-gray-500 mt-0.5">
-                  {t("Scan & pay via Bakong / Mobile Banking")}
-                </p>
-              </div>
-            </div>
+                <span className="flex items-center gap-3">
+                  <span
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      selected ? "bg-[#A1255B] text-white" : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-bold text-gray-900 leading-tight">{t(title)}</span>
+                    <span className="block text-[11px] text-gray-500 mt-0.5">{t(description)}</span>
+                  </span>
+                </span>
 
-            <div
-              className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
-                selectedMethod === "QR Scan"
-                  ? "border-[#A1255B] bg-[#A1255B] text-white"
-                  : "border-gray-300 bg-white"
-              }`}
-            >
-              {selectedMethod === "QR Scan" && <Check className="w-3 h-3" />}
-            </div>
-          </div>
-
-          <div
-            onClick={() => !isSubmitting && setSelectedMethod("Cash")}
-            className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none ${
-              selectedMethod === "Cash"
-                ? "border-[#A1255B] bg-pink-50/40 shadow-sm ring-1 ring-[#A1255B]"
-                : "border-gray-200 hover:border-gray-300 bg-white"
-            } ${isSubmitting ? "opacity-60 cursor-not-allowed" : ""}`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  selectedMethod === "Cash"
-                    ? "bg-[#A1255B] text-white"
-                    : "bg-gray-100 text-gray-600"
-                }`}
-              >
-                <Banknote className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-gray-900 leading-tight">
-                  {t("Cash")}
-                </h4>
-                <p className="text-[11px] text-gray-500 mt-0.5">
-                  {t("Pay cash upon pickup")}
-                </p>
-              </div>
-            </div>
-
-            <div
-              className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
-                selectedMethod === "Cash"
-                  ? "border-[#A1255B] bg-[#A1255B] text-white"
-                  : "border-gray-300 bg-white"
-              }`}
-            >
-              {selectedMethod === "Cash" && <Check className="w-3 h-3" />}
-            </div>
-          </div>
+                <span
+                  aria-hidden="true"
+                  className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                    selected ? "border-[#A1255B] bg-[#A1255B] text-white" : "border-gray-300 bg-white"
+                  }`}
+                >
+                  {selected && <Check className="w-3 h-3" />}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="space-y-2">
