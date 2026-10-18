@@ -50,7 +50,7 @@ export function OptionDropdown<T extends string>({
           "group flex items-center justify-between gap-2 cursor-pointer select-none transition-all outline-none",
           "focus-visible:ring-2 focus-visible:ring-[#A1255B]/30",
           compact
-            ? "rounded-full border border-pink-200 bg-pink-50/80 hover:bg-pink-100/80 px-2.5 py-1 text-[11px] sm:text-xs font-bold text-[#A1255B] whitespace-nowrap"
+            ? "max-w-full rounded-full border border-pink-200 bg-pink-50/80 hover:bg-pink-100/80 px-2.5 py-1 text-[11px] sm:text-xs font-bold text-[#A1255B] whitespace-nowrap"
             : "w-full rounded-xl border border-gray-200 bg-white hover:border-[#A1255B]/50 data-[popup-open]:border-[#A1255B] px-3 py-2.5 text-sm font-semibold text-gray-900"
         )}
       >
@@ -106,7 +106,7 @@ export function OptionDropdown<T extends string>({
     </Select.Root>
   );
 
-  if (compact) return <div className={cn("inline-block", className)}>{control}</div>;
+  if (compact) return <div className={cn("inline-block max-w-full", className)}>{control}</div>;
 
   return (
     <div className={cn("mb-4", className)}>

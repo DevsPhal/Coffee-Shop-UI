@@ -70,7 +70,7 @@ export function OrderpageView() {
             <div className="order_page_table_header">
               <div className="order_page_table_header_product">{t("Product")}</div>
               <div className="order_page_table_header_price hidden sm:block">{t("Price")}</div>
-              <div className="order_page_table_header_quantity">{t("Quantity")}</div>
+              <div className="order_page_table_header_quantity hidden sm:block">{t("Quantity")}</div>
               <div className="order_page_table_header_total">{t("Total")}</div>
             </div>
             <div className="order_page_items_list">

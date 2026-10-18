@@ -603,7 +603,7 @@
 .order_page_table_header {  background-color: #eaeaea;  border-radius: 0.75rem;  padding: 0.625rem 0.5rem;  display: grid;  grid-template-columns: repeat(12, minmax(0, 1fr));  gap: 0.25rem;  align-items: center;  font-size: 0.6875rem;  font-weight: 700;  color: #374151; box-sizing: border-box;
   @media (min-width: 640px) {    font-size: 0.875rem; padding: 0.875rem 1.25rem; gap: 1rem; }
 }
-.order_page_table_header_product {  grid-column: span 5 / span 5;
+.order_page_table_header_product {  grid-column: span 6 / span 6;
   @media (min-width: 640px) { grid-column: span 4 / span 4; }
 }
 .order_page_table_header_price {  grid-column: span 2 / span 2;  text-align: center;
@@ -611,20 +611,21 @@
 .order_page_table_header_quantity {  grid-column: span 3 / span 3;  text-align: center;
   @media (min-width: 640px) { grid-column: span 2 / span 2; }
 }
-.order_page_table_header_total {  grid-column: span 2 / span 2;  text-align: right;
+.order_page_table_header_total {  grid-column: span 6 / span 6;  text-align: right;
   @media (min-width: 640px) { grid-column: span 4 / span 4; }
 }
 .order_page_items_list {  border-top: 1px solid #f3f4f6;}
-.order_page_item_row {  padding: 1rem 0.5rem;  display: grid;  grid-template-columns: repeat(12, minmax(0, 1fr));  gap: 0.25rem;  align-items: center;  border-bottom: 1px solid #f3f4f6; box-sizing: border-box;
+// Phones: product + options take the full first line; quantity and total sit on the line below.
+.order_page_item_row {  padding: 1rem 0.5rem;  display: grid;  grid-template-columns: repeat(12, minmax(0, 1fr));  gap: 0.75rem 0.25rem;  align-items: center;  border-bottom: 1px solid #f3f4f6; box-sizing: border-box;
   @media (min-width: 640px) { padding: 1.25rem 1.25rem; gap: 1rem; }
 }
-.order_page_item_product {  grid-column: span 5 / span 5;  display: flex;  align-items: center;  gap: 0.375rem;  min-width: 0;
+.order_page_item_product {  grid-column: span 12 / span 12;  display: flex;  align-items: center;  gap: 0.375rem;  min-width: 0;
   @media (min-width: 640px) { grid-column: span 4 / span 4; gap: 1rem;}
 }
 .order_page_item_image_wrapper {  width: 2.75rem;  height: 2.75rem;  background-color: #eaeaea;  border-radius: 0.625rem;  display: flex;  align-items: center;  justify-content: center;flex-shrink: 0;overflow: hidden;position: relative;
   @media (min-width: 640px) {width: 4rem; height: 4rem; border-radius: 0.75rem;}
 }
-.order_page_item_details {min-width: 0;}
+.order_page_item_details {flex: 1 1 0%;min-width: 0;}
 .order_page_item_title {font-size: 0.75rem;font-weight: 600;color: #1f2937;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;
   @media (min-width: 640px) {font-size: 0.875rem;}
 }
@@ -634,8 +635,8 @@
 .order_page_item_price {grid-column: span 2 / span 2;text-align: center;font-size: 0.75rem;font-weight: 600;color: #1f2937;
   @media (min-width: 640px) {font-size: 0.875rem;}
 }
-.order_page_item_quantity {grid-column: span 3 / span 3;display: flex;justify-content: center;
-  @media (min-width: 640px) { grid-column: span 2 / span 2; }
+.order_page_item_quantity {grid-column: span 6 / span 6;display: flex;justify-content: flex-start;padding-left: 3.125rem;
+  @media (min-width: 640px) { grid-column: span 2 / span 2; justify-content: center; padding-left: 0; }
 }
 .order_page_quantity_pill {display: inline-flex;align-items: center;justify-content: space-between;border: 1px solid #e5e7eb;border-radius: 9999px;padding: 0.2rem 0.4rem;background-color: #ffffff;box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);width: 4.2rem;font-size: 0.75rem;
   @media (min-width: 640px) {width: 6rem; padding: 0.25rem 0.75rem;}
@@ -644,7 +645,7 @@
   &:hover {color: #000000;}
 }
 .order_page_quantity_val {font-weight: 700;color: #1f2937;user-select: none;}
-.order_page_item_total {grid-column: span 2 / span 2;text-align: right;font-size: 0.75rem;font-weight: 600;color: #1f2937;
+.order_page_item_total {grid-column: span 6 / span 6;text-align: right;font-size: 0.75rem;font-weight: 600;color: #1f2937;
   @media (min-width: 640px) {font-size: 0.875rem; grid-column: span 4 / span 4;}
 }
 .order_page_summary_card {background-color: #ffffff;border: 1px solid #f3f4f6;box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);border-radius: 1.25rem;padding: 1.25rem;display: flex;flex-direction: column;gap: 1.25rem; box-sizing: border-box;
