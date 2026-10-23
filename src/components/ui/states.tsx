@@ -30,7 +30,7 @@ export function LoadingRegion({
 export function ProductCardSkeleton() {
   return (
     <div className="skeleton_card flex flex-col rounded-lg border border-gray-100 bg-[#f8f8f8] p-5" aria-hidden>
-      <Skeleton className="mb-4 h-44 w-full rounded-lg sm:h-48" />
+      <Skeleton className="mb-4 aspect-4/3 w-full rounded-lg sm:aspect-auto sm:h-48" />
       <div className="mb-4 flex items-center justify-between gap-3">
         <Skeleton className="h-5 w-3/5" />
         <Skeleton className="h-5 w-14" />

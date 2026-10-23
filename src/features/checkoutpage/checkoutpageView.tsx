@@ -33,7 +33,7 @@ import { useGetCurrentUserQuery } from "@/store/api/authApi";
 import { usePayCashOnPickupMutation } from "@/store/api/orderApi";
 import { ICE_LABELS, MILK_LABELS, SUGAR_LABELS, VARIANT_LABELS } from "@/store/api/optionMapping";
 import type { VariantName } from "@/store/api/types";
-import { resolveProductImage } from "@/store/api/productAdapter";
+import { ProductImage } from "@/components/common/ProductImage";
 import { toTitleCase } from "@/lib/utils";
 import { useCheckout } from "@/store/api/useCheckout";
 import { PaymentMethodModal } from "@/components/ui/PaymentMethodModal";
@@ -763,15 +763,11 @@ export function CheckoutpageView() {
                 return (
                   <div key={item.lineId} className="checkout_item_row">
                     <div className="checkout_item_info">
-                      <div className="checkout_item_image_wrapper">
-                        <Image
-                          src={resolveProductImage(item.image)}
-                          alt={toTitleCase(item.title)}
-                          fill
-                          unoptimized
-                          className="object-cover"
-                        />
-                      </div>
+                      <ProductImage
+                        src={item.image}
+                        alt={toTitleCase(item.title)}
+                        className="checkout_item_image_wrapper"
+                      />
                       <div className="checkout_item_details">
                         <h3 className="checkout_item_title">{toTitleCase(item.title)}</h3>
                         <div className="flex flex-wrap items-center gap-1.5 mt-0.5">

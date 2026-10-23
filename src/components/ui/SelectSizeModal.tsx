@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { Coffee, ShoppingBag, X, Snowflake, Candy, Milk, CupSoda } from "lucide-react";
@@ -12,7 +11,8 @@ import {
   SUGAR_OPTIONS,
   variantOptions,
 } from "@/store/api/optionMapping";
-import { getDrinkCustomization, resolveProductImage, type StoreProduct } from "@/store/api/productAdapter";
+import { getDrinkCustomization, type StoreProduct } from "@/store/api/productAdapter";
+import { ProductImage } from "@/components/common/ProductImage";
 import type { IceLevel, MilkType, SugarLevel, UUID } from "@/store/api/types";
 import { ExtrasSelector } from "@/components/ui/ExtrasSelector";
 import { OptionDropdown } from "@/components/ui/OptionDropdown";
@@ -113,15 +113,11 @@ export function SelectSizeModal({
         </div>
 
         <div className="box_product flex items-center gap-3 p-3 mb-4 rounded-2xl bg-gray-50">
-          <div className="box_product relative w-12 h-12 rounded-xl overflow-hidden shrink-0">
-            <Image
-              src={resolveProductImage(product.image)}
-              alt={product.title}
-              fill
-              unoptimized
-              className="object-cover img"
-            />
-          </div>
+          <ProductImage
+            src={product.image}
+            alt={product.title}
+            className="box_product w-12 h-12 rounded-xl shrink-0"
+          />
           <div className="min-w-0 flex-1">
             <h4 className="text-sm font-bold text-gray-900 truncate">
               {product.title}

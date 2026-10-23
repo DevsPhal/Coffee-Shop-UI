@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { iconFor } from "@/components/ui/CategoryDropdown";
-import { resolveProductImage } from "@/store/api/productAdapter";
+import { ProductImage } from "@/components/common/ProductImage";
 import { useCatalog, useCategories } from "@/store/api/useCatalog";
 import { toTitleCase } from "@/lib/utils";
 import { Search, ChevronRight, ArrowUpRight, Filter, SearchX } from "lucide-react";
@@ -74,7 +73,7 @@ export function CategorypageView() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("Search a category...")}
-              className="w-full bg-transparent text-xs sm:text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
+              className="search_field_input w-full bg-transparent text-xs sm:text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
             />
           </form>
         </div>
@@ -140,18 +139,12 @@ export function CategorypageView() {
                   {previews.length > 0 && (
                     <div className="mt-4 flex items-center gap-2">
                       {previews.map((product) => (
-                        <span
+                        <ProductImage
                           key={product.id}
-                          className="relative h-14 w-14 overflow-hidden rounded-xl bg-gray-100"
-                        >
-                          <Image
-                            src={resolveProductImage(product.imageUrl)}
-                            alt={toTitleCase(product.name)}
-                            fill
-                            unoptimized
-                            className="object-cover"
-                          />
-                        </span>
+                          src={product.imageUrl}
+                          alt={toTitleCase(product.name)}
+                          className="h-14 w-14 rounded-xl"
+                        />
                       ))}
                     </div>
                   )}

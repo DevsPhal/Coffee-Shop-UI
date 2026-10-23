@@ -2,7 +2,6 @@
 
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
@@ -10,7 +9,8 @@ import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { toast } from "@/components/ui/toast";
 import { useGetProductQuery } from "@/store/api/catalogApi";
-import { getDrinkCustomization, resolveProductImage, toStoreProduct } from "@/store/api/productAdapter";
+import { getDrinkCustomization, toStoreProduct } from "@/store/api/productAdapter";
+import { ProductImage } from "@/components/common/ProductImage";
 import {
   ICE_OPTIONS,
   MILK_OPTIONS,
@@ -69,7 +69,6 @@ export function ProductpageView({
   const displayPromoEndDate = product?.discountEndsAt;
   const displayDescription = product?.description ?? "";
   const displayCategory = product?.category ?? "";
-  const displayImage = resolveProductImage(product?.image);
 
   const variants = product?.variants ?? [];
   const drinkOptions = product
@@ -199,21 +198,12 @@ export function ProductpageView({
         </nav>
       </div>
       <div className="product_detail_grid">
-        <div className="product_image_container" suppressHydrationWarning>
-          {displayImage ? (
-            <Image
-              src={displayImage}
-              alt={displayTitle}
-              fill
-              unoptimized
-              className="object-cover"
-              loading="eager"
-            />
-          ) : (
-            <div className="product_image_placeholder">
-              {displayTitle}
-            </div>
-          )}
+        <ProductImage
+          src={product?.image}
+          alt={displayTitle}
+          className="product_image_container"
+          loading="eager"
+        >
           {discountInfo.hasDiscount && discountInfo.badgeText && isPromotion && (
             <span className="product_discount_badge">
               {discountInfo.badgeText}
@@ -228,7 +218,7 @@ export function ProductpageView({
               <span className="promo_clock_text">{promoResult.displayText}</span>
             </div>
           )}
-        </div>
+        </ProductImage>
         <div className="product_info_box" suppressHydrationWarning>
           <div className="product_info_header">
             <div>

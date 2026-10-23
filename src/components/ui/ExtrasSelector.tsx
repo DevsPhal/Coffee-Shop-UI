@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { Check } from "lucide-react";
-import { resolveProductImage } from "@/store/api/productAdapter";
+import { ProductImage } from "@/components/common/ProductImage";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import type { ProductExtraResponse } from "@/store/api/types";
 import type { CartExtra } from "@/store/useCartStore";
@@ -49,15 +48,11 @@ export function ExtrasSelector({ extras, selected, onChange }: ExtrasSelectorPro
                   : "border-gray-200 hover:border-gray-300 bg-white"
               }`}
             >
-              <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-gray-100">
-                <Image
-                  src={resolveProductImage(extra.imageUrl)}
-                  alt={extra.name}
-                  fill
-                  unoptimized
-                  className="object-cover"
-                />
-              </div>
+              <ProductImage
+                src={extra.imageUrl}
+                alt={extra.name}
+                className="w-10 h-10 rounded-lg shrink-0"
+              />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-gray-900 truncate">{extra.name}</p>
                 <p className="text-[11px] text-[#A1255B] font-semibold">

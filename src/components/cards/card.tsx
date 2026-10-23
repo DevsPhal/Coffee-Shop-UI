@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -10,8 +9,9 @@ import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { Clock } from "lucide-react";
 import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidation";
-import { resolveProductImage, type StoreProduct } from "@/store/api/productAdapter";
+import type { StoreProduct } from "@/store/api/productAdapter";
 import SelectSizeModal, { type SizeSelection } from "@/components/ui/SelectSizeModal";
+import { ProductImage } from "@/components/common/ProductImage";
 import "@/app/globals.scss";
 
 export interface CardProps {
@@ -43,8 +43,6 @@ export function Card({
   const [added, setAdded] = useState(false);
   const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
   const [modalActionType, setModalActionType] = useState<"checkout" | "cart">("cart");
-
-  const imgSrc = resolveProductImage(product.image);
 
   const discountInfo = formatDiscountBadge(price, originalPrice, discountType, discountAmount);
 
@@ -115,20 +113,14 @@ export function Card({
               : "border border-[#F3E8EC] hover:border-[#931B42]/40 shadow-sm default"
           }`}
         >
-          <Link href={targetHref} className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden shrink-0 bg-gray-100 block image-container">
-            <Image
-              src={imgSrc}
-              alt={title}
-              fill
-              unoptimized
-              sizes="(max-width: 640px) 80px, 88px"
-              className="object-cover transition-transform duration-300 hover:scale-105 card-thumb"
-            />
-            {discountInfo.hasDiscount && discountInfo.badgeText && isPromotion && (
-              <span className="discount_badge discount_badge_phone">
-                {discountInfo.badgeText}
-              </span>
-            )}
+          <Link href={targetHref} className="block shrink-0">
+            <ProductImage src={product.image} alt={title} className="image-container">
+              {discountInfo.hasDiscount && discountInfo.badgeText && isPromotion && (
+                <span className="discount_badge discount_badge_phone">
+                  {discountInfo.badgeText}
+                </span>
+              )}
+            </ProductImage>
           </Link>
 
           <div className="flex-1 min-w-0 px-3 sm:px-4 overflow-hidden card-info">
@@ -208,15 +200,11 @@ export function Card({
   return (
     <div className="card_item relative w-full min-w-0 max-w-full overflow-hidden" suppressHydrationWarning>
       <Link href={targetHref} className="block cursor-pointer group w-full min-w-0">
-        <div className="card_image_box group-hover:opacity-90 transition-opacity relative w-full overflow-hidden">
-          <Image
-            src={imgSrc}
-            alt={title}
-            fill
-            unoptimized
-            className="card_image object-cover"
-          />
-
+        <ProductImage
+          src={product.image}
+          alt={title}
+          className="card_image_box group-hover:opacity-90 transition-opacity"
+        >
           {discountInfo.hasDiscount && discountInfo.badgeText && isPromotion && (
             <span className="discount_badge">
               {discountInfo.badgeText}
@@ -233,7 +221,7 @@ export function Card({
               <span className="promo_clock_text" suppressHydrationWarning>{displayPromoTime}</span>
             </div>
           )}
-        </div>
+        </ProductImage>
 
         <div className="flex flex-col items-start gap-1 mb-4 w-full min-w-0">
           <h3 className="card_title product_card_title group-hover:underline mb-0 w-full" title={title}>

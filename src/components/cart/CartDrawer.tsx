@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import {
@@ -13,7 +12,8 @@ import {
   SUGAR_LABELS,
   VARIANT_LABELS,
 } from "@/store/api/optionMapping";
-import { getDrinkCustomization, resolveProductImage } from "@/store/api/productAdapter";
+import { getDrinkCustomization } from "@/store/api/productAdapter";
+import { ProductImage } from "@/components/common/ProductImage";
 import { toTitleCase } from "@/lib/utils";
 import { useCatalog } from "@/store/api/useCatalog";
 import { useLanguage } from "@/components/ui/translatetokhmer";
@@ -196,15 +196,11 @@ export function CartDrawer() {
 
                   return (
                     <div key={item.lineId} className="cart_item">
-                      <div className="cart_item_thumbnail">
-                        <Image
-                          src={resolveProductImage(item.image)}
-                          alt={toTitleCase(item.title)}
-                          fill
-                          unoptimized
-                          className="object-cover"
-                        />
-                      </div>
+                      <ProductImage
+                        src={item.image}
+                        alt={toTitleCase(item.title)}
+                        className="cart_item_thumbnail"
+                      />
 
                       <div className="cart_item_details">
                         <h3 className="cart_item_title">{toTitleCase(item.title)}</h3>

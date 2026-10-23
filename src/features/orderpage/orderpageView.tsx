@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
@@ -11,7 +10,8 @@ import {
   SUGAR_OPTIONS,
   variantOptions,
 } from "@/store/api/optionMapping";
-import { getDrinkCustomization, resolveProductImage } from "@/store/api/productAdapter";
+import { getDrinkCustomization } from "@/store/api/productAdapter";
+import { ProductImage } from "@/components/common/ProductImage";
 import { useCatalog } from "@/store/api/useCatalog";
 import { toTitleCase } from "@/lib/utils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
@@ -84,15 +84,11 @@ export function OrderpageView() {
                 return (
                   <div key={item.lineId} className="order_page_item_row">
                     <div className="order_page_item_product">
-                      <div className="order_page_item_image_wrapper">
-                        <Image
-                          src={resolveProductImage(item.image)}
-                          alt={toTitleCase(item.title)}
-                          fill
-                          unoptimized
-                          className="object-cover"
-                        />
-                      </div>
+                      <ProductImage
+                        src={item.image}
+                        alt={toTitleCase(item.title)}
+                        className="order_page_item_image_wrapper"
+                      />
                       <div className="order_page_item_details">
                         <h3 className="order_page_item_title">{toTitleCase(item.title)}</h3>
                         <div className="flex flex-col items-start gap-1 mt-1 w-full max-w-full">

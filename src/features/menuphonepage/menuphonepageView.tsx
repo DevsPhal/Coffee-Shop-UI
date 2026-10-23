@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CategoryDropdown } from "@/components/ui";
 import { ALL_CATEGORIES } from "@/components/ui/CategoryDropdown";
-import { resolveProductImage, toStoreProduct, type StoreProduct } from "@/store/api/productAdapter";
+import { toStoreProduct, type StoreProduct } from "@/store/api/productAdapter";
+import { ProductImage } from "@/components/common/ProductImage";
 import { useCatalog, useCategories } from "@/store/api/useCatalog";
 import { isCategoryId, useCategoryQuery } from "@/lib/categoryParam";
 import type { SizeSelection } from "@/components/ui/SelectSizeModal";
@@ -46,8 +46,6 @@ export function PhoneCard({
   const { t } = useLanguage();
   const [added, setAdded] = useState(false);
   const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
-
-  const imgSrc = resolveProductImage(product.image);
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -99,21 +97,13 @@ export function PhoneCard({
         className={`phone-card cursor-pointer ${isSelected ? "selected" : "default"}`}
         suppressHydrationWarning
       >
-        <div className="image-container relative shrink-0">
-          <Image
-            src={imgSrc}
-            alt={product.title}
-            fill
-            unoptimized
-            sizes="(max-width: 640px) 80px, 88px"
-            className="card-thumb"
-          />
+        <ProductImage src={product.image} alt={product.title} className="image-container shrink-0">
           {discountInfo.hasDiscount && discountInfo.badgeText && isPromotion && (
             <span className="discount_badge discount_badge_phone">
               {discountInfo.badgeText}
             </span>
           )}
-        </div>
+        </ProductImage>
 
         <div className="card-info flex-1 min-w-0 overflow-hidden">
           <div className="title-row flex items-start gap-1.5 min-w-0">
@@ -264,7 +254,7 @@ export function MenupageView() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t("Search product...")}
-                className="w-full bg-transparent text-xs font-semibold text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
+                className="search_field_input w-full bg-transparent text-xs font-semibold text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
               />
               {searchQuery && (
                 <button
@@ -306,7 +296,7 @@ export function MenupageView() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t("Search...")}
-                className="w-full bg-transparent text-xs font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
+                className="search_field_input w-full bg-transparent text-xs font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
               />
               {searchQuery && (
                 <button
@@ -408,14 +398,11 @@ export function MenupageView() {
                 ✕
               </button>
 
-              <div className="modal-img-container relative">
-                <Image
-                  src={resolveProductImage(activeModalProduct.image)}
-                  alt={activeModalProduct.title}
-                  fill
-                  unoptimized
-                  className="modal-img"
-                />
+              <ProductImage
+                src={activeModalProduct.image}
+                alt={activeModalProduct.title}
+                className="modal-img-container"
+              >
                 {modalDiscountInfo.hasDiscount && modalDiscountInfo.badgeText && isModalPromotion && (
                   <span className="discount_badge">
                     {modalDiscountInfo.badgeText}
@@ -430,7 +417,7 @@ export function MenupageView() {
                     <span className="promo_clock_text">{modalPromoResult.displayText}</span>
                   </div>
                 )}
-              </div>
+              </ProductImage>
 
               <div>
                 <div className="modal-header-row items-baseline min-w-0 w-full overflow-hidden">
