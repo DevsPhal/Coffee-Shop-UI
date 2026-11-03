@@ -29,7 +29,6 @@ import {
   usePayCashOnPickupMutation,
 } from "@/store/api/orderApi";
 import { apiErrorMessage } from "@/store/api/baseApi";
-import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { useEstimateLabel } from "@/components/common/OrderEstimate";
 import { formatShopClock, parseShopDateTime } from "@/lib/estimate";
 import { ICE_LABELS, MILK_LABELS, SUGAR_LABELS, VARIANT_LABELS } from "@/store/api/optionMapping";
@@ -74,16 +73,11 @@ export function CheckoutdonepageView() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [payCashOnPickup] = usePayCashOnPickupMutation();
 
+  // RealtimeSync writes pushed updates into this query's cache; the slow poll only covers a blocked socket.
   const { currentData: order, error: orderError, refetch } = useGetMyOrderQuery(targetId, {
     skip: !targetId,
     refetchOnMountOrArgChange: true,
     pollingInterval: 30000,
-  });
-
-  useOrderLiveUpdates((message) => {
-    if (message.order.id === targetId) {
-      refetch();
-    }
   });
 
   const { currentData: staffCall } = useGetMyStaffCallQuery(targetId, {

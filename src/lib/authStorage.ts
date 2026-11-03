@@ -26,6 +26,26 @@ export function getRefreshToken(): string | null {
   }
 }
 
+const tokenListeners = new Set<() => void>();
+
+/** Calls `listener` whenever the access token changes in this tab or another one (sign-in, sign-out, refresh). */
+export function onAccessTokenChange(listener: () => void): () => void {
+  if (!canUseStorage()) return () => {};
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === ACCESS_TOKEN_KEY) listener();
+  };
+  tokenListeners.add(listener);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    tokenListeners.delete(listener);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+function notifyAccessTokenChange(): void {
+  tokenListeners.forEach((listener) => listener());
+}
+
 export function setTokens(tokens: AuthTokenResponse): void {
   if (!canUseStorage()) return;
   try {
@@ -33,6 +53,7 @@ export function setTokens(tokens: AuthTokenResponse): void {
     window.localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
   } catch {
   }
+  notifyAccessTokenChange();
 }
 
 export function clearTokens(): void {
@@ -43,6 +64,7 @@ export function clearTokens(): void {
     window.localStorage.removeItem(REFRESH_TOKEN_KEY);
   } catch {
   }
+  notifyAccessTokenChange();
 }
 
 export function isAuthenticated(): boolean {

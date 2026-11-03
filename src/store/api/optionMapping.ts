@@ -33,14 +33,20 @@ export const VARIANT_LABELS: Record<VariantName, string> = {
   MEDIUM: "Medium",
   LARGE: "Large",
   PIECE: "Piece",
+  PACK: "Pack",
+  BOX: "Box",
+  CARTON: "Carton",
 };
 
 export function variantOptions(
-  variants: readonly { id: string; name: VariantName; finalPrice: string | number }[]
+  variants: readonly { id: string; name: VariantName; finalPrice: string | number; unitsPerSale?: number }[]
 ) {
   return variants.map((variant) => ({
     value: variant.id,
-    label: VARIANT_LABELS[variant.name],
+    // "Carton of 24" so a customer knows a carton is not one can.
+    label: (variant.unitsPerSale ?? 1) > 1
+      ? `${VARIANT_LABELS[variant.name]} of ${variant.unitsPerSale}`
+      : VARIANT_LABELS[variant.name],
     hint: `$${Number(variant.finalPrice).toFixed(2)}`,
   }));
 }

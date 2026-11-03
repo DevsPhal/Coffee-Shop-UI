@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Armchair, ChevronRight, Coffee, LogOut, Users } from "lucide-react";
 import { EmptyState, PageLoader } from "@/components/ui/states";
 import { useLanguage } from "@/components/ui/translatetokhmer";
-import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { useMounted } from "@/hooks/useMounted";
 import { clearPersistentState } from "@/hooks/usePersistentState";
 import { isAuthenticated } from "@/lib/authStorage";
@@ -100,16 +99,7 @@ export default function TablepageView({ tableNumber }: { tableNumber: string }) 
 
 function MyTableOrders({ tableNumber }: { tableNumber: string }) {
   const { t } = useLanguage();
-  const { data: orders, refetch } = useListMyTableOrdersQuery(tableNumber);
-
-  useOrderLiveUpdates(
-    useCallback(
-      (message) => {
-        if (message.order.tableNumber === tableNumber) void refetch();
-      },
-      [refetch, tableNumber]
-    )
-  );
+  const { data: orders } = useListMyTableOrdersQuery(tableNumber);
 
   if (!orders || orders.length === 0) return null;
 

@@ -2,7 +2,6 @@
 
 import { useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useDispatch } from "react-redux";
 
 import { toast } from "@/components/ui/toast";
 import { useLanguage } from "@/components/ui/translatetokhmer";
@@ -10,8 +9,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { useStaffCallUpdates } from "@/hooks/useStaffCallUpdates";
 import { getOrderEstimate } from "@/lib/estimate";
-import { baseApi } from "@/store/api/baseApi";
-import type { AppDispatch } from "@/store/redux";
 import type { OrderResponse, OrderUpdateMessage, StaffCallMessage } from "@/store/api/types";
 
 type ToastType = "success" | "info" | "warning";
@@ -30,7 +27,6 @@ export function OrderNotifications() {
   const { t } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
-  const dispatch = useDispatch<AppDispatch>();
 
   const estimateText = useCallback(
     (order: OrderResponse) => {
@@ -106,7 +102,6 @@ export function OrderNotifications() {
     useCallback(
       (message: StaffCallMessage) => {
         if (message.type !== "ANSWERED") return;
-        dispatch(baseApi.util.invalidateTags([{ type: "StaffCall", id: message.orderId }]));
         const who = message.answeredByName || t("Staff");
         show(
           {
@@ -117,7 +112,7 @@ export function OrderNotifications() {
           message.orderId
         );
       },
-      [dispatch, show, t]
+      [show, t]
     ),
     isLoggedIn
   );

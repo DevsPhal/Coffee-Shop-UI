@@ -24,7 +24,6 @@ import { calculatePromoTimeLeft, formatDiscountBadge } from "@/lib/promoValidati
 import { ExtrasSelector } from "@/components/ui/ExtrasSelector";
 import { OptionDropdown } from "@/components/ui/OptionDropdown";
 import type { CartExtra } from "@/store/useCartStore";
-import { useCatalogLiveUpdates } from "@/hooks/useCatalogLiveUpdates";
 import "@/app/globals.scss";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
@@ -55,10 +54,6 @@ export function ProductpageView({
     error: productError,
     refetch: refetchProduct,
   } = useGetProductQuery(productId, { skip: !productId });
-
-  useCatalogLiveUpdates(() => {
-    if (productId) refetchProduct();
-  });
 
   const product = apiProduct ? toStoreProduct(apiProduct) : null;
 

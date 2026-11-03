@@ -22,7 +22,6 @@ import {
 } from "@/store/api/authApi";
 import type { Gender, UpdateProfileRequest } from "@/store/api/types";
 import { useListMyOrdersQuery } from "@/store/api/orderApi";
-import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
 import { Modal, ModalContent } from "@/components/ui/modal";
@@ -121,7 +120,6 @@ export function UserprofilepageView() {
     { page: 1, size: 50 },
     { skip: !signedIn }
   );
-  useOrderLiveUpdates(() => refetchOrders());
   const userOrders = orderPage?.content ?? [];
 
   const profile: UserProfileData = {

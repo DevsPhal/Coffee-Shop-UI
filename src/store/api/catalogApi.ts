@@ -26,6 +26,7 @@ export const catalogApi = baseApi.injectEndpoints({
           title: toTitleCase(event.title),
           description: event.description ? capitalizeFirst(event.description) : event.description,
         })),
+      providesTags: ["Event"],
     }),
     getShopSettings: builder.query<ShopSettingsResponse, void>({
       query: () => "/api/shop/settings",

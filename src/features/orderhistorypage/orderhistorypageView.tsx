@@ -13,7 +13,6 @@ import { toTitleCase } from "@/lib/utils";
 import { reorderLines } from "@/lib/reorder";
 import type { OrderResponse, OrderStatus } from "@/store/api/types";
 import { OrderEstimateBadge } from "@/components/common/OrderEstimate";
-import { useOrderLiveUpdates } from "@/hooks/useOrderLiveUpdates";
 import { EmptyState, ErrorState, LoadingRegion, OrderCardSkeleton } from "@/components/ui/states";
 import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
@@ -43,8 +42,6 @@ export function OrderhistorypageView() {
     },
     { skip: !signedIn }
   );
-
-  useOrderLiveUpdates(() => refetch());
 
   const filteredOrders = data?.content ?? [];
   const isLoadingOrders = isFetching && currentData === undefined;

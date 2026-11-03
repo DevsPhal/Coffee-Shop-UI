@@ -175,10 +175,13 @@ export interface UserResponse {
   createdByRole: Role | null;
 }
 
-export type CategoryGroup = "FRESH_DRINK" | "BEVERAGE" | "SNACK";
-export type VariantName = "MEDIUM" | "LARGE" | "PIECE";
-export type StockUnit = "PACK" | "BOX" | "CARTON" | "PIECE";
-export type SellUnit = "PLATE" | "BOTTLE" | "CAN" | "CUP" | "CARTON" | "PACKAGE" | "TANK" | "PIECE";
+// INGREDIENT products are stock-only and never reach the customer menu.
+export type CategoryGroup = "FRESH_DRINK" | "BEVERAGE" | "SNACK" | "INGREDIENT";
+// PACK / BOX / CARTON sell several units at once (unitsPerSale), e.g. a carton of 24 cans.
+export type VariantName = "MEDIUM" | "LARGE" | "PIECE" | "PACK" | "BOX" | "CARTON";
+export type StockUnit = "PACK" | "BOX" | "CARTON" | "PIECE" | "BAG" | "BOTTLE" | "KILOGRAM" | "LITER";
+export type SellUnit =
+  | "PLATE" | "BOTTLE" | "CAN" | "CUP" | "CARTON" | "PACKAGE" | "TANK" | "PIECE" | "GRAM" | "MILLILITER";
 
 export interface ProductVariantResponse {
   id: UUID;
@@ -186,8 +189,12 @@ export interface ProductVariantResponse {
   name: VariantName;
   price: Numeric;
   finalPrice: Numeric;
+  unitsPerSale: number;
   sortOrder: number | null;
   status: Status;
+  // How many can be ordered right now.
+  availableQuantity: number | null;
+  recipeBased: boolean;
 }
 
 export interface ProductExtraResponse {
@@ -440,7 +447,8 @@ export interface StaffCallMessage {
   sentAt: string;
 }
 
-export type CatalogResourceType = "PRODUCT" | "CATEGORY" | "EXTRA";
+// INVENTORY arrives on /topic/stock; the rest on /topic/catalog.
+export type CatalogResourceType = "PRODUCT" | "CATEGORY" | "EXTRA" | "BANNER" | "EVENT" | "INVENTORY";
 export type CatalogChangeType = "CREATED" | "UPDATED" | "DELETED";
 
 export interface ResourceChangeMessage {

@@ -6,7 +6,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { LanguageProvider } from "@/components/ui/translatetokhmer";
 import ScrollObserver from "@/components/common/ScrollObserver";
 import PointerCapturePolyfill from "@/components/common/PointerCapturePolyfill";
-import RealtimeCatalogSync from "@/components/RealtimeCatalogSync";
+import RealtimeSync from "@/components/RealtimeSync";
 import OrderNotifications from "@/components/OrderNotifications";
 import LoginWelcome from "@/components/LoginWelcome";
 import { Toaster } from "@/components/ui/toast";
@@ -56,7 +56,7 @@ export default function RootLayout({
               <LanguageProvider>
                 <ScrollObserver />
                 <PointerCapturePolyfill />
-                <RealtimeCatalogSync />
+                <RealtimeSync />
                 <OrderNotifications />
                 <LoginWelcome />
                 {children}
