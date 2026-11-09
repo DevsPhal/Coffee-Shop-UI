@@ -1158,6 +1158,10 @@ input[type="tel"] { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; 
 
 .progress_status_container { max-width: 48rem; margin-left: auto; margin-right: auto; padding-left: 1rem; padding-right: 1rem; margin-top: -2rem; position: relative; z-index: 20; margin-bottom: 2rem; }
 .progress_status_card { width: 100%; background-color: #ffffff; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05); border: 1px solid #f3f4f6; padding: 1.5rem; @media (min-width: 640px) { padding: 2rem; } }
+.progress_payment_action { margin-top: 1rem; width: 100%; display: flex; align-items: center; gap: 0.625rem; padding: 0.75rem 1rem 0.75rem 0.75rem; border-radius: 18px; background-color: var(--primary-color); color: #ffffff; font-weight: 700; font-size: 0.9375rem; line-height: 1.25; @media (min-width: 640px) { gap: 0.75rem; padding: 0.875rem 1.25rem 0.875rem 0.875rem; font-size: 1rem; } border: none; cursor: pointer; text-decoration: none; box-shadow: 0 12px 24px -10px rgba(161, 37, 91, 0.6); transition: background-color 0.2s, transform 0.1s; &:hover { background-color: #881d52; } &:active { transform: scale(0.99); } &:focus-visible { outline: 3px solid rgba(161, 37, 91, 0.35); outline-offset: 3px; } }
+.progress_payment_action_icon { width: 2.25rem; height: 2.25rem; @media (min-width: 640px) { width: 2.5rem; height: 2.5rem; } border-radius: 12px; background-color: rgba(255, 255, 255, 0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.progress_payment_action_label { flex: 1; min-width: 0; text-align: left; }
+.progress_payment_action_amount { font-weight: 800; white-space: nowrap; }
 .progress_status_header { font-size: 1.125rem; font-weight: 700; color: #111827; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
 .stepper_container { position: relative; display: flex; align-items: center; justify-content: space-between; }
 .stepper_bg_line { position: absolute; top: 50%; left: 0; right: 0; height: 4px; background-color: #e5e7eb; transform: translateY(-50%); z-index: 0; border-radius: 9999px; }

@@ -396,6 +396,8 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "Send Reset Link": "ផ្ញើតំណកំណត់ពាក្យសម្ងាត់",
     "Back to Login": "ត្រឡប់ទៅការចូលឈ្មោះ",
     "Order Progress Status": "ស្ថានភាពដំណើរការបញ្ជាទិញ",
+    "Choose Payment Method": "ជ្រើសរើសវិធីបង់ប្រាក់",
+    "Continue to payment": "បន្តទៅការបង់ប្រាក់",
     Confirmed: "បានបញ្ជាក់",
     Preparing: "កំពុងរៀបចំ",
     "Ready!": "រួចរាល់!",

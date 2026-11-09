@@ -19,6 +19,9 @@ import {
   UtensilsCrossed,
   XCircle,
   MessageCircleReply,
+  Wallet,
+  QrCode,
+  ChevronRight,
 } from "lucide-react";
 import { isAuthenticated } from "@/lib/authStorage";
 import { useGetCurrentUserQuery } from "@/store/api/authApi";
@@ -322,27 +325,6 @@ export function CheckoutdonepageView() {
           </span>
         </div>
       )}
-      {needsPaymentChoice && (
-        <div className="p-4 text-center">
-          <button
-            type="button"
-            onClick={() => setIsPaymentModalOpen(true)}
-            className="inline-block rounded-xl bg-[#A1255B] hover:bg-[#881d52] px-5 py-3 font-bold text-white cursor-pointer border-none transition-colors"
-          >
-            {t("Choose Payment Method")}
-          </button>
-        </div>
-      )}
-      {isUnpaid && order?.paymentMethod === "BAKONG" && (
-        <div className="p-4 text-center">
-          <Link
-            href={`/payment?orderId=${encodeURIComponent(targetId)}`}
-            className="inline-block rounded-xl bg-[#A1255B] hover:bg-[#881d52] px-5 py-3 font-bold text-white transition-colors"
-          >
-            {t("Continue to payment")}
-          </Link>
-        </div>
-      )}
       <div className="banner_section">
         <div
           className="banner_bg"
@@ -434,6 +416,30 @@ export function CheckoutdonepageView() {
             })}
           </div>
         </div>
+
+        {needsPaymentChoice && (
+          <button
+            type="button"
+            onClick={() => setIsPaymentModalOpen(true)}
+            className="progress_payment_action"
+          >
+            <span className="progress_payment_action_icon"><Wallet className="w-5 h-5" /></span>
+            <span className="progress_payment_action_label">{t("Choose Payment Method")}</span>
+            <span className="progress_payment_action_amount" suppressHydrationWarning>{formatMoney(grandTotal)}</span>
+            <ChevronRight className="w-5 h-5 shrink-0" />
+          </button>
+        )}
+        {isUnpaid && order?.paymentMethod === "BAKONG" && (
+          <Link
+            href={`/payment?orderId=${encodeURIComponent(targetId)}`}
+            className="progress_payment_action"
+          >
+            <span className="progress_payment_action_icon"><QrCode className="w-5 h-5" /></span>
+            <span className="progress_payment_action_label">{t("Continue to payment")}</span>
+            <span className="progress_payment_action_amount" suppressHydrationWarning>{formatMoney(grandTotal)}</span>
+            <ChevronRight className="w-5 h-5 shrink-0" />
+          </Link>
+        )}
       </div>
 
       <div className="main_content">
