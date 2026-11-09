@@ -20,6 +20,8 @@ const buttonVariants = cva(
         addCart: "button_add_cart",
         buyNow: "button_buy_now",
         navLogin: "button_nav_login",
+        brand: "ui_button_brand",
+        quiet: "ui_button_quiet",
         unstyled: "",
       },
       size: {
@@ -55,7 +57,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       className?.includes("btn-");
 
     const selectedVariant = variant ?? (hasCustomPillOrBrandClass ? "unstyled" : "default");
-    const selectedSize = size ?? (hasCustomPillOrBrandClass ? "none" : "default");
+    // brand and quiet carry their own size (44px pill).
+    const ownsSize = hasCustomPillOrBrandClass || selectedVariant === "brand" || selectedVariant === "quiet";
+    const selectedSize = size ?? (ownsSize ? "none" : "default");
 
     return (
       <button

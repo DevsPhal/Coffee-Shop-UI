@@ -13,7 +13,17 @@ import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { shippingInformationSchema, tableNumberSchema } from "@/lib/authSchema";
 import { cleanPhoneInput, phoneInputProps } from "@/lib/phoneUtils";
-import { AlertCircle, Armchair, Check, MapPin, Navigation, Compass, Search, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  Armchair,
+  Check,
+  MapPin,
+  Navigation,
+  Compass,
+  Search,
+  Loader2,
+  ShoppingBag,
+} from "lucide-react";
 import { isAuthenticated } from "@/lib/authStorage";
 import {
   isShortMapsLink,
@@ -40,6 +50,8 @@ import { PaymentMethodModal } from "@/components/ui/PaymentMethodModal";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import "@/app/globals.scss";
 import { clearPersistentState, usePersistentState } from "@/hooks/usePersistentState";
+import { Select } from "@/components/ui/select";
+import { EmptyState } from "@/components/ui/states";
 
 const DeliveryMapPicker = dynamic(() => import("@/components/ui/DeliveryMapPicker"), {
   ssr: false,
@@ -571,16 +583,15 @@ export function CheckoutpageView() {
 
                     <div>
                       <label className="checkout_field_label">{t("Capital / City")}</label>
-                      <div className="checkout_select_wrapper">
-                        <select
-                          value={capital}
-                          onChange={(e) => setCapital(e.target.value)}
-                          disabled
-                          className="checkout_select checkout_input_disabled cursor-not-allowed opacity-75 bg-gray-50 pr-4"
-                        >
-                          <option value="Phnom Penh">{t("Phnom Penh")}</option>
-                        </select>
-                      </div>
+                      <Select
+                        value={capital}
+                        onChange={(e) => setCapital(e.target.value)}
+                        disabled
+                        invalid={Boolean(errors.capital)}
+                        aria-label={t("Capital / City")}
+                      >
+                        <option value="Phnom Penh">{t("Phnom Penh")}</option>
+                      </Select>
                       {errors.capital && <TooltipAlert message={errors.capital} />}
                     </div>
                   </div>
@@ -601,7 +612,7 @@ export function CheckoutpageView() {
                       <button
                         type="button"
                         onClick={handleOpenMapModal}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95 border-none"
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand hover:bg-brand-hover text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95 border-none"
                       >
                         <MapPin className="w-3.5 h-3.5" />
                       </button>
@@ -626,7 +637,7 @@ export function CheckoutpageView() {
               >
                 <div className="checkout_delivery_card_content">
                   <div className="checkout_delivery_logo_container">
-                    <Armchair className="h-7 w-7 text-[#A1255B]" aria-hidden />
+                    <Armchair className="h-7 w-7 text-brand" aria-hidden />
                   </div>
                   <div>
                     <h3 className="checkout_delivery_title">
@@ -747,7 +758,7 @@ export function CheckoutpageView() {
 
           <div className="checkout_summary_items_list" suppressHydrationWarning>
             {items.length === 0 ? (
-              <p className="checkout_summary_empty" suppressHydrationWarning>{t("Your cart is empty")}</p>
+              <EmptyState compact icon={ShoppingBag} title="Your cart is empty" />
             ) : (
               items.map((item) => {
                 const customDetails: string[] = [];
@@ -771,11 +782,11 @@ export function CheckoutpageView() {
                       <div className="checkout_item_details">
                         <h3 className="checkout_item_title">{toTitleCase(item.title)}</h3>
                         <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                          <p className="checkout_item_price font-extrabold text-[#A1255B]" suppressHydrationWarning>
+                          <p className="checkout_item_price font-extrabold text-brand" suppressHydrationWarning>
                             ${((item.unitPrice + extrasTotal) * item.quantity).toFixed(2)}
                           </p>
                           {item.variantName && (
-                            <span className="rounded-full text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5 ">
+                            <span className="rounded-full text-[10px] font-semibold text-brand bg-pink-50 border border-pink-200 px-1.5 py-0.5 ">
                               Size: {VARIANT_LABELS[item.variantName as VariantName]}
                             </span>
                           )}
@@ -790,7 +801,7 @@ export function CheckoutpageView() {
                           {(item.selectedExtras ?? []).map((extra) => (
                             <span
                               key={extra.extraId}
-                              className="rounded-full text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5 "
+                              className="rounded-full text-[10px] font-semibold text-brand bg-pink-50 border border-pink-200 px-1.5 py-0.5 "
                             >
                               + {extra.name}
                             </span>
@@ -832,7 +843,7 @@ export function CheckoutpageView() {
                   {hasDiscount && (
                     <div className="checkout_summary_line">
                       <span className="checkout_summary_label">{t("Discount:")}</span>
-                      <span className="checkout_summary_value font-bold text-[#A1255B]" suppressHydrationWarning>
+                      <span className="checkout_summary_value font-bold text-brand" suppressHydrationWarning>
                         -${totalDiscount.toFixed(2)}
                       </span>
                     </div>
@@ -873,7 +884,7 @@ export function CheckoutpageView() {
               value={baristaNote}
               onChange={(e) => setBaristaNote(e.target.value)}
               placeholder={t("e.g. less ice, extra hot, no straw")}
-              className="w-full p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:border-[#A1255B] focus:bg-white transition-all resize-none"
+              className="w-full p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base font-medium text-gray-900 outline-none focus:border-brand focus:bg-white transition-all resize-none"
             />
           </div>
 
@@ -881,10 +892,11 @@ export function CheckoutpageView() {
             <button
               type="button"
               onClick={handlePlaceOrderNow}
-              disabled={isCheckingTable}
+              disabled={isCheckingTable || isPlacing}
+              aria-busy={isCheckingTable || isPlacing}
               className="checkout_submit_btn"
             >
-              {isCheckingTable ? t("Checking table...") : t("Place Order")}
+              {isCheckingTable ? t("Checking table...") : isPlacing ? t("Placing order...") : t("Place Order")}
             </button>
 
             <button
@@ -899,7 +911,7 @@ export function CheckoutpageView() {
       </div>
 
       <Modal open={showCancelModal} onOpenChange={setShowCancelModal}>
-        <ModalContent className="max-w-sm p-6 text-center rounded-2xl border border-gray-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)]" showCloseButton={false}>
+        <ModalContent className="max-w-sm p-6 text-center rounded-2xl border border-gray-100" showCloseButton={false}>
           <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3.5 shadow-2xs">
             <AlertCircle className="w-6 h-6 stroke-[2.2]" />
           </div>
@@ -923,7 +935,7 @@ export function CheckoutpageView() {
             <button
               type="button"
               onClick={handleConfirmCancel}
-              className="w-full bg-[#A1255B] hover:bg-[#881d52] text-white font-medium py-2.5 px-4 rounded-xl text-sm transition-all cursor-pointer shadow-sm active:scale-[0.98] border-none"
+              className="ui_button_brand w-full"
             >
               Yes
             </button>
@@ -941,7 +953,7 @@ export function CheckoutpageView() {
 
       <Modal open={isMapModalOpen} onOpenChange={setIsMapModalOpen}>
         <ModalContent className="max-w-xl p-0 overflow-hidden rounded-2xl border border-gray-100 shadow-2xl">
-          <div className="bg-[#A1255B] text-white p-4 flex items-center justify-between">
+          <div className="bg-brand text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-amber-300" />
               <div>
@@ -968,7 +980,7 @@ export function CheckoutpageView() {
                   placeholder={t("Street, landmark, area, or paste a Google Maps link")}
                   aria-label={t("Search for a place")}
                   enterKeyHint="search"
-                  className="w-full h-10 pl-9 pr-3 rounded-full bg-white text-sm border border-gray-200 outline-none focus:border-[#A1255B] transition-colors"
+                  className="w-full h-10 pl-9 pr-3 rounded-full bg-white text-base border border-gray-200 outline-none focus:border-brand transition-colors"
                 />
               </div>
               <button
@@ -983,7 +995,7 @@ export function CheckoutpageView() {
                 type="button"
                 onClick={() => void handleDetectCurrentLocation()}
                 disabled={isLocating}
-                className="flex-1 sm:flex-none h-10 flex items-center justify-center gap-1.5 whitespace-nowrap px-4 rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white text-sm font-semibold border-none cursor-pointer transition-colors disabled:opacity-50"
+                className="flex-1 sm:flex-none h-10 flex items-center justify-center gap-1.5 whitespace-nowrap px-4 rounded-full bg-brand hover:bg-brand-hover text-white text-sm font-semibold border-none cursor-pointer transition-colors disabled:opacity-50"
               >
                 {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
                 <span>{t("Use my location")}</span>
@@ -999,7 +1011,7 @@ export function CheckoutpageView() {
                       onClick={() => chooseLocationResult(place)}
                       className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left hover:bg-gray-50 cursor-pointer"
                     >
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#A1255B]" />
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-medium text-gray-900">{place.name}</span>
                         {place.detail ? <span className="block truncate text-xs text-gray-500">{place.detail}</span> : null}
@@ -1014,7 +1026,7 @@ export function CheckoutpageView() {
               <p
                 role={locationNotice.tone === "error" ? "alert" : "status"}
                 className={`rounded-lg px-3 py-2 text-xs ${
-                  locationNotice.tone === "error" ? "bg-red-50 text-red-700" : "bg-pink-50 text-[#A1255B]"
+                  locationNotice.tone === "error" ? "bg-red-50 text-red-700" : "bg-pink-50 text-brand"
                 }`}
               >
                 {locationNotice.text}
@@ -1034,7 +1046,7 @@ export function CheckoutpageView() {
             )}
 
             <div className="absolute top-3 left-3 z-1000 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-md text-xs font-medium text-gray-800 flex items-center gap-1.5 border border-white pointer-events-none">
-              <Compass className="w-4 h-4 text-[#A1255B]" />
+              <Compass className="w-4 h-4 text-brand" />
               <span className="tabular-nums">
                 {mapCoords.lat.toFixed(5)}, {mapCoords.lng.toFixed(5)}
               </span>
@@ -1051,7 +1063,7 @@ export function CheckoutpageView() {
                 value={tempAddress}
                 onChange={(e) => setTempAddress(e.target.value)}
                 placeholder={t("Address details will appear here...")}
-                className="w-full p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:border-[#A1255B] focus:bg-white transition-all resize-none"
+                className="w-full p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base font-medium text-gray-900 outline-none focus:border-brand focus:bg-white transition-all resize-none"
               />
             </div>
 
@@ -1066,7 +1078,7 @@ export function CheckoutpageView() {
               <button
                 type="button"
                 onClick={handleConfirmLocation}
-                className="w-full rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white font-semibold py-2.5 px-4 text-xs sm:text-sm transition-all cursor-pointer shadow-md border-none flex items-center justify-center gap-1.5"
+                className="ui_button_brand w-full"
               >
                 <Check className="w-4 h-4" />
                 <span>{t("Confirm Location")}</span>

@@ -46,7 +46,7 @@ export function CategorypageView() {
     products.filter((product) => product.categoryId === categoryId).slice(0, 3);
 
   return (
-    <div className="menu_page_wrapper font-sans min-h-screen pb-32 sm:pb-24 bg-[#F8FAFC]">
+    <div className="menu_page_wrapper font-sans min-h-dvh pb-32 sm:pb-24 bg-(--slate-50)">
       <div className="menu_page_container max-w-7xl mx-auto px-4 sm:px-6 pt-3 sm:pt-8 space-y-6 sm:space-y-10">
         <div className="title_category_page text-center my-3 sm:my-8">
           <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
@@ -65,7 +65,7 @@ export function CategorypageView() {
 
           <form
             onSubmit={(e) => e.preventDefault()}
-            className="flex items-center rounded-full bg-white border border-gray-200 focus-within:border-[#A1255B] p-1 pl-3.5 shadow-2xs transition-all flex-1 sm:flex-none sm:w-72"
+            className="flex items-center rounded-full bg-white border border-gray-200 focus-within:border-brand p-1 pl-3.5 shadow-2xs transition-all flex-1 sm:flex-none sm:w-72"
           >
             <Search className="w-4 h-4 text-gray-400 shrink-0 mr-2 pointer-events-none" />
             <input
@@ -73,7 +73,7 @@ export function CategorypageView() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("Search a category...")}
-              className="search_field_input w-full bg-transparent text-xs sm:text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
+              className="search_field_input w-full bg-transparent text-base font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
             />
           </form>
         </div>
@@ -118,18 +118,18 @@ export function CategorypageView() {
                 <Link
                   key={category.id}
                   href={`${menuBaseUrl}?category=${encodeURIComponent(category.id)}`}
-                  className="group flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:border-[#A1255B]/40 hover:shadow-md"
+                  className="group flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:border-brand/40 hover:shadow-md"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[#A1255B] shrink-0">
+                      <span className="text-brand shrink-0">
                         <Icon className="w-5 h-5" />
                       </span>
                       <h2 className="truncate text-base font-extrabold text-gray-900">
                         {category.name}
                       </h2>
                     </div>
-                    <ArrowUpRight className="w-4 h-4 shrink-0 text-gray-300 transition-colors group-hover:text-[#A1255B]" />
+                    <ArrowUpRight className="w-4 h-4 shrink-0 text-gray-300 transition-colors group-hover:text-brand" />
                   </div>
 
                   <p className="mt-2 text-xs text-gray-500">
@@ -149,7 +149,7 @@ export function CategorypageView() {
                     </div>
                   )}
 
-                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#A1255B]">
+                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand">
                     {t("Browse category")}
                     <ChevronRight className="w-3.5 h-3.5" />
                   </span>

@@ -49,7 +49,7 @@ export function CategoryCard({
           </div>
         )}
 
-        <h3 className="font-serif text-sm sm:text-lg font-bold text-gray-900 leading-tight group-hover:text-[#A1255B] transition-colors line-clamp-2">
+        <h3 className="font-serif text-sm sm:text-lg font-bold text-gray-900 leading-tight group-hover:text-brand transition-colors line-clamp-2">
           {t(title)}
         </h3>
 

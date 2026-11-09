@@ -48,7 +48,7 @@ export function PaymentMethodModal({
       <ModalContent className="max-w-sm p-6 rounded-3xl border border-gray-100 shadow-2xl bg-white" showCloseButton={false}>
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-pink-50 text-[#f0383e] flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-xl bg-pink-50 text-(--color-accent) flex items-center justify-center font-bold">
               <CreditCard className="w-4 h-4" />
             </div>
             <h3 className="text-base font-extrabold text-gray-900 tracking-tight">
@@ -60,7 +60,7 @@ export function PaymentMethodModal({
               type="button"
               onClick={() => onOpenChange(false)}
               aria-label={t("Close")}
-              className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors cursor-pointer border-none"
+              className="touch_target w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors cursor-pointer border-none"
             >
               <X className="w-4 h-4" />
             </button>
@@ -69,7 +69,7 @@ export function PaymentMethodModal({
 
         <div className="flex items-center justify-between p-3.5 rounded-2xl bg-pink-50/60 border border-pink-100 mb-5">
           <span className="text-xs font-semibold text-gray-600">{t("Total:")}</span>
-          <span className="text-base font-black text-[#A1255B]" suppressHydrationWarning>
+          <span className="text-base font-black text-brand" suppressHydrationWarning>
             ${grandTotal.toFixed(2)}
           </span>
         </div>
@@ -85,16 +85,16 @@ export function PaymentMethodModal({
                 aria-pressed={selected}
                 disabled={isSubmitting}
                 onClick={() => setSelectedMethod(method)}
-                className={`w-full text-left flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-[#A1255B] focus-visible:ring-offset-2 ${
+                className={`w-full text-left flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${
                   selected
-                    ? "border-[#A1255B] bg-pink-50/40 shadow-sm ring-1 ring-[#A1255B]"
+                    ? "border-brand bg-pink-50/40 shadow-sm ring-1 ring-brand"
                     : "border-gray-200 hover:border-gray-300 bg-white"
                 } ${isSubmitting ? "opacity-60 cursor-not-allowed" : ""}`}
               >
                 <span className="flex items-center gap-3">
                   <span
                     className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      selected ? "bg-[#A1255B] text-white" : "bg-gray-100 text-gray-600"
+                      selected ? "bg-brand text-white" : "bg-gray-100 text-gray-600"
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -108,7 +108,7 @@ export function PaymentMethodModal({
                 <span
                   aria-hidden="true"
                   className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
-                    selected ? "border-[#A1255B] bg-[#A1255B] text-white" : "border-gray-300 bg-white"
+                    selected ? "border-brand bg-brand text-white" : "border-gray-300 bg-white"
                   }`}
                 >
                   {selected && <Check className="w-3 h-3" />}
@@ -123,7 +123,7 @@ export function PaymentMethodModal({
             type="button"
             onClick={handleConfirmClick}
             disabled={isSubmitting}
-            className={`w-full rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white  py-3 px-4 text-sm shadow-md shadow-[#A1255B]/20 transition-all cursor-pointer border-none flex items-center justify-center gap-2 active:scale-98 ${
+            className={`ui_button_brand w-full ${
               isSubmitting ? "opacity-90 cursor-wait" : ""
             }`}
           >

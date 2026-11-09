@@ -24,7 +24,7 @@ export function TelegramLoginWidget({ login }: { login: TelegramLogin }) {
           type="button"
           onClick={login.start}
           disabled={login.isLoadingConfig}
-          className="flex h-[clamp(3.125rem,6.2vh,3.375rem)] w-full max-w-88 cursor-pointer items-center justify-center gap-2 rounded-full bg-[#1F75C9] px-6 text-base font-semibold text-white outline-none transition-[background-color,transform] duration-200 hover:bg-[#1A64AE] focus-visible:ring-2 focus-visible:ring-[#3390EC] focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 motion-reduce:transition-none motion-reduce:active:scale-100"
+          className="flex h-[clamp(3.125rem,6.2vh,3.375rem)] w-full max-w-88 cursor-pointer items-center justify-center gap-2 rounded-full bg-(--brand-telegram-hover) px-6 text-base font-semibold text-white outline-none transition-[background-color,transform] duration-200 hover:bg-(--brand-telegram-active) focus-visible:ring-2 focus-visible:ring-(--brand-telegram) focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 motion-reduce:transition-none motion-reduce:active:scale-100"
         >
           <Send className="h-4.5 w-4.5" aria-hidden />
           {t("Log in with Telegram")}

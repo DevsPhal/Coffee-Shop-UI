@@ -100,13 +100,13 @@ export function SelectSizeModal({
       <ModalContent className="max-w-sm p-5" showCloseButton={false}>
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Coffee className="w-5 h-5 text-[#A1255B]" />
+            <Coffee className="w-5 h-5 text-brand" />
             <h3 className="text-base font-bold text-gray-900">{t("Customize")}</h3>
           </div>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors cursor-pointer border-none"
+            className="touch_target w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors cursor-pointer border-none"
           >
             <X className="w-4 h-4" />
           </button>
@@ -122,7 +122,7 @@ export function SelectSizeModal({
             <h4 className="text-sm font-bold text-gray-900 truncate">
               {product.title}
             </h4>
-            <p className="text-xs font-extrabold text-[#A1255B] mt-0.5">
+            <p className="text-xs font-extrabold text-brand mt-0.5">
               ${(unitPrice + extrasTotal).toFixed(2)}
             </p>
           </div>
@@ -131,7 +131,7 @@ export function SelectSizeModal({
         {hasSizes && variantId && (
           <OptionDropdown
             label="Size"
-            icon={<CupSoda className="w-3.5 h-3.5 text-[#A1255B]" />}
+            icon={<CupSoda className="w-3.5 h-3.5 text-brand" />}
             value={variantId}
             options={variantOptions(variants)}
             onChange={setVariantId}
@@ -140,7 +140,7 @@ export function SelectSizeModal({
         {drinkOptions.ice && (
           <OptionDropdown
             label="Ice Level"
-            icon={<Snowflake className="w-3.5 h-3.5 text-[#A1255B]" />}
+            icon={<Snowflake className="w-3.5 h-3.5 text-brand" />}
             value={iceLevel}
             options={ICE_OPTIONS}
             onChange={setIceLevel}
@@ -149,7 +149,7 @@ export function SelectSizeModal({
         {drinkOptions.sugar && (
           <OptionDropdown
             label="Sugar Level"
-            icon={<Candy className="w-3.5 h-3.5 text-[#A1255B]" />}
+            icon={<Candy className="w-3.5 h-3.5 text-brand" />}
             value={sugarLevel}
             options={SUGAR_OPTIONS}
             onChange={setSugarLevel}
@@ -158,7 +158,7 @@ export function SelectSizeModal({
         {drinkOptions.milk && (
           <OptionDropdown
             label="Milk"
-            icon={<Milk className="w-3.5 h-3.5 text-[#A1255B]" />}
+            icon={<Milk className="w-3.5 h-3.5 text-brand" />}
             value={milkType}
             options={MILK_OPTIONS}
             onChange={setMilkType}
@@ -175,7 +175,7 @@ export function SelectSizeModal({
           <button
             type="button"
             onClick={handleConfirm}
-            className="w-full rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white py-3 px-4 text-sm shadow-md shadow-[#A1255B]/20 transition-all cursor-pointer border-none flex items-center justify-center gap-2 active:scale-98"
+            className="ui_button_brand w-full"
           >
             <ShoppingBag className="w-4 h-4" />
             <span>

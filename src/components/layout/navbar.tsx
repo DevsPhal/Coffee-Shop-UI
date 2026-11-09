@@ -213,7 +213,7 @@ export function Navbar() {
         pathname?.startsWith("/payment") ||
         pathname === "/checkout"
       ) && (
-        <div className="mobile_nav_bottom_bar fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] py-2 px-1 w-full max-w-full overflow-x-hidden" suppressHydrationWarning>
+        <div className="mobile_nav_bottom_bar fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_20px_color-mix(in_srgb,var(--black)_8%,transparent)] py-2 px-1 w-full max-w-full overflow-x-hidden" suppressHydrationWarning>
           <div className="w-full max-w-md mx-auto flex items-center justify-between">
             {mobileNavItems.map((item) => {
               const active = isMobileNavActive(item.href);
@@ -237,7 +237,7 @@ export function Navbar() {
                 >
                   <div
                     className={`icon-wrapper flex h-11 w-11 items-center justify-center rounded-full transition-all duration-200 ${
-                      active ? "bg-[#A1255B]/15 scale-110" : "hover:bg-gray-100"
+                      active ? "bg-brand/15 scale-110" : "hover:bg-gray-100"
                     }`}
                   >
                     {item.avatar ? (
@@ -246,13 +246,13 @@ export function Navbar() {
                         name={authUser?.name}
                         sizes="28px"
                         className={`h-7 w-7 text-[10px] transition-all duration-200 ${
-                          active ? "ring-2 ring-[#A1255B]" : "ring-1 ring-gray-200 opacity-80 hover:opacity-100"
+                          active ? "ring-2 ring-brand" : "ring-1 ring-gray-200 opacity-80 hover:opacity-100"
                         }`}
                       />
                     ) : (
                       <Icon
                         className={`nav-icon h-6 w-6 transition-all duration-200 ${
-                          active ? "text-[#A1255B]" : "text-gray-500 opacity-60 hover:opacity-100"
+                          active ? "text-brand" : "text-gray-500 opacity-60 hover:opacity-100"
                         }`}
                       />
                     )}

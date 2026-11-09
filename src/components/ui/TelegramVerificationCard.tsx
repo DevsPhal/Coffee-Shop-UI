@@ -67,14 +67,14 @@ const FAILURES: Record<
 };
 
 const FOCUS_RING =
-  "outline-none focus-visible:ring-2 focus-visible:ring-[#3390EC] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900";
+  "outline-none focus-visible:ring-2 focus-visible:ring-(--brand-telegram) focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900";
 const CTA_BASE = cn(
   "relative isolate flex h-14 w-full select-none items-center justify-center overflow-hidden rounded-2xl px-6 text-[15px] font-semibold transition-[transform,box-shadow,background-color,color] duration-200 ease-out",
   FOCUS_RING
 );
 const CTA_READY =
-  "cursor-pointer bg-[#1F75C9] text-white shadow-[0_10px_24px_-12px_rgba(31,117,201,0.75)] hover:bg-[#1A64AE] hover:shadow-[0_14px_28px_-12px_rgba(31,117,201,0.8)] motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 motion-safe:active:scale-[0.98]";
-const CTA_BUSY = "cursor-default bg-[#EEF6FE] text-[#1A64AE] dark:bg-[#3390EC]/15 dark:text-[#9CC8F5]";
+  "cursor-pointer bg-(--brand-telegram-hover) text-white shadow-[0_10px_24px_-12px_color-mix(in_srgb,var(--brand-telegram-hover)_75%,transparent)] hover:bg-(--brand-telegram-active) hover:shadow-[0_14px_28px_-12px_color-mix(in_srgb,var(--brand-telegram-hover)_80%,transparent)] motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 motion-safe:active:scale-[0.98]";
+const CTA_BUSY = "cursor-default bg-(--slate-100) text-(--brand-telegram-active) dark:bg-(--brand-telegram)/15 dark:text-(--brand-telegram-light)";
 
 function formatCountdown(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -164,12 +164,12 @@ function CtaLink({
 function ConnectionIllustration({ connected }: { connected: boolean }) {
   return (
     <div aria-hidden className="relative flex h-16 w-56 items-center justify-center">
-      <span className="absolute left-4 top-1 size-2 rounded-full bg-[#3390EC]/25 motion-safe:animate-tg-float" />
-      <span className="absolute right-7 top-0 size-3 rounded-full bg-[#3390EC]/15 motion-safe:animate-tg-float [animation-delay:-1.3s]" />
-      <span className="absolute bottom-0 right-3 size-1.5 rounded-full bg-[#07112F]/20 motion-safe:animate-tg-float [animation-delay:-2.6s] dark:bg-white/20" />
-      <span className="absolute bottom-2 left-9 size-2.5 rounded-full bg-[#07112F]/10 motion-safe:animate-tg-float [animation-delay:-0.6s] dark:bg-white/10" />
+      <span className="absolute left-4 top-1 size-2 rounded-full bg-(--brand-telegram)/25 motion-safe:animate-tg-float" />
+      <span className="absolute right-7 top-0 size-3 rounded-full bg-(--brand-telegram)/15 motion-safe:animate-tg-float [animation-delay:-1.3s]" />
+      <span className="absolute bottom-0 right-3 size-1.5 rounded-full bg-(--slate-900)/20 motion-safe:animate-tg-float [animation-delay:-2.6s] dark:bg-white/20" />
+      <span className="absolute bottom-2 left-9 size-2.5 rounded-full bg-(--slate-900)/10 motion-safe:animate-tg-float [animation-delay:-0.6s] dark:bg-white/10" />
 
-      <span className="grid size-14 place-items-center rounded-2xl bg-[#07112F] text-white shadow-lg shadow-[#07112F]/20 dark:bg-white dark:text-[#07112F]">
+      <span className="grid size-14 place-items-center rounded-2xl bg-(--slate-900) text-white shadow-lg shadow-(--slate-900)/20 dark:bg-white dark:text-(--slate-900)">
         <Coffee className="size-6" />
       </span>
       <span className="mx-3 flex items-center gap-1.5">
@@ -178,13 +178,13 @@ function ConnectionIllustration({ connected }: { connected: boolean }) {
             key={dot}
             className={cn(
               "size-1.5 rounded-full transition-colors duration-200",
-              connected ? "bg-[#16A34A]" : "bg-[#3390EC] motion-safe:animate-tg-dot"
+              connected ? "bg-(--green-600)" : "bg-(--brand-telegram) motion-safe:animate-tg-dot"
             )}
             style={{ animationDelay: `${dot * 160}ms` }}
           />
         ))}
       </span>
-      <span className="relative grid size-14 place-items-center rounded-full bg-[#3390EC] text-white shadow-lg shadow-[#3390EC]/30 ring-8 ring-[#3390EC]/10">
+      <span className="relative grid size-14 place-items-center rounded-full bg-(--brand-telegram) text-white shadow-lg shadow-(--brand-telegram)/30 ring-8 ring-(--brand-telegram)/10">
         <Send className="size-6 -translate-x-px translate-y-px" />
       </span>
     </div>
@@ -193,8 +193,8 @@ function ConnectionIllustration({ connected }: { connected: boolean }) {
 
 function SuccessMark() {
   return (
-    <div aria-hidden className="grid size-20 place-items-center rounded-full bg-[#16A34A]/10 motion-safe:animate-tg-pop">
-      <span className="grid size-14 place-items-center rounded-full bg-[#16A34A] text-white shadow-lg shadow-[#16A34A]/30">
+    <div aria-hidden className="grid size-20 place-items-center rounded-full bg-(--green-600)/10 motion-safe:animate-tg-pop">
+      <span className="grid size-14 place-items-center rounded-full bg-(--green-600) text-white shadow-lg shadow-(--green-600)/30">
         <svg viewBox="0 0 24 24" className="size-7" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 12.5l4.5 4.5L19 7.5" pathLength={1} strokeDasharray={1} className="motion-safe:animate-tg-check" />
         </svg>
@@ -209,7 +209,7 @@ function ProgressRing({ value, warn }: { value: number; warn: boolean }) {
   return (
     <span aria-hidden className="relative grid size-10 shrink-0 place-items-center">
       <svg viewBox="0 0 40 40" className="absolute inset-0 -rotate-90">
-        <circle cx="20" cy="20" r={radius} fill="none" strokeWidth="3" className="stroke-[#E5E7EB] dark:stroke-slate-700" />
+        <circle cx="20" cy="20" r={radius} fill="none" strokeWidth="3" className="stroke-(--gray-200) dark:stroke-slate-700" />
         <circle
           cx="20"
           cy="20"
@@ -221,11 +221,11 @@ function ProgressRing({ value, warn }: { value: number; warn: boolean }) {
           strokeDashoffset={circumference * (1 - Math.min(1, Math.max(0, value)))}
           className={cn(
             "motion-safe:transition-[stroke-dashoffset,stroke] motion-safe:duration-200 motion-safe:ease-out",
-            warn ? "stroke-amber-500" : "stroke-[#3390EC]"
+            warn ? "stroke-amber-500" : "stroke-(--brand-telegram)"
           )}
         />
       </svg>
-      <Loader2 className={cn("size-4 motion-safe:animate-spin", warn ? "text-amber-500" : "text-[#3390EC]")} />
+      <Loader2 className={cn("size-4 motion-safe:animate-spin", warn ? "text-amber-500" : "text-(--brand-telegram)")} />
     </span>
   );
 }
@@ -248,17 +248,17 @@ function Steps({ active }: { active: number }) {
                 aria-hidden
                 className={cn(
                   "absolute left-[calc(-50%+30px)] right-[calc(50%+30px)] top-5.25 h-0.5 rounded-full transition-colors duration-200",
-                  index <= active ? "bg-[#3390EC]" : "bg-[#E5E7EB] dark:bg-slate-700"
+                  index <= active ? "bg-(--brand-telegram)" : "bg-(--gray-200) dark:bg-slate-700"
                 )}
               />
             )}
             <span
               className={cn(
                 "relative grid size-11 place-items-center rounded-2xl border transition-[background-color,border-color,color,box-shadow] duration-200",
-                state === "done" && "border-green-200 bg-green-50 text-[#16A34A] dark:border-green-500/30 dark:bg-green-500/10",
+                state === "done" && "border-green-200 bg-green-50 text-(--green-600) dark:border-green-500/30 dark:bg-green-500/10",
                 state === "active" &&
-                  "border-[#3390EC]/40 bg-[#EEF6FE] text-[#1A64AE] shadow-[0_0_0_4px_rgba(51,144,236,0.12)] dark:bg-[#3390EC]/15 dark:text-[#9CC8F5]",
-                state === "todo" && "border-[#E5E7EB] bg-[#F8FAFC] text-slate-400 dark:border-slate-700 dark:bg-slate-800/60"
+                  "border-(--brand-telegram)/40 bg-(--slate-100) text-(--brand-telegram-active) shadow-[0_0_0_4px_color-mix(in_srgb,var(--brand-telegram)_12%,transparent)] dark:bg-(--brand-telegram)/15 dark:text-(--brand-telegram-light)",
+                state === "todo" && "border-(--gray-200) bg-(--slate-50) text-slate-400 dark:border-slate-700 dark:bg-slate-800/60"
               )}
             >
               <Icon aria-hidden className="size-4.5" />
@@ -266,9 +266,9 @@ function Steps({ active }: { active: number }) {
                 aria-hidden
                 className={cn(
                   "absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full border-2 border-white text-[10px] font-bold dark:border-slate-900",
-                  state === "done" && "bg-[#16A34A] text-white",
-                  state === "active" && "bg-[#1F75C9] text-white",
-                  state === "todo" && "bg-[#E5E7EB] text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                  state === "done" && "bg-(--green-600) text-white",
+                  state === "active" && "bg-(--brand-telegram-hover) text-white",
+                  state === "todo" && "bg-(--gray-200) text-slate-600 dark:bg-slate-700 dark:text-slate-300"
                 )}
               >
                 {state === "done" ? <Check className="size-3" strokeWidth={3} /> : index + 1}
@@ -277,7 +277,7 @@ function Steps({ active }: { active: number }) {
             <span
               className={cn(
                 "text-xs leading-tight",
-                state === "todo" ? "text-slate-500 dark:text-slate-400" : "font-semibold text-[#07112F] dark:text-white"
+                state === "todo" ? "text-slate-500 dark:text-slate-400" : "font-semibold text-(--slate-900) dark:text-white"
               )}
             >
               <span className="sr-only">
@@ -379,7 +379,7 @@ export function TelegramVerificationCard({ login }: { login: TelegramLogin }) {
 
   return (
     <div className={cn("w-full", primaryAction && "pb-28 sm:pb-0")}>
-      <div className="w-full pt-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-200 sm:rounded-3xl sm:border sm:border-[#E5E7EB] sm:bg-white sm:px-8 sm:pt-7 sm:pb-6 lg:short:pt-5 lg:short:pb-5 sm:shadow-[0_1px_2px_rgba(7,17,47,0.04),0_16px_40px_-20px_rgba(7,17,47,0.18)] dark:sm:border-slate-800 dark:sm:bg-slate-900">
+      <div className="w-full pt-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-200 sm:rounded-3xl sm:border sm:border-(--gray-200) sm:bg-white sm:px-8 sm:pt-7 sm:pb-6 lg:short:pt-5 lg:short:pb-5 sm:shadow-[0_1px_2px_color-mix(in_srgb,var(--slate-900)_4%,transparent),0_16px_40px_-20px_color-mix(in_srgb,var(--slate-900)_18%,transparent)] dark:sm:border-slate-800 dark:sm:bg-slate-900">
         <div key={view} className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200">
           <header className="flex flex-col items-center text-center">
             {view === "success" ? (
@@ -394,7 +394,7 @@ export function TelegramVerificationCard({ login }: { login: TelegramLogin }) {
             <h1
               ref={headingRef}
               tabIndex={-1}
-              className={cn("mt-4 text-2xl font-bold tracking-tight text-[#07112F] outline-none dark:text-white", view === "verify" && "lg:short:mt-0")}
+              className={cn("mt-4 text-2xl font-bold tracking-tight text-(--slate-900) outline-none dark:text-white", view === "verify" && "lg:short:mt-0")}
             >
               {title}
             </h1>
@@ -413,7 +413,7 @@ export function TelegramVerificationCard({ login }: { login: TelegramLogin }) {
                     rel="noopener noreferrer"
                     onClick={markOpened}
                     className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full border border-[#3390EC]/20 bg-[#EEF6FE] px-3 py-1 text-xs font-semibold text-[#1A64AE] transition-colors duration-200 hover:border-[#3390EC]/40 hover:bg-[#E1EEFC] dark:bg-[#3390EC]/15 dark:text-[#9CC8F5] dark:hover:bg-[#3390EC]/25",
+                      "inline-flex items-center gap-1.5 rounded-full border border-(--brand-telegram)/20 bg-(--slate-100) px-3 py-1 text-xs font-semibold text-(--brand-telegram-active) transition-colors duration-200 hover:border-(--brand-telegram)/40 hover:bg-(--brand-telegram-soft) dark:bg-(--brand-telegram)/15 dark:text-(--brand-telegram-light) dark:hover:bg-(--brand-telegram)/25",
                       FOCUS_RING
                     )}
                   >
@@ -422,7 +422,7 @@ export function TelegramVerificationCard({ login }: { login: TelegramLogin }) {
                     {botHandle}
                   </a>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-1 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-(--gray-200) bg-(--slate-50) px-3 py-1 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
                     <Bot aria-hidden className="size-3.5" />
                     {botHandle}
                   </span>
@@ -448,7 +448,7 @@ export function TelegramVerificationCard({ login }: { login: TelegramLogin }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={cn(
-                      "inline-flex h-9 shrink-0 items-center rounded-full bg-[#07112F] px-4 text-xs font-semibold text-white transition-colors duration-200 hover:bg-[#1b2647] dark:bg-white dark:text-[#07112F] dark:hover:bg-slate-200",
+                      "inline-flex h-9 shrink-0 items-center rounded-full bg-(--slate-900) px-4 text-xs font-semibold text-white transition-colors duration-200 hover:bg-(--brand-telegram-night) dark:bg-white dark:text-(--slate-900) dark:hover:bg-slate-200",
                       FOCUS_RING
                     )}
                   >
@@ -462,26 +462,26 @@ export function TelegramVerificationCard({ login }: { login: TelegramLogin }) {
               </div>
 
               <div className="my-5 flex items-center gap-3 lg:short:my-3">
-                <div className="h-px flex-1 bg-[#E5E7EB] dark:bg-slate-700" />
+                <div className="h-px flex-1 bg-(--gray-200) dark:bg-slate-700" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("or")}</span>
-                <div className="h-px flex-1 bg-[#E5E7EB] dark:bg-slate-700" />
+                <div className="h-px flex-1 bg-(--gray-200) dark:bg-slate-700" />
               </div>
 
               <section
                 aria-labelledby={qrTitleId}
-                className="group flex flex-col items-center gap-4 rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] p-4 text-center sm:flex-row-reverse sm:text-left dark:border-slate-700 dark:bg-slate-800/60"
+                className="group flex flex-col items-center gap-4 rounded-2xl border border-(--gray-200) bg-(--slate-50) p-4 text-center sm:flex-row-reverse sm:text-left dark:border-slate-700 dark:bg-slate-800/60"
               >
                 <div className="min-w-0 flex-1">
                   <h2
                     id={qrTitleId}
-                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#07112F] dark:text-white"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-(--slate-900) dark:text-white"
                   >
-                    <ScanLine aria-hidden className="size-4 text-[#3390EC]" />
+                    <ScanLine aria-hidden className="size-4 text-(--brand-telegram)" />
                     {t("Scan instead")}
                   </h2>
                   <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{t("Use Telegram on your phone.")}</p>
                 </div>
-                <div className="shrink-0 rounded-xl border border-[#E5E7EB] bg-white p-2 shadow-sm transition-transform duration-200 ease-out motion-safe:group-hover:scale-[1.03] dark:border-slate-700">
+                <div className="shrink-0 rounded-xl border border-(--gray-200) bg-white p-2 shadow-sm transition-transform duration-200 ease-out motion-safe:group-hover:scale-[1.03] dark:border-slate-700">
                   {qrCode ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -497,13 +497,13 @@ export function TelegramVerificationCard({ login }: { login: TelegramLogin }) {
                 </div>
               </section>
 
-              <div className="mt-3 flex items-center gap-3 rounded-2xl border border-[#E5E7EB] bg-white px-4 py-3 text-left dark:border-slate-700 dark:bg-slate-900">
+              <div className="mt-3 flex items-center gap-3 rounded-2xl border border-(--gray-200) bg-white px-4 py-3 text-left dark:border-slate-700 dark:bg-slate-900">
                 <ProgressRing
                   value={challenge && totalSeconds > 0 ? secondsLeft / totalSeconds : 1}
                   warn={challenge !== null && secondsLeft <= LOW_TIME_SECONDS}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[#07112F] dark:text-white">
+                  <p className="text-sm font-semibold text-(--slate-900) dark:text-white">
                     {!challenge
                       ? t("Connecting to Telegram")
                       : botStarted
@@ -530,7 +530,7 @@ export function TelegramVerificationCard({ login }: { login: TelegramLogin }) {
                 type="button"
                 onClick={cancel}
                 className={cn(
-                  "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-[#07112F] dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white",
+                  "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-(--slate-900) dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white",
                   FOCUS_RING
                 )}
               >
@@ -543,7 +543,7 @@ export function TelegramVerificationCard({ login }: { login: TelegramLogin }) {
       </div>
 
       {primaryAction && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#E5E7EB] bg-white/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-12px_32px_-20px_rgba(7,17,47,0.35)] backdrop-blur sm:hidden dark:border-slate-800 dark:bg-slate-900/95">
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-(--gray-200) bg-white/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-12px_32px_-20px_color-mix(in_srgb,var(--slate-900)_35%,transparent)] backdrop-blur sm:hidden dark:border-slate-800 dark:bg-slate-900/95">
           {primaryAction}
         </div>
       )}

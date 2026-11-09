@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ExternalLink, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move, Trash2, Send } from "lucide-react";
+import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move, Trash2, Send } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { TelegramLinkModal } from "@/components/ui/TelegramLinkModal";
 import { GenderDropdown } from "@/components/ui/GenderDropdown";
@@ -13,7 +13,8 @@ import { VARIANT_LABELS } from "@/store/api/optionMapping";
 import { useContactStore } from "@/store/useContactStore";
 import { isAuthenticated } from "@/lib/authStorage";
 import { useMounted } from "@/hooks/useMounted";
-import { apiErrorMessage } from "@/store/api/baseApi";
+import { apiErrorMessage, apiFieldErrors } from "@/store/api/baseApi";
+import { IMAGE_ACCEPT, imageFileProblem } from "@/lib/imageFile";
 import {
   useChangePasswordMutation,
   useGetCurrentUserQuery,
@@ -26,7 +27,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
-import { validateForm } from "@/lib/formValidation";
+import { validateForm, type FieldErrors } from "@/lib/formValidation";
 import { changePasswordSchema, profileSchema, verifyPasswordSchema } from "@/lib/authSchema";
 import { cleanPhoneInput, formatPhone, phoneInputProps, samePhone } from "@/lib/phoneUtils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
@@ -40,6 +41,7 @@ import {
 } from "@/components/ui/states";
 import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { EmptyState } from "@/components/ui/states";
 
 const GENDER_LABELS: Record<Gender, string> = {
   MALE: "Male",
@@ -178,6 +180,8 @@ export function UserprofilepageView() {
     confirmPass: "",
   });
   const [passError, setPassError] = useState("");
+  // Per-field messages for the edit-profile form, from the zod check or from the API.
+  const [profileErrors, setProfileErrors] = useState<FieldErrors>({});
 
   const [editForm, setEditForm] = usePersistentState<UserProfileData>("profile:editForm", { ...profile });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -263,6 +267,7 @@ export function UserprofilepageView() {
   const openEditProfile = () => {
     setEditForm({ ...profile });
     setAvatarFile(null);
+    setProfileErrors({});
     setIsEditProfileOpen(true);
   };
 
@@ -271,6 +276,7 @@ export function UserprofilepageView() {
     if (isSavingProfile) return;
 
     const check = validateForm(profileSchema, { name: editForm.name, phone: editForm.phone ?? "" });
+    setProfileErrors(check.errors);
     if (!check.ok) return;
     const { name, phone } = check.data;
 
@@ -296,6 +302,8 @@ export function UserprofilepageView() {
       setIsEditProfileOpen(false);
       toast.add({ type: "success", description: "Your profile has been updated." });
     } catch (err) {
+      const fields = apiFieldErrors(err);
+      if (fields.fullName || fields.phoneNumber) setProfileErrors({ name: fields.fullName, phone: fields.phoneNumber });
       toast.add({
         type: "error",
         description: apiErrorMessage(
@@ -492,20 +500,12 @@ export function UserprofilepageView() {
               {activeTab === "messages" && (
                 <div>
                   {userMessages.length === 0 ? (
-                    <div className="profile_empty_state">
-                      <MessageSquare className="profile_empty_icon" />
-                      <p className="profile_empty_title">No Sent Messages Yet</p>
-                      <p className="profile_empty_desc">
-                        Have questions or feedback? Send us a message from our contact page.
-                      </p>
-                      <Link
-                        href="/contact"
-                        className="profile_empty_btn"
-                      >
-                        <span>Contact Us</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
+                    <EmptyState
+                      icon={MessageSquare}
+                      title="No Sent Messages Yet"
+                      message="Have questions or feedback? Send us a message from our contact page."
+                      action={{ label: "Contact Us", href: "/contact" }}
+                    />
                   ) : (
                     <div>
                       <div className="flex items-center justify-between mb-3 px-1">
@@ -572,19 +572,12 @@ export function UserprofilepageView() {
                       onRetry={() => void refetchOrders()}
                     />
                   ) : userOrders.length === 0 ? (
-                    <div className="profile_empty_state">
-                      <ShoppingBag className="profile_empty_icon" />
-                      <p className="profile_empty_title">No Past Orders Found</p>
-                      <p className="profile_empty_desc">
-                        Once you complete checkout, your order history will appear here.
-                      </p>
-                      <Link
-                        href="/menu"
-                        className="profile_empty_btn profile_empty_btn_secondary"
-                      >
-                        <span>Order Now</span>
-                      </Link>
-                    </div>
+                    <EmptyState
+                      icon={ShoppingBag}
+                      title="No Past Orders Found"
+                      message="Once you complete checkout, your order history will appear here."
+                      action={{ label: "Order Now", href: "/menu" }}
+                    />
                   ) : (
                     <div>
                       <div className="flex items-center justify-between mb-3 px-1">
@@ -824,15 +817,21 @@ export function UserprofilepageView() {
                   htmlFor="avatar-file-upload"
                   className="btn_upload_photo"
                 >
-                  <Upload className="w-3.5 h-3.5 text-[#A1255B]" />
+                  <Upload className="w-3.5 h-3.5 text-brand" />
                   <span>Choose Photo</span>
                 </label>
                 <input
                   type="file"
                   id="avatar-file-upload"
-                  accept="image/*"
+                  accept={IMAGE_ACCEPT}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
+                    e.target.value = "";
+                    const problem = file ? imageFileProblem(file) : null;
+                    if (problem) {
+                      toast.add({ type: "warning", description: problem });
+                      return;
+                    }
                     if (file) {
                       setAvatarFile(file);
                       const reader = new FileReader();
@@ -861,9 +860,12 @@ export function UserprofilepageView() {
                       type="text"
                       value={editForm.name}
                       onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      className="modal_input_control"
+                      className={`modal_input_control ${profileErrors.name ? "modal_input_control_error" : ""}`}
+                      aria-invalid={profileErrors.name ? true : undefined}
+                      maxLength={255}
                       required
                     />
+                    <TooltipAlert message={profileErrors.name} />
                   </div>
 
                   <div className="modal_input_group">
@@ -873,7 +875,6 @@ export function UserprofilepageView() {
                     <GenderDropdown
                       value={editForm.gender || ""}
                       onChange={(value) => setEditForm({ ...editForm, gender: value })}
-                      triggerClassName="modal_input_control bg-white cursor-pointer flex items-center justify-between"
                     />
                   </div>
 
@@ -885,8 +886,10 @@ export function UserprofilepageView() {
                       {...phoneInputProps}
                       value={editForm.phone || ""}
                       onChange={(e) => setEditForm({ ...editForm, phone: cleanPhoneInput(e.target.value) })}
-                      className="modal_input_control"
+                      className={`modal_input_control ${profileErrors.phone ? "modal_input_control_error" : ""}`}
+                      aria-invalid={profileErrors.phone ? true : undefined}
                     />
+                    <TooltipAlert message={profileErrors.phone} />
                   </div>
                 </div>
               </div>

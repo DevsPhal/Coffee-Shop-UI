@@ -22,6 +22,8 @@ import type { VariantName } from "@/store/api/types";
 import type { CartItem } from "@/store/useCartStore";
 import { ChevronDown, Check } from "lucide-react";
 import "@/app/globals.scss";
+import { EmptyState } from "@/components/ui/states";
+import { ShoppingCart } from "lucide-react";
 
 function extrasUnitTotal(item: Pick<CartItem, "selectedExtras">): number {
   return (item.selectedExtras ?? []).reduce((sum, extra) => sum + extra.price, 0);
@@ -54,12 +56,12 @@ function EnumDropdown<T extends string>({
       <button
         type="button"
         onClick={toggle}
-        className="inline-flex items-center justify-between gap-1 px-2.5 py-0.5 rounded-full border border-pink-200 bg-pink-50 hover:bg-pink-100 text-[#A1255B] font-bold text-[11px] shadow-2xs transition-all cursor-pointer select-none whitespace-nowrap"
+        className="inline-flex items-center justify-between gap-1 px-2.5 py-0.5 rounded-full border border-pink-200 bg-pink-50 hover:bg-pink-100 text-brand font-bold text-[11px] shadow-2xs transition-all cursor-pointer select-none whitespace-nowrap"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
         <span>{prefix ? `${t(prefix)}: ${labels[value]}` : labels[value]}</span>
-        <ChevronDown className="dropdown_chevron w-3 h-3 text-[#A1255B]" aria-hidden />
+        <ChevronDown className="dropdown_chevron w-3 h-3 text-brand" aria-hidden />
       </button>
 
       {isOpen && (
@@ -76,7 +78,7 @@ function EnumDropdown<T extends string>({
                 }}
                 className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border-none text-left select-none ${
                   isSelected
-                    ? "bg-[#A1255B] text-white shadow-2xs"
+                    ? "bg-brand text-white shadow-2xs"
                     : "hover:bg-gray-100 text-gray-800"
                 }`}
               >
@@ -167,24 +169,7 @@ export function CartDrawer() {
 
           <div className="cart_drawer_body">
             {items.length === 0 ? (
-              <div className="cart_drawer_empty">
-                <svg
-                  width="48"
-                  height="48"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="cart_drawer_empty_icon"
-                >
-                  <circle cx="9" cy="21" r="1" />
-                  <circle cx="20" cy="21" r="1" />
-                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                </svg>
-                <p className="cart_drawer_empty_text">{t("Your cart is empty")}</p>
-              </div>
+              <EmptyState compact icon={ShoppingCart} title="Your cart is empty" />
             ) : (
               <div className="cart_drawer_items_list">
                 {items.map((item) => {
@@ -260,7 +245,7 @@ export function CartDrawer() {
                           {item.selectedExtras && item.selectedExtras.length > 0 && item.selectedExtras.map((extra) => (
                             <span
                               key={extra.extraId}
-                              className="rounded-full text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5"
+                              className="rounded-full text-[10px] font-semibold text-brand bg-pink-50 border border-pink-200 px-1.5 py-0.5"
                             >
                               + {extra.name}
                             </span>
@@ -288,7 +273,7 @@ export function CartDrawer() {
                         </div>
 
                         <p
-                          className="cart_item-price font-extrabold text-[#A1255B]"
+                          className="cart_item-price font-extrabold text-brand"
                           suppressHydrationWarning
                         >
                           ${((item.unitPrice + extrasUnitTotal(item)) * item.quantity).toFixed(2)}
@@ -323,7 +308,7 @@ export function CartDrawer() {
                   {hasDiscount && (
                     <div className="cart_drawer_subtotal-row mt-1">
                       <span className="cart_drawer_subtotal-label">{t("Discount:")}</span>
-                      <span className="cart_drawer_subtotal-value font-bold text-[#A1255B]" suppressHydrationWarning>
+                      <span className="cart_drawer_subtotal-value font-bold text-brand" suppressHydrationWarning>
                         -${totalDiscount.toFixed(2)}
                       </span>
                     </div>

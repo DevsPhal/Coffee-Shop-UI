@@ -36,7 +36,7 @@ export function OrderEstimateBadge({ order }: { order: EstimateOrder }) {
 
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full border border-[#A1255B]/20 bg-[#A1255B]/10 px-2.5 py-0.5 text-[11px] font-bold text-[#A1255B]"
+      className="inline-flex items-center gap-1 rounded-full border border-brand/20 bg-brand/10 px-2.5 py-0.5 text-[11px] font-bold text-brand"
       title={`${t("ready by")} ${estimate.clock}`}
       suppressHydrationWarning
     >

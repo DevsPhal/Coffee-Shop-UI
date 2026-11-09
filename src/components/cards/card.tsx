@@ -109,8 +109,8 @@ export function Card({
           suppressHydrationWarning
           className={`relative flex items-center justify-between p-3 sm:p-3.5 rounded-[22px] bg-white transition-all duration-200 cursor-pointer w-full min-w-0 overflow-hidden phone-card ${
             isSelected
-              ? "border-[1.5px] border-[#931B42] shadow-md shadow-[#931B42]/10 selected"
-              : "border border-[#F3E8EC] hover:border-[#931B42]/40 shadow-sm default"
+              ? "border-[1.5px] border-brand-hover shadow-md shadow-brand-hover/10 selected"
+              : "border border-(--color-brand-tint) hover:border-brand-hover/40 shadow-sm default"
           }`}
         >
           <Link href={targetHref} className="block shrink-0">
@@ -127,13 +127,13 @@ export function Card({
             <div className="flex items-center gap-1.5 min-w-0 w-full flex-wrap title-row">
               <Link
                 href={targetHref}
-                className="text-[#111827] font-bold text-base sm:text-[17px] leading-snug tracking-tight truncate min-w-0 flex-initial hover:underline item-title"
+                className="text-(--gray-900) font-bold text-base sm:text-[17px] leading-snug tracking-tight truncate min-w-0 flex-initial hover:underline item-title"
                 title={title}
               >
                 {title}
               </Link>
               {isPromotion && (
-                <span className="bg-[#A1255B] text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
+                <span className="bg-brand text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
                   PROMO
                 </span>
               )}
@@ -144,7 +144,7 @@ export function Card({
                   e.stopPropagation();
                   if (onOpenInfo) onOpenInfo();
                 }}
-                className="w-4 h-4 rounded-full border border-[#931B42] text-[#931B42] flex items-center justify-center text-[10px] font-semibold hover:bg-[#931B42] hover:text-white transition-colors shrink-0 info-btn"
+                className="w-4 h-4 rounded-full border border-brand-hover text-brand-hover flex items-center justify-center text-[10px] font-semibold hover:bg-brand-hover hover:text-white transition-colors shrink-0 info-btn"
               >
                 i
               </button>

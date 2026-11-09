@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { useContactStore } from "@/store/useContactStore";
+import { useCreateFeedbackMutation } from "@/store/api/feedbackApi";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { cleanPhoneInput, phoneInputProps } from "@/lib/phoneUtils";
@@ -36,6 +37,7 @@ export function ContactForm() {
     resetForm,
     submitMessage,
   } = useContactStore();
+  const [createFeedback] = useCreateFeedbackMutation();
 
   useEffect(() => {
     if (user) {
@@ -57,7 +59,7 @@ export function ContactForm() {
       router.push(`/login?next=${encodeURIComponent("/contact")}`);
       return;
     }
-    await submitMessage(user);
+    await submitMessage(user, (body) => createFeedback(body).unwrap());
   };
 
   if (isSubmitted) {
@@ -89,7 +91,7 @@ export function ContactForm() {
       <div className="contact_form_header">
         {user && (
           <div className="mb-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-[#A1255B] bg-[#fff1f2] border border-[#fecdd3] rounded-full" suppressHydrationWarning>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-brand bg-(--rose-50) border border-(--rose-200) rounded-full" suppressHydrationWarning>
               <User className="w-3.5 h-3.5" />
               {t("Connected with")} {user.name}
             </span>

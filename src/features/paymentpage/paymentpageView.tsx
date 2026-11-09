@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
 import { CheckCircle2, Clock, Download, Loader2, RefreshCw, Share2, XCircle } from "lucide-react";
+import { Loader } from "@/components/ui/states";
 
 import { toast } from "@/components/ui/toast";
 import { apiErrorMessage } from "@/store/api/baseApi";
@@ -343,7 +344,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   if (effectivePhase === "awaiting_fee") {
     return (
       <StatusScreen
-        icon={<Loader2 className="h-12 w-12 animate-spin text-[#A1255B]" />}
+        icon={<Loader2 className="h-12 w-12 animate-spin text-brand" />}
         title="Confirming your delivery fee"
         message="The shop is reviewing your pinned location and pricing the delivery. Your payment QR will appear here automatically — no need to refresh."
         secondary={{ label: "Back to checkout", onClick: () => router.push("/checkout") }}
@@ -356,7 +357,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const isUrgent = isLive && secondsLeft !== null && secondsLeft <= 60;
 
   return (
-    <div className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col px-4 py-4 font-sans sm:py-6">
+    <div className="mx-auto flex min-h-[70dvh] w-full max-w-md flex-col px-4 py-4 font-sans sm:py-6">
       <div className="mb-4 flex w-full items-center justify-between">
         <h1 className="m-0 text-xl font-extrabold text-gray-900">Scan to pay</h1>
         <button
@@ -371,7 +372,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
       <section className="w-full overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-md">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
           <div className="flex items-center gap-2">
-            <span className="rounded bg-[#E21F26] px-1.5 py-0.5 text-[10px] font-black tracking-wider text-white">KHQR</span>
+            <span className="rounded bg-(--brand-khqr-red) px-1.5 py-0.5 text-[10px] font-black tracking-wider text-white">KHQR</span>
             <span className="text-sm font-extrabold text-gray-900">590st Cafe</span>
           </div>
           {isLive || isExpired ? (
@@ -431,7 +432,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
                 priority
               />
             ) : effectivePhase === "loading" ? (
-              <Loader2 className="h-8 w-8 animate-spin text-gray-300" />
+              <Loader label="Generating your QR code..." />
             ) : isExpired ? (
               <div className="flex flex-col items-center gap-2 px-6">
                 <Clock className="h-10 w-10 text-gray-300" />
@@ -455,7 +456,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
                       void requestQr(currency);
                     }}
                     disabled={isGenerating}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-full border-none bg-[#A1255B] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#881d52] active:scale-95 disabled:opacity-60"
+                    className="ui_button_brand"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                     Try again
@@ -541,7 +542,7 @@ function StatusScreen({
 }) {
   return (
     <div
-      className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col items-center justify-center gap-4 px-4 text-center"
+      className="mx-auto flex min-h-[70dvh] w-full max-w-md flex-col items-center justify-center gap-4 px-4 text-center"
       role="status"
       aria-live="polite"
     >
@@ -553,7 +554,7 @@ function StatusScreen({
           <button
             type="button"
             onClick={primary.onClick}
-            className="cursor-pointer rounded-full border-none bg-[#A1255B] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#881d52] active:scale-95"
+            className="ui_button_brand"
           >
             {primary.label}
           </button>
@@ -604,7 +605,7 @@ function PhonePayGuide({
           type="button"
           onClick={onSave}
           disabled={disabled || busy !== null}
-          className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full border-none bg-[#A1255B] px-4 text-sm font-bold text-white shadow-md shadow-[#A1255B]/20 transition hover:bg-[#881d52] active:scale-98 disabled:opacity-60"
+          className="ui_button_brand"
         >
           {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           Save QR
@@ -634,7 +635,7 @@ function PhonePayGuide({
               aria-checked={selected}
               onClick={() => onBankChange(id)}
               className={`min-h-9 cursor-pointer truncate rounded-xl border-none px-1 text-xs font-bold transition ${
-                selected ? "bg-white text-[#A1255B] shadow-sm" : "bg-transparent text-gray-500 hover:text-gray-800"
+                selected ? "bg-white text-brand shadow-sm" : "bg-transparent text-gray-500 hover:text-gray-800"
               }`}
             >
               {BANK_APPS[id].shortName}
@@ -647,7 +648,7 @@ function PhonePayGuide({
         {steps.map((step, index) => (
           <li key={index} className="flex items-start gap-3">
             <span
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#A1255B]/10 text-[11px] font-extrabold text-[#A1255B]"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand/10 text-[11px] font-extrabold text-brand"
               aria-hidden="true"
             >
               {index + 1}

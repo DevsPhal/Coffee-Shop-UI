@@ -35,7 +35,8 @@ async function proxy(req: NextRequest, { params }: RouteContext): Promise<Respon
   } catch (err) {
     console.error(`[api-proxy] ${req.method} ${apiPath} -> FAILED:`, err);
     return NextResponse.json(
-      { status: "BAD_GATEWAY", message: "Could not reach the API.", path: apiPath },
+      // Same shape as the API's ErrorResponse, so the app reads it like any other error.
+      { status: "BAD_GATEWAY", message: "Could not reach the API.", path: apiPath, timeStamp: new Date().toISOString() },
       { status: 502 }
     );
   }

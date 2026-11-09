@@ -5,6 +5,10 @@ import { z } from "zod";
 import { toast } from "@/components/ui/toast";
 import type { IceLevel, MilkType, SugarLevel, UUID } from "@/store/api/types";
 
+// The API's ValidationPatterns.MAX_ITEM_QUANTITY: the most of one item a single cart line can hold.
+export const MAX_LINE_QUANTITY = 999;
+const LINE_LIMIT_MESSAGE = `You can add at most ${MAX_LINE_QUANTITY} of one item.`;
+
 const LINE_DELIMITER = "|";
 
 export const cartExtraSchema = z.object({
@@ -21,7 +25,11 @@ export const cartItemSchema = z.object({
   image: z.string().nullable().optional(),
   unitPrice: z.number().nonnegative({ message: "Price cannot be negative." }),
   originalUnitPrice: z.number().nonnegative().optional(),
-  quantity: z.number().int().positive({ message: "Quantity must be at least 1." }),
+  quantity: z
+    .number()
+    .int()
+    .positive({ message: "Quantity must be at least 1." })
+    .max(MAX_LINE_QUANTITY, { message: LINE_LIMIT_MESSAGE }),
   variantId: z.string().uuid().nullable().optional(),
   variantName: z.string().nullable().optional(),
   sugarLevel: z.enum(["ZERO", "LESS", "NORMAL", "EXTRA"]).optional(),
@@ -103,7 +111,7 @@ function rekey(items: CartItem[], lineId: string, patch: Partial<CartItem>): Car
     const merged = [...rest];
     merged[twin] = {
       ...merged[twin],
-      quantity: merged[twin].quantity + updated.quantity,
+      quantity: Math.min(MAX_LINE_QUANTITY, merged[twin].quantity + updated.quantity),
     };
     return merged;
   }
@@ -133,6 +141,11 @@ export const useCartStore = create<CartStoreState>()(
 
         const data = parsed.data;
         const lineId = buildLineId(data);
+        const already = get().items.find((item) => item.lineId === lineId)?.quantity ?? 0;
+        if (already + data.quantity > MAX_LINE_QUANTITY) {
+          toast.add({ type: "warning", description: LINE_LIMIT_MESSAGE });
+          return { success: false, message: LINE_LIMIT_MESSAGE };
+        }
 
         set((state) => {
           const existing = state.items.findIndex((item) => item.lineId === lineId);
@@ -158,6 +171,10 @@ export const useCartStore = create<CartStoreState>()(
         if (!item) return { success: false, message: "Item not found." };
 
         const next = item.quantity + change;
+        if (next > MAX_LINE_QUANTITY) {
+          toast.add({ type: "warning", description: LINE_LIMIT_MESSAGE });
+          return { success: false, message: LINE_LIMIT_MESSAGE };
+        }
         if (next <= 0) {
           set((state) => ({ items: state.items.filter((i) => i.lineId !== lineId) }));
           return { success: true };

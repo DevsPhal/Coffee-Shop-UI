@@ -31,7 +31,7 @@ export function BrandLogo({ tone = "black", className = "h-10", href = "/", prio
       href={href}
       aria-label="590st CAFE — Home"
       title="590st CAFE — Home"
-      className="inline-flex shrink-0 items-center rounded-md transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#A1255B]"
+      className="inline-flex shrink-0 items-center rounded-md transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
     >
       {image}
     </Link>

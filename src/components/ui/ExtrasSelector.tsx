@@ -44,7 +44,7 @@ export function ExtrasSelector({ extras, selected, onChange }: ExtrasSelectorPro
               onClick={() => toggle(extra)}
               className={`w-full flex items-center gap-3 rounded-xl border p-2 text-left transition-all cursor-pointer select-none disabled:cursor-not-allowed disabled:opacity-50 ${
                 active
-                  ? "border-[#A1255B] bg-pink-50/60 ring-1 ring-[#A1255B]"
+                  ? "border-brand bg-pink-50/60 ring-1 ring-brand"
                   : "border-gray-200 hover:border-gray-300 bg-white"
               }`}
             >
@@ -55,7 +55,7 @@ export function ExtrasSelector({ extras, selected, onChange }: ExtrasSelectorPro
               />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-gray-900 truncate">{extra.name}</p>
-                <p className="text-[11px] text-[#A1255B] font-semibold">
+                <p className="text-[11px] text-brand font-semibold">
                   +${Number(extra.price).toFixed(2)}
                 </p>
                 {outOfStock && (
@@ -65,7 +65,7 @@ export function ExtrasSelector({ extras, selected, onChange }: ExtrasSelectorPro
               <div
                 className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
                   active
-                    ? "border-[#A1255B] bg-[#A1255B] text-white"
+                    ? "border-brand bg-brand text-white"
                     : "border-gray-300 bg-white"
                 }`}
               >

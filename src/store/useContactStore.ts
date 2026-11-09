@@ -2,7 +2,9 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { z } from "zod";
 import { toast } from "@/components/ui/toast";
-import { getAccessToken, isAuthenticated } from "@/lib/authStorage";
+import { isAuthenticated } from "@/lib/authStorage";
+import { apiErrorMessage, apiFieldErrors } from "@/store/api/baseApi";
+import type { CreateFeedbackRequest, FeedbackResponse } from "@/store/api/feedbackApi";
 import { formatPhone, PHONE_PATTERN } from "@/lib/phoneUtils";
 
 const TOPIC_TO_API_ENUM: Record<string, string> = {
@@ -72,7 +74,11 @@ interface ContactStoreState {
   prefillUser: (user: { userId?: string; name?: string; email?: string; phone?: string } | null) => void;
   validateField: <K extends keyof ContactMessageInput>(field: K, value: ContactMessageInput[K]) => void;
   resetForm: () => void;
-  submitMessage: (currentUser?: { userId?: string; name?: string; email?: string } | null) => Promise<{ success: boolean; message?: string }>;
+  /** `send` posts the message (the useCreateFeedbackMutation trigger), so the request refreshes an expired token. */
+  submitMessage: (
+    currentUser: { userId?: string; name?: string; email?: string } | null | undefined,
+    send: (body: CreateFeedbackRequest) => Promise<FeedbackResponse>,
+  ) => Promise<{ success: boolean; message?: string }>;
   clearHistory: () => void;
 }
 
@@ -136,7 +142,7 @@ export const useContactStore = create<ContactStoreState>()(
         });
       },
 
-      submitMessage: async (currentUser) => {
+      submitMessage: async (currentUser, send) => {
         if (get().isSubmitting) return { success: false, message: "Your message is being sent." };
         const { formData } = get();
 
@@ -185,33 +191,28 @@ export const useContactStore = create<ContactStoreState>()(
         set({ isSubmitting: true, errors: {} });
 
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/customer/feedback`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${getAccessToken()}`,
-            },
-            body: JSON.stringify({
-              fullName: validData.fullName,
-              email: validData.email,
-              phoneNumber: validData.phone || undefined,
-              topic: TOPIC_TO_API_ENUM[validData.topic] ?? validData.topic,
-              message: validData.message,
-            }),
-            signal: AbortSignal.timeout(15000),
+          const saved = await send({
+            fullName: validData.fullName,
+            email: validData.email,
+            phoneNumber: validData.phone || undefined,
+            topic: TOPIC_TO_API_ENUM[validData.topic] ?? validData.topic,
+            message: validData.message,
           });
-          const result = await response.json();
-          if (!response.ok || !result.data?.id) {
-            throw new Error(result.message || "Could not send your message. Please try again.");
-          }
           const newRecord: ContactMessageRecord = {
-            ...validData, id: result.data.id, createdAt: result.data.createdAt, status: "Received",
+            ...validData, id: saved.id, createdAt: saved.createdAt, status: "Received",
           };
           set((state) => ({ isSubmitted: true, messagesHistory: [newRecord, ...state.messagesHistory] }));
           toast.add({ type: "success", description: "Your message has been received by the shop." });
           return { success: true };
         } catch (error) {
-          const message = error instanceof Error ? error.message : "Could not send your message. Please try again.";
+          const message = apiErrorMessage(error as never, "Could not send your message. Please try again.");
+          // The API names its fields; this form calls the phone "phone".
+          const serverErrors: Partial<Record<keyof ContactMessageInput, string>> = {};
+          for (const [field, fieldMessage] of Object.entries(apiFieldErrors(error))) {
+            const key = (field === "phoneNumber" ? "phone" : field) as keyof ContactMessageInput;
+            serverErrors[key] = fieldMessage;
+          }
+          if (Object.keys(serverErrors).length > 0) set({ errors: serverErrors });
           toast.add({ type: "error", description: message });
           return { success: false, message };
         } finally {
