@@ -19,9 +19,7 @@ import {
 import { toast } from "@/components/ui/toast";
 import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
-import { isCategoryId, useCategoryQuery } from "@/lib/categoryParam";
-
-const FEATURED = "Featured";
+import { FEATURED_CATEGORY, isCategoryId, useCategoryQuery, useFeaturedChoice } from "@/lib/categoryParam";
 
 const SORT_OPTIONS: SortOption[] = [
   { value: "newest", label: "Newest" },
@@ -35,14 +33,20 @@ export function MenupageView() {
   const queryCategory = searchParams.get("category");
   const { t } = useLanguage();
 
-  const [selectedCategory, setSelectedCategory] = usePersistentState<string>("menu:selectedCategory", ALL_CATEGORIES);
+  const [savedCategory, setSelectedCategory] = usePersistentState<string>("menu:selectedCategory", ALL_CATEGORIES);
   const [searchQuery, setSearchQuery] = usePersistentState<string>("menu:searchQuery", "");
   const [sortBy, setSortBy] = usePersistentState<string>("menu:sortBy", "newest");
 
   const { categories } = useCategories();
-  useCategoryQuery({ queryCategory, selectedCategory, setSelectedCategory, categories, specialValues: [FEATURED] });
+  useCategoryQuery({
+    queryCategory,
+    selectedCategory: savedCategory,
+    setSelectedCategory,
+    categories,
+    specialValues: [FEATURED_CATEGORY],
+  });
 
-  const isFeatured = selectedCategory === FEATURED;
+  const { selectedCategory, isFeatured, leadingEntries } = useFeaturedChoice(savedCategory);
   const { products, isLoading, error, refetch } = useCatalog(
     isCategoryId(selectedCategory) ? selectedCategory : undefined
   );
@@ -78,7 +82,7 @@ export function MenupageView() {
 
   const getPageTitle = () => {
     if (selectedCategory === ALL_CATEGORIES) return t("All Products");
-    if (selectedCategory === FEATURED) return t("Featured Products");
+    if (isFeatured) return t("Featured Products");
     const matched = categories.find((category) => category.id === selectedCategory);
     return matched ? matched.name : t("Menu");
   };
@@ -118,13 +122,7 @@ export function MenupageView() {
               <CategoryDropdown
                 selectedCategory={selectedCategory}
                 onSelectCategory={setSelectedCategory}
-                leadingEntries={[
-                  {
-                    id: FEATURED,
-                    name: "Featured Products",
-                    count: products.filter((p) => p.discountActive).length,
-                  },
-                ]}
+                leadingEntries={leadingEntries}
               />
             </div>
 

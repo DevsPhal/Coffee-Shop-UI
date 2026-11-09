@@ -9,7 +9,7 @@ import { ALL_CATEGORIES } from "@/components/ui/CategoryDropdown";
 import { toStoreProduct, type StoreProduct } from "@/store/api/productAdapter";
 import { ProductImage } from "@/components/common/ProductImage";
 import { useCatalog, useCategories } from "@/store/api/useCatalog";
-import { isCategoryId, useCategoryQuery } from "@/lib/categoryParam";
+import { FEATURED_CATEGORY, isCategoryId, useCategoryQuery, useFeaturedChoice } from "@/lib/categoryParam";
 import type { SizeSelection } from "@/components/ui/SelectSizeModal";
 import { useCart } from "@/context/CartContext";
 import { useRequireLogin } from "@/hooks/useRequireLogin";
@@ -176,7 +176,8 @@ export function MenupageView() {
   const searchParams = useSearchParams();
   const queryCategory = searchParams.get("category");
   const { t } = useLanguage();
-  const [selectedCategory, setSelectedCategory] = usePersistentState<string>("menu-phone:selectedCategory", ALL_CATEGORIES);
+  const [savedCategory, setSelectedCategory] = usePersistentState<string>("menu-phone:selectedCategory", ALL_CATEGORIES);
+  const { selectedCategory, isFeatured, leadingEntries } = useFeaturedChoice(savedCategory);
   const [searchQuery, setSearchQuery] = usePersistentState<string>("menu-phone:searchQuery", "");
   const [selectedId, setSelectedId] = useState<string>("1");
   const [activeModalProduct, setActiveModalProduct] = useState<StoreProduct | null>(null);
@@ -197,7 +198,13 @@ export function MenupageView() {
   };
 
   const { categories } = useCategories();
-  useCategoryQuery({ queryCategory, selectedCategory, setSelectedCategory, categories });
+  useCategoryQuery({
+    queryCategory,
+    selectedCategory: savedCategory,
+    setSelectedCategory,
+    categories,
+    specialValues: [FEATURED_CATEGORY],
+  });
 
   useEffect(() => {
     if (activeModalProduct) {
@@ -214,6 +221,7 @@ export function MenupageView() {
   }, [activeModalProduct]);
 
   const filteredProducts = products
+    .filter((product) => (isFeatured ? product.discountActive : true))
     .filter((product) => {
       const term = searchQuery.trim().toLowerCase();
       if (!term) return true;
@@ -241,6 +249,7 @@ export function MenupageView() {
           <CategoryDropdown
             selectedCategory={selectedCategory}
             onSelectCategory={setSelectedCategory}
+            leadingEntries={leadingEntries}
           />
 
           <form
@@ -282,6 +291,7 @@ export function MenupageView() {
             <CategoryDropdown
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
+              leadingEntries={leadingEntries}
             />
           </div>
 

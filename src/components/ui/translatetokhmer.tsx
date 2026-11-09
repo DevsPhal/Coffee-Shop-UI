@@ -151,6 +151,7 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
 
     "All Products": "ផលិតផលទាំងអស់",
     "Featured Products": "ផលិតផលពិសេស",
+    "See all": "មើលទាំងអស់",
     "590 Signature": "ប្រចាំហាង 590",
     "Party Together": "ជប់លៀងជាមួយគ្នា",
     "Chess Master": "កំពូលអ្នកលេងអុក",

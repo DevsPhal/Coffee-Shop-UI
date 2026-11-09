@@ -136,7 +136,8 @@
   }
 }
 .discount_badge { position: absolute; top: 0.625rem; left: 0.625rem; z-index: 10; background-color: var(--secondary-color); color: var(--white); font-size: 0.6875rem; font-weight: 500; padding: 0.25rem 0.625rem; border-radius: 9999px; box-shadow: 0 4px 6px -1px color-mix(in srgb, var(--black) 10%, transparent), 0 2px 4px -1px color-mix(in srgb, var(--black) 6%, transparent);
-  &.discount_badge_phone { top: auto; bottom: 0.35rem; left: 0.35rem; font-size: 0.5625rem; padding: 0.15rem 0.45rem; line-height: 1; }
+  // Phone thumbnails: the same top-left corner as the bigger cards, just smaller.
+  &.discount_badge_phone { top: 0.35rem; left: 0.35rem; font-size: 0.5625rem; padding: 0.15rem 0.45rem; line-height: 1; }
 }
 .promo_time_inline { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.6875rem; font-weight: 700; white-space: nowrap; color: var(--amber-700);
   &.promo_time_danger { color: var(--red-600); }
@@ -346,6 +347,11 @@
 .nav_desktop_only { display: none !important;
   @media (min-width: 768px) and (min-height: 501px) { display: inline-flex !important; }
   @media (min-width: 1024px) { display: inline-flex !important; }
+}
+// The other half: shown exactly where the phone bottom bar is (links that go to the phone pages).
+.nav_phone_only { display: inline-flex !important;
+  @media (min-width: 768px) and (min-height: 501px) { display: none !important; }
+  @media (min-width: 1024px) { display: none !important; }
 }
 .mobile_nav_bottom_bar { display: flex !important;
   @media (min-width: 768px) and (min-height: 501px) { display: none !important; }

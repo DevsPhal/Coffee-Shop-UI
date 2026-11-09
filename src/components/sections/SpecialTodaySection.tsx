@@ -1,7 +1,10 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { Card } from "@/components/cards/card";
+import { featuredMenuHref } from "@/lib/categoryParam";
 import { LoadingRegion, ProductCardSkeletons } from "@/components/ui/states";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { toStoreProduct } from "@/store/api/productAdapter";
@@ -35,6 +38,17 @@ export function SpecialTodaySection({
       <div className="homepage_section_header">
         <h2 className="homepage_section_title">{t(title)}</h2>
         <p className="homepage_section_subtitle">{t(subtitle)}</p>
+        {/* Every discounted product, in the menu's Featured Products list. Phones get the phone menu. */}
+        <div className="mt-4 flex justify-center">
+          <Link href={featuredMenuHref("/menu")} className="ui_button_quiet nav_desktop_only">
+            {t("See all")}
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+          <Link href={featuredMenuHref("/menuphone")} className="ui_button_quiet nav_phone_only">
+            {t("See all")}
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </div>
       </div>
 
       {isLoading ? (
