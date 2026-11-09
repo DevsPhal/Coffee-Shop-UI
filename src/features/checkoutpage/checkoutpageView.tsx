@@ -873,7 +873,7 @@ export function CheckoutpageView() {
               value={baristaNote}
               onChange={(e) => setBaristaNote(e.target.value)}
               placeholder={t("e.g. less ice, extra hot, no straw")}
-              className="w-full p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:border-[#A1255B] focus:bg-white transition-all resize-none"
+              className="w-full p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base font-medium text-gray-900 outline-none focus:border-[#A1255B] focus:bg-white transition-all resize-none"
             />
           </div>
 
@@ -969,7 +969,7 @@ export function CheckoutpageView() {
                   placeholder={t("Street, landmark, area, or paste a Google Maps link")}
                   aria-label={t("Search for a place")}
                   enterKeyHint="search"
-                  className="w-full h-10 pl-9 pr-3 rounded-full bg-white text-sm border border-gray-200 outline-none focus:border-[#A1255B] transition-colors"
+                  className="w-full h-10 pl-9 pr-3 rounded-full bg-white text-base border border-gray-200 outline-none focus:border-[#A1255B] transition-colors"
                 />
               </div>
               <button
@@ -1052,7 +1052,7 @@ export function CheckoutpageView() {
                 value={tempAddress}
                 onChange={(e) => setTempAddress(e.target.value)}
                 placeholder={t("Address details will appear here...")}
-                className="w-full p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium text-gray-900 outline-none focus:border-[#A1255B] focus:bg-white transition-all resize-none"
+                className="w-full p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-base font-medium text-gray-900 outline-none focus:border-[#A1255B] focus:bg-white transition-all resize-none"
               />
             </div>
 

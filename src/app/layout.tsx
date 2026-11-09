@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Google_Sans_Flex, Noto_Sans_Khmer } from "next/font/google";
 import { CartProvider } from "@/context/CartContext";
 import { StoreProvider } from "@/store/StoreProvider";
@@ -25,6 +25,14 @@ const notoSansKhmer = Noto_Sans_Khmer({
   variable: "--font-noto-khmer",
   display: "swap",
 });
+
+// Zoom stays allowed (no maximum-scale / user-scalable=no); fields are 16px so iOS never zooms on focus.
+// resizes-visual: the on-screen keyboard overlays the page instead of shrinking it, so nothing jumps.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-visual",
+};
 
 export const metadata: Metadata = {
   title: "590st Cafe Shop",

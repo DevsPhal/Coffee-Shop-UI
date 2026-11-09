@@ -356,7 +356,7 @@ function OrderPaymentView({ orderId }: { orderId: string | null }) {
   const isUrgent = isLive && secondsLeft !== null && secondsLeft <= 60;
 
   return (
-    <div className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col px-4 py-4 font-sans sm:py-6">
+    <div className="mx-auto flex min-h-[70dvh] w-full max-w-md flex-col px-4 py-4 font-sans sm:py-6">
       <div className="mb-4 flex w-full items-center justify-between">
         <h1 className="m-0 text-xl font-extrabold text-gray-900">Scan to pay</h1>
         <button
@@ -541,7 +541,7 @@ function StatusScreen({
 }) {
   return (
     <div
-      className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col items-center justify-center gap-4 px-4 text-center"
+      className="mx-auto flex min-h-[70dvh] w-full max-w-md flex-col items-center justify-center gap-4 px-4 text-center"
       role="status"
       aria-live="polite"
     >

@@ -88,7 +88,7 @@ export function OrderhistorypageView() {
   if (!signedIn) return null;
 
   return (
-    <div className="contact_page_container font-sans min-h-screen">
+    <div className="contact_page_container font-sans min-h-dvh">
       <div className="product_detail_header mb-6">
         <h1 className="product_detail_title">Order History</h1>
 

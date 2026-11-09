@@ -46,7 +46,7 @@ export function CategorypageView() {
     products.filter((product) => product.categoryId === categoryId).slice(0, 3);
 
   return (
-    <div className="menu_page_wrapper font-sans min-h-screen pb-32 sm:pb-24 bg-[#F8FAFC]">
+    <div className="menu_page_wrapper font-sans min-h-dvh pb-32 sm:pb-24 bg-[#F8FAFC]">
       <div className="menu_page_container max-w-7xl mx-auto px-4 sm:px-6 pt-3 sm:pt-8 space-y-6 sm:space-y-10">
         <div className="title_category_page text-center my-3 sm:my-8">
           <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
@@ -73,7 +73,7 @@ export function CategorypageView() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("Search a category...")}
-              className="search_field_input w-full bg-transparent text-xs sm:text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
+              className="search_field_input w-full bg-transparent text-base font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
             />
           </form>
         </div>

@@ -83,7 +83,7 @@ export function StaffCallReasonModal({ open, onOpenChange, isDelivery, onConfirm
 
   return (
     <Modal open={open} onOpenChange={close}>
-      <ModalContent className="max-w-sm p-6 rounded-3xl border border-gray-100 shadow-2xl bg-white max-h-[calc(100vh-32px)] overflow-y-auto" showCloseButton={false}>
+      <ModalContent className="max-w-sm p-6 rounded-3xl border border-gray-100 shadow-2xl bg-white max-h-[calc(100dvh-32px)] overflow-y-auto" showCloseButton={false}>
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-pink-50 text-[#f0383e] flex items-center justify-center font-bold">
@@ -164,7 +164,7 @@ export function StaffCallReasonModal({ open, onOpenChange, isDelivery, onConfirm
               rows={2}
               maxLength={NOTE_LIMIT}
               placeholder={t("e.g. Less ice in my latte, please")}
-              className="w-full rounded-2xl border border-gray-200 focus:border-[#A1255B] focus:ring-1 focus:ring-[#A1255B] outline-none p-3 text-sm text-gray-900 resize-none"
+              className="w-full rounded-2xl border border-gray-200 focus:border-[#A1255B] focus:ring-1 focus:ring-[#A1255B] outline-none p-3 text-base text-gray-900 resize-none"
             />
             <p className="text-[11px] text-gray-400 text-right mt-1">
               {note.length}/{NOTE_LIMIT}

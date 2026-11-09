@@ -254,7 +254,7 @@ export function MenupageView() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t("Search product...")}
-                className="search_field_input w-full bg-transparent text-xs font-semibold text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
+                className="search_field_input w-full bg-transparent text-base font-semibold text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
               />
               {searchQuery && (
                 <button
@@ -296,7 +296,7 @@ export function MenupageView() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t("Search...")}
-                className="search_field_input w-full bg-transparent text-xs font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
+                className="search_field_input w-full bg-transparent text-base font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none border-none p-0"
               />
               {searchQuery && (
                 <button

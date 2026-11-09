@@ -383,3 +383,41 @@ header.navbar_header {
     transition: none;
   }
 }
+
+/* Mobile input zoom. iOS Safari zooms the whole page into a focused field whose text is under 16px. This rule is
+   outside Tailwind's layers, so it beats text-xs / text-sm on a field (layered utilities always lose to unlayered
+   rules); :where() keeps its specificity at zero, so a component class can still pick a size, and larger text
+   utilities (a 6-digit code field) are left alone. Field classes in the stylesheets are 1rem or more.
+   Written as simple :not() chains: Turbopack's CSS parser drops a rule with selector lists inside :not(). */
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]),
+  select,
+  textarea
+):where(:not([class*="text-lg"]):not([class*="text-xl"]):not([class*="text-2xl"]):not([class*="text-3xl"]):not([class*="text-4xl"])) {
+  font-size: max(16px, 1rem);
+}
+
+/* With the on-screen keyboard up (it overlays the page: viewport interactive-widget=resizes-visual), fixed bottom
+   bars would cover the field being typed in, so they step aside until it loses focus. */
+@media (pointer: coarse) {
+  html:has(input[type="text"]:focus) .mobile_nav_bottom_bar,
+  html:has(input[type="text"]:focus) .dinein_pill,
+  html:has(input[type="text"]:focus) .mobile_bottom_bar,
+  html:has(input[type="search"]:focus) .mobile_nav_bottom_bar,
+  html:has(input[type="search"]:focus) .dinein_pill,
+  html:has(input[type="search"]:focus) .mobile_bottom_bar,
+  html:has(input[type="tel"]:focus) .mobile_nav_bottom_bar,
+  html:has(input[type="tel"]:focus) .dinein_pill,
+  html:has(input[type="tel"]:focus) .mobile_bottom_bar,
+  html:has(input[type="email"]:focus) .mobile_nav_bottom_bar,
+  html:has(input[type="email"]:focus) .dinein_pill,
+  html:has(input[type="email"]:focus) .mobile_bottom_bar,
+  html:has(input:not([type]):focus) .mobile_nav_bottom_bar,
+  html:has(input:not([type]):focus) .dinein_pill,
+  html:has(input:not([type]):focus) .mobile_bottom_bar,
+  html:has(textarea:focus) .mobile_nav_bottom_bar,
+  html:has(textarea:focus) .dinein_pill,
+  html:has(textarea:focus) .mobile_bottom_bar {
+    display: none !important;
+  }
+}
