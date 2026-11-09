@@ -23,6 +23,7 @@ import { useLanguage } from "@/components/ui/translatetokhmer";
 import { useCategories, type CatalogCategory } from "@/store/api/useCatalog";
 import "@/app/globals.scss";
 import { useDropdown } from "@/hooks/useDropdown";
+import { Loader } from "@/components/ui/states";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useMounted } from "@/hooks/useMounted";
 
@@ -100,7 +101,7 @@ export function CategoryDropdown({
 
   const renderCurrentIcon = () => {
     const Icon = iconFor(current?.name ?? ALL_CATEGORIES);
-    return <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-[#A1255B]" />;
+    return <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-brand" />;
   };
 
   const renderCategoryItem = (entry: CatalogCategory) => {
@@ -117,21 +118,17 @@ export function CategoryDropdown({
           onSelectCategory(entry.id);
           close();
         }}
-        className={`w-full flex items-center justify-between py-2 px-3 rounded-xl text-xs sm:text-sm font-bold text-gray-900 hover:bg-gray-100 transition-all cursor-pointer border-none text-left select-none ${
-          isSelected ? "bg-[#A1255B] !text-white shadow-2xs" : ""
-        }`}
+        className="ui_select_option"
       >
         <div className="flex items-center gap-2 min-w-0 pr-2">
-          <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-white" : "text-[#A1255B]"}`} />
+          <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-white" : "text-brand"}`} />
           <span className="truncate">{entry.id === ALL_CATEGORIES ? t(ALL_CATEGORIES) : entry.name}</span>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
           <span
-            className={`px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold ${
-              isSelected
-                ? "bg-white/20 text-white"
-                : "bg-gray-100 text-gray-600 border border-gray-200"
+            className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
+              isSelected ? "bg-white/20" : "bg-(--color-surface-muted) border border-(--color-line)"
             }`}
           >
             {entry.count}
@@ -162,7 +159,7 @@ export function CategoryDropdown({
         } ${touchActiveCat === entry.id ? "touch_active" : ""}`}
       >
         <div className="category_drawer_item_left flex items-center gap-2">
-          <Icon className="category_drawer_item_icon h-5 w-5 text-[#A1255B]" />
+          <Icon className="category_drawer_item_icon h-5 w-5 text-brand" />
           <span className="category_drawer_item_name">{entry.id === ALL_CATEGORIES ? t(ALL_CATEGORIES) : entry.name}</span>
         </div>
 
@@ -179,7 +176,7 @@ export function CategoryDropdown({
       <button
         type="button"
         onClick={toggle}
-        className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full border border-gray-200 bg-white hover:border-[#A1255B] text-gray-900 font-bold text-xs sm:text-sm shadow-2xs transition-all cursor-pointer select-none"
+        className="ui_select_trigger is_pill"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
@@ -194,10 +191,10 @@ export function CategoryDropdown({
       {isOpen && !isMobile && (
         <div
           role="listbox"
-          className="absolute left-0 top-[calc(100%+6px)] z-50 w-64 sm:w-72 max-w-[calc(100vw-2rem)] bg-white border border-gray-100 rounded-2xl shadow-xl p-2 max-h-96 overflow-y-auto space-y-1 transition-all duration-150 animate-in fade-in slide-in-from-top-2"
+          className="ui_select_popup absolute left-0 top-[calc(100%+6px)] z-50 w-64 sm:w-72 max-w-[calc(100vw-2rem)] animate-in fade-in slide-in-from-top-2"
         >
           {isLoading ? (
-            <p className="px-3 py-4 text-xs text-gray-400">{t("Loading categories…")}</p>
+            <Loader className="px-3 py-4" label="Loading categories…" />
           ) : (
             entries.map(renderCategoryItem)
           )}

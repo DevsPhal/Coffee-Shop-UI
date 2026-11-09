@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ExternalLink, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move, Trash2, Send } from "lucide-react";
+import { KeyRound, LogOut, Edit3, Check, ShieldCheck, User, Upload, Eye, EyeOff, MessageSquare, Calendar, Tag, ShoppingBag, Clock, ChevronRight, CheckCircle2, Move, Trash2, Send } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { TelegramLinkModal } from "@/components/ui/TelegramLinkModal";
 import { GenderDropdown } from "@/components/ui/GenderDropdown";
@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/states";
 import "@/app/globals.scss";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { EmptyState } from "@/components/ui/states";
 
 const GENDER_LABELS: Record<Gender, string> = {
   MALE: "Male",
@@ -499,20 +500,12 @@ export function UserprofilepageView() {
               {activeTab === "messages" && (
                 <div>
                   {userMessages.length === 0 ? (
-                    <div className="profile_empty_state">
-                      <MessageSquare className="profile_empty_icon" />
-                      <p className="profile_empty_title">No Sent Messages Yet</p>
-                      <p className="profile_empty_desc">
-                        Have questions or feedback? Send us a message from our contact page.
-                      </p>
-                      <Link
-                        href="/contact"
-                        className="profile_empty_btn"
-                      >
-                        <span>Contact Us</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
+                    <EmptyState
+                      icon={MessageSquare}
+                      title="No Sent Messages Yet"
+                      message="Have questions or feedback? Send us a message from our contact page."
+                      action={{ label: "Contact Us", href: "/contact" }}
+                    />
                   ) : (
                     <div>
                       <div className="flex items-center justify-between mb-3 px-1">
@@ -579,19 +572,12 @@ export function UserprofilepageView() {
                       onRetry={() => void refetchOrders()}
                     />
                   ) : userOrders.length === 0 ? (
-                    <div className="profile_empty_state">
-                      <ShoppingBag className="profile_empty_icon" />
-                      <p className="profile_empty_title">No Past Orders Found</p>
-                      <p className="profile_empty_desc">
-                        Once you complete checkout, your order history will appear here.
-                      </p>
-                      <Link
-                        href="/menu"
-                        className="profile_empty_btn profile_empty_btn_secondary"
-                      >
-                        <span>Order Now</span>
-                      </Link>
-                    </div>
+                    <EmptyState
+                      icon={ShoppingBag}
+                      title="No Past Orders Found"
+                      message="Once you complete checkout, your order history will appear here."
+                      action={{ label: "Order Now", href: "/menu" }}
+                    />
                   ) : (
                     <div>
                       <div className="flex items-center justify-between mb-3 px-1">
@@ -831,7 +817,7 @@ export function UserprofilepageView() {
                   htmlFor="avatar-file-upload"
                   className="btn_upload_photo"
                 >
-                  <Upload className="w-3.5 h-3.5 text-[#A1255B]" />
+                  <Upload className="w-3.5 h-3.5 text-brand" />
                   <span>Choose Photo</span>
                 </label>
                 <input
@@ -889,7 +875,6 @@ export function UserprofilepageView() {
                     <GenderDropdown
                       value={editForm.gender || ""}
                       onChange={(value) => setEditForm({ ...editForm, gender: value })}
-                      triggerClassName="modal_input_control bg-white cursor-pointer flex items-center justify-between"
                     />
                   </div>
 

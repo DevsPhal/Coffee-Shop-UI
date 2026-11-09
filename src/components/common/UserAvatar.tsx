@@ -42,7 +42,7 @@ export function UserAvatar({
   return (
     <span
       className={cn(
-        "relative flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-[#fdf2f7] font-bold text-[#A1255B]",
+        "relative flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-(--color-brand-soft) font-bold text-brand",
         className
       )}
     >

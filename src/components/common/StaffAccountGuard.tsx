@@ -17,7 +17,7 @@ export function StaffAccountGuard({ children }: { children: React.ReactNode }) {
   if (!user || !isStaffRole(user.role)) return <>{children}</>;
 
   return (
-    <main className="flex min-h-svh flex-1 items-center justify-center bg-[#F9FAFC] px-4">
+    <main className="flex min-h-svh flex-1 items-center justify-center bg-(--gray-50) px-4">
       <div
         role="alert"
         className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-sm"
@@ -25,8 +25,8 @@ export function StaffAccountGuard({ children }: { children: React.ReactNode }) {
         <div className="flex justify-center">
           <BrandLogo className="h-12" />
         </div>
-        <div className="mx-auto mt-8 grid h-14 w-14 place-items-center rounded-full bg-[#A1255B]/10">
-          <ShieldAlert className="h-7 w-7 text-[#A1255B]" />
+        <div className="mx-auto mt-8 grid h-14 w-14 place-items-center rounded-full bg-brand/10">
+          <ShieldAlert className="h-7 w-7 text-brand" />
         </div>
         <h1 className="mt-5 text-lg font-bold text-gray-900">
           {t("This is a staff account")}

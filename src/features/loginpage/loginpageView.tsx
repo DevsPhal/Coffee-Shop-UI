@@ -201,7 +201,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
               </p>
 
               <input
-                className="mt-6 h-12 w-full rounded-md border border-gray-300 text-center text-2xl tracking-[0.5em] outline-none focus:border-[#A1255B]"
+                className="mt-6 h-12 w-full rounded-md border border-gray-300 text-center text-2xl tracking-[0.5em] outline-none focus:border-brand"
                 placeholder="000000"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -325,7 +325,7 @@ export function LoginPageView({ initialViewMode = "login" }: LoginPageViewProps 
                       type="button"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-1.5 grid size-9 place-items-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+                      className="touch_target absolute right-1.5 grid size-9 place-items-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
                     >
                       {showPassword ? (
                         <EyeOff className="w-5 h-5" />

@@ -63,7 +63,7 @@ export function DrinkpageView() {
 
           <form
             onSubmit={(e) => e.preventDefault()}
-            className="flex items-center flex-1 min-w-0 bg-white border border-gray-200 focus-within:border-[#A1255B] focus-within:ring-1 focus-within:ring-[#A1255B] rounded-full p-1 pl-3.5 shadow-2xs transition-all"
+            className="flex items-center flex-1 min-w-0 bg-white border border-gray-200 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand rounded-full p-1 pl-3.5 shadow-2xs transition-all"
           >
             <Search className="w-4 h-4 text-gray-400 shrink-0 mr-2 pointer-events-none" />
             <input
@@ -77,7 +77,7 @@ export function DrinkpageView() {
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="text-gray-400 hover:text-gray-700 text-xs font-bold bg-gray-100 hover:bg-gray-200 w-4 h-4 rounded-full flex items-center justify-center cursor-pointer shrink-0 mr-1 transition-colors"
+                className="touch_target text-gray-400 hover:text-gray-700 text-xs font-bold bg-gray-100 hover:bg-gray-200 w-4 h-4 rounded-full flex items-center justify-center cursor-pointer shrink-0 mr-1 transition-colors"
                 title="Clear search"
               >
                 ✕
@@ -85,7 +85,7 @@ export function DrinkpageView() {
             )}
             <button
               type="submit"
-              className="w-8 h-8 bg-[#A1255B] hover:bg-[#881d52] text-white rounded-full shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none active:scale-95 ml-1"
+              className="touch_target w-8 h-8 bg-brand hover:bg-brand-hover text-white rounded-full shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none active:scale-95 ml-1"
               title="Search"
             >
               <Search className="w-4 h-4 text-white" />

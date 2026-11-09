@@ -59,7 +59,7 @@ export function OrderpageView() {
           <button
             type="button"
             onClick={handleContinueShopping}
-            className="inline-block rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white font-bold py-3 px-8 text-xs transition-colors cursor-pointer border-none shadow-md shadow-[#A1255B]/20"
+            className="ui_button_brand"
           >
             {t("Explore Menu & Add Drinks")}
           </button>
@@ -146,7 +146,7 @@ export function OrderpageView() {
                               {item.selectedExtras.map((extra) => (
                                 <span
                                   key={extra.extraId}
-                                  className="rounded-full text-[10px] font-semibold text-[#A1255B] bg-pink-50 border border-pink-200 px-1.5 py-0.5"
+                                  className="rounded-full text-[10px] font-semibold text-brand bg-pink-50 border border-pink-200 px-1.5 py-0.5"
                                 >
                                   + {extra.name}
                                 </span>
@@ -184,7 +184,7 @@ export function OrderpageView() {
                       </div>
                     </div>
                     <div
-                      className="order_page_item_total font-extrabold text-[#A1255B]"
+                      className="order_page_item_total font-extrabold text-brand"
                       suppressHydrationWarning
                     >
                       ${((item.unitPrice + extrasUnitTotal(item)) * item.quantity).toFixed(2)}
@@ -220,7 +220,7 @@ export function OrderpageView() {
                       <span className="order_page_summary_label">
                         {t("Discount:")}
                       </span>
-                      <span className="order_page_summary_value text-[#A1255B] font-bold" suppressHydrationWarning>
+                      <span className="order_page_summary_value text-brand font-bold" suppressHydrationWarning>
                         -${totalDiscount.toFixed(2)}
                       </span>
                     </div>

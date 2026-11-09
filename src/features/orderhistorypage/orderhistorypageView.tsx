@@ -113,7 +113,7 @@ export function OrderhistorypageView() {
             onClick={() => setFilterStatus(value)}
             className={`px-4 py-2 text-xs font-bold rounded-full border transition-all shrink-0 cursor-pointer ${
               filterStatus === value
-                ? "bg-[#A1255B] text-white border-[#A1255B] shadow-sm"
+                ? "bg-brand text-white border-brand shadow-sm"
                 : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
             }`}
           >
@@ -176,7 +176,7 @@ export function OrderhistorypageView() {
 
               <div className="py-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs border-b border-gray-100">
                 <div className="flex items-center gap-1.5 text-gray-600">
-                  <User className="w-3.5 h-3.5 text-[#A1255B]" />
+                  <User className="w-3.5 h-3.5 text-brand" />
                   <span>Customer: </span>
                   <strong className="text-gray-900 font-bold" suppressHydrationWarning>
                     {order.customerName ?? "You"}
@@ -191,9 +191,9 @@ export function OrderhistorypageView() {
                 </div>
                 <div className="flex items-start gap-1.5 text-gray-600 sm:col-span-2">
                   {order.fulfillmentMethod === "DELIVERY" ? (
-                    <Truck className="w-3.5 h-3.5 text-[#A1255B] shrink-0 mt-0.5" />
+                    <Truck className="w-3.5 h-3.5 text-brand shrink-0 mt-0.5" />
                   ) : (
-                    <Package className="w-3.5 h-3.5 text-[#A1255B] shrink-0 mt-0.5" />
+                    <Package className="w-3.5 h-3.5 text-brand shrink-0 mt-0.5" />
                   )}
                   <span className="shrink-0">
                     {order.fulfillmentMethod === "DELIVERY" ? "Deliver to: " : "Pickup: "}
@@ -263,7 +263,7 @@ export function OrderhistorypageView() {
                   ) : (
                     <Link
                       href={`/checkoutdone?id=${order.id}`}
-                      className="inline-flex items-center gap-1 px-4 py-1.5 text-xs font-bold text-white bg-[#A1255B] hover:bg-[#881d52] rounded-xl transition-colors shadow-sm whitespace-nowrap shrink-0"
+                      className="inline-flex items-center gap-1 px-4 py-1.5 text-xs font-bold text-white bg-brand hover:bg-brand-hover rounded-xl transition-colors shadow-sm whitespace-nowrap shrink-0"
                     >
                       <span>Track</span>
                       <ChevronRight className="w-3.5 h-3.5 shrink-0" />

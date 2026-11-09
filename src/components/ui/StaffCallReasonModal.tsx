@@ -86,7 +86,7 @@ export function StaffCallReasonModal({ open, onOpenChange, isDelivery, onConfirm
       <ModalContent className="max-w-sm p-6 rounded-3xl border border-gray-100 shadow-2xl bg-white max-h-[calc(100dvh-32px)] overflow-y-auto" showCloseButton={false}>
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-pink-50 text-[#f0383e] flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-xl bg-pink-50 text-(--color-accent) flex items-center justify-center font-bold">
               <ConciergeBell className="w-4 h-4" />
             </div>
             <h3 className="text-base font-extrabold text-gray-900 tracking-tight">
@@ -98,7 +98,7 @@ export function StaffCallReasonModal({ open, onOpenChange, isDelivery, onConfirm
               type="button"
               onClick={() => close(false)}
               aria-label={t("Close")}
-              className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors cursor-pointer border-none"
+              className="touch_target w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors cursor-pointer border-none"
             >
               <X className="w-4 h-4" />
             </button>
@@ -122,14 +122,14 @@ export function StaffCallReasonModal({ open, onOpenChange, isDelivery, onConfirm
                 onClick={() => setReason(value)}
                 className={`w-full flex items-center justify-between gap-3 p-3 rounded-2xl border text-left transition-all cursor-pointer select-none ${
                   selected
-                    ? "border-[#A1255B] bg-pink-50/40 shadow-sm ring-1 ring-[#A1255B]"
+                    ? "border-brand bg-pink-50/40 shadow-sm ring-1 ring-brand"
                     : "border-gray-200 hover:border-gray-300 bg-white"
                 } ${isSubmitting ? "opacity-60 cursor-not-allowed" : ""}`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      selected ? "bg-[#A1255B] text-white" : "bg-gray-100 text-gray-600"
+                      selected ? "bg-brand text-white" : "bg-gray-100 text-gray-600"
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -141,7 +141,7 @@ export function StaffCallReasonModal({ open, onOpenChange, isDelivery, onConfirm
                 </div>
                 <div
                   className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
-                    selected ? "border-[#A1255B] bg-[#A1255B] text-white" : "border-gray-300 bg-white"
+                    selected ? "border-brand bg-brand text-white" : "border-gray-300 bg-white"
                   }`}
                 >
                   {selected && <Check className="w-3 h-3" />}
@@ -164,7 +164,7 @@ export function StaffCallReasonModal({ open, onOpenChange, isDelivery, onConfirm
               rows={2}
               maxLength={NOTE_LIMIT}
               placeholder={t("e.g. Less ice in my latte, please")}
-              className="w-full rounded-2xl border border-gray-200 focus:border-[#A1255B] focus:ring-1 focus:ring-[#A1255B] outline-none p-3 text-base text-gray-900 resize-none"
+              className="w-full rounded-2xl border border-gray-200 focus:border-brand focus:ring-1 focus:ring-brand outline-none p-3 text-base text-gray-900 resize-none"
             />
             <p className="text-[11px] text-gray-400 text-right mt-1">
               {note.length}/{NOTE_LIMIT}
@@ -177,7 +177,7 @@ export function StaffCallReasonModal({ open, onOpenChange, isDelivery, onConfirm
             type="button"
             onClick={handleConfirm}
             disabled={!canSubmit}
-            className={`w-full rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white py-3 px-4 text-sm shadow-md shadow-[#A1255B]/20 transition-all cursor-pointer border-none flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`ui_button_brand w-full ${
               isSubmitting ? "cursor-wait" : ""
             }`}
           >

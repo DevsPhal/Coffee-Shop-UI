@@ -163,7 +163,7 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
 
         <form onSubmit={handleVerifyRegistration} className="w-full space-y-4">
           <input
-            className="h-12 w-full rounded-md border border-gray-300 text-center text-2xl tracking-[0.5em] outline-none focus:border-[#A1255B]"
+            className="h-12 w-full rounded-md border border-gray-300 text-center text-2xl tracking-[0.5em] outline-none focus:border-brand"
             placeholder="000000"
             value={otp}
             onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -263,6 +263,7 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
           </label>
           <GenderDropdown
             value={gender}
+            invalid={Boolean(errors.gender)}
             onChange={(value) => {
               setGender(value);
               validateField("gender", value);
@@ -374,7 +375,7 @@ export function Create({ onBackToLogin: leave, isAdmin = false }: CreateProps) {
             <button
               type="button"
               onClick={onBackToLogin}
-              className="cursor-pointer border-none bg-transparent font-bold text-[#A1255B] underline"
+              className="cursor-pointer border-none bg-transparent font-bold text-brand underline"
             >
               {t("Log in with Telegram")}
             </button>

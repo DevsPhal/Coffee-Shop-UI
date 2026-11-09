@@ -29,7 +29,7 @@ export function LoadingRegion({
 
 export function ProductCardSkeleton() {
   return (
-    <div className="skeleton_card flex flex-col rounded-lg border border-gray-100 bg-[#f8f8f8] p-5" aria-hidden>
+    <div className="skeleton_card flex flex-col rounded-lg border border-gray-100 bg-(--zinc-50) p-5" aria-hidden>
       <Skeleton className="mb-4 aspect-4/3 w-full rounded-lg sm:aspect-auto sm:h-48" />
       <div className="mb-4 flex items-center justify-between gap-3">
         <Skeleton className="h-5 w-3/5" />
@@ -56,7 +56,7 @@ export function ProductCardSkeletons({ count = 8 }: { count?: number }) {
 export function PhoneCardSkeleton() {
   return (
     <div
-      className="flex items-center gap-3 rounded-2xl border border-[#f3e8ec] bg-white px-3 py-2.5 sm:px-4 sm:py-3.5"
+      className="flex items-center gap-3 rounded-2xl border border-(--color-brand-tint) bg-white px-3 py-2.5 sm:px-4 sm:py-3.5"
       aria-hidden
     >
       <Skeleton className="h-20 w-20 shrink-0 rounded-2xl sm:h-22 sm:w-22" />
@@ -101,7 +101,7 @@ export function CategoryCardSkeleton() {
 
 export function EventCardSkeleton() {
   return (
-    <div className="relative h-[340px] overflow-hidden rounded-2xl bg-[#f1f5f9]" aria-hidden>
+    <div className="relative h-[340px] overflow-hidden rounded-2xl bg-(--slate-100)" aria-hidden>
       <Skeleton className="absolute inset-0 rounded-none" />
       <div className="absolute inset-x-0 bottom-0 space-y-2 p-5">
         <Skeleton className="skeleton_on_dark h-5 w-2/3" />
@@ -181,7 +181,7 @@ export function ProductDetailSkeleton() {
 export function ProfileCardSkeleton() {
   return (
     <div
-      className="flex flex-col gap-6 rounded-2xl border border-[#eaecf0] bg-white p-6 shadow-sm sm:flex-row"
+      className="flex flex-col gap-6 rounded-2xl border border-(--gray-200) bg-white p-6 shadow-sm sm:flex-row"
       aria-hidden
     >
       <div className="flex shrink-0 justify-center">
@@ -213,6 +213,18 @@ export function ProfileCardSkeleton() {
   );
 }
 
+/** The one inline loading indicator: a spinner and a short label, announced to screen readers. */
+export function Loader({ label = "Loading...", className = "" }: { label?: string; className?: string }) {
+  const { t } = useLanguage();
+  return (
+    <span role="status" aria-live="polite" className={`ui_loader ${className}`}>
+      <Loader2 className="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none" aria-hidden />
+      <span>{t(label)}</span>
+    </span>
+  );
+}
+
+/** A page (or large region) that is still loading. */
 export function PageLoader({ label = "Loading...", className = "" }: { label?: string; className?: string }) {
   const { t } = useLanguage();
   return (
@@ -221,7 +233,7 @@ export function PageLoader({ label = "Loading...", className = "" }: { label?: s
       aria-live="polite"
       className={`flex flex-col items-center justify-center gap-3 px-4 py-24 text-center font-sans ${className}`}
     >
-      <Loader2 className="h-9 w-9 animate-spin text-[#A1255B]" aria-hidden />
+      <Loader2 className="h-9 w-9 animate-spin text-brand motion-reduce:animate-none" aria-hidden />
       <p className="text-sm font-medium text-gray-500">{t(label)}</p>
     </div>
   );
@@ -287,7 +299,7 @@ export function ErrorState({
             <button
               type="button"
               onClick={onRetry}
-              className="inline-flex cursor-pointer items-center gap-2 rounded-full border-none bg-[#A1255B] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-[#A1255B]/20 transition-colors hover:bg-[#881d52] active:scale-95"
+              className="ui_button_brand"
             >
               <RefreshCw className="h-3.5 w-3.5" aria-hidden />
               {t("Try again")}
@@ -296,7 +308,7 @@ export function ErrorState({
           {secondaryAction && (
             <Link
               href={secondaryAction.href}
-              className="inline-flex items-center rounded-full border border-gray-200 bg-white px-5 py-2.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-50"
+              className="ui_button_quiet"
             >
               {t(secondaryAction.label)}
             </Link>
@@ -312,19 +324,22 @@ export interface EmptyStateProps {
   title: string;
   message?: string;
   action?: { label: string; href?: string; onClick?: () => void };
+  /** Less padding and no frame, for a small panel. */
+  compact?: boolean;
   className?: string;
 }
 
-export function EmptyState({ icon: Icon, title, message, action, className = "" }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, message, action, compact = false, className = "" }: EmptyStateProps) {
   const { t } = useLanguage();
-  const actionClass =
-    "mt-5 inline-flex cursor-pointer items-center justify-center rounded-full border-none bg-[#A1255B] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-[#A1255B]/20 transition-colors hover:bg-[#881d52]";
+  const actionClass = "ui_button_brand mt-5";
 
   return (
     <div
-      className={`mx-auto flex w-full max-w-md flex-col items-center rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-12 text-center font-sans ${className}`}
+      className={`mx-auto flex w-full max-w-md flex-col items-center text-center font-sans ${
+        compact ? "px-4 py-6" : "rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-12"
+      } ${className}`}
     >
-      <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-pink-50 text-[#A1255B]">
+      <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-pink-50 text-brand">
         <Icon className="h-6 w-6" aria-hidden />
       </span>
       <h3 className="text-base font-bold text-gray-900">{t(title)}</h3>

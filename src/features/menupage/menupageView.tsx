@@ -84,7 +84,7 @@ export function MenupageView() {
   };
 
   return (
-    <div className="menu_page_wrapper font-sans min-h-dvh pb-16 bg-[#F9FAFC]">
+    <div className="menu_page_wrapper font-sans min-h-dvh pb-16 bg-(--gray-50)">
       <div className="menu_page_container max-w-7xl mx-auto px-4 sm:px-6 pt-4">
         
         <div className="menu_page_header text-center my-4 sm:my-6">
@@ -98,7 +98,7 @@ export function MenupageView() {
 
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 mb-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl sm:text-2xl font-extrabold text-[#A1255B] tracking-tight whitespace-nowrap">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-brand tracking-tight whitespace-nowrap">
               {getPageTitle()}
             </h2>
             {isLoading ? (
@@ -130,7 +130,7 @@ export function MenupageView() {
 
             <form
               onSubmit={(e) => e.preventDefault()}
-              className="flex items-center rounded-full bg-white border border-gray-200 focus-within:border-[#A1255B] focus-within:ring-1 focus-within:ring-[#A1255B] p-1 pl-3.5 shadow-2xs transition-all flex-1 min-w-[12rem] lg:flex-none lg:w-64"
+              className="flex items-center rounded-full bg-white border border-gray-200 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand p-1 pl-3.5 shadow-2xs transition-all flex-1 min-w-[12rem] lg:flex-none lg:w-64"
             >
               <Search className="w-4 h-4 text-gray-400 shrink-0 mr-2 pointer-events-none" />
               <input
@@ -144,7 +144,7 @@ export function MenupageView() {
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="rounded-full text-gray-400 hover:text-gray-700 text-xs font-bold bg-gray-100 hover:bg-gray-200 w-4 h-4 flex items-center justify-center cursor-pointer shrink-0 mr-1 transition-colors"
+                  className="touch_target rounded-full text-gray-400 hover:text-gray-700 text-xs font-bold bg-gray-100 hover:bg-gray-200 w-4 h-4 flex items-center justify-center cursor-pointer shrink-0 mr-1 transition-colors"
                   title="Clear search"
                 >
                   ✕
@@ -152,7 +152,7 @@ export function MenupageView() {
               )}
               <button
                 type="submit"
-                className="w-8 h-8 rounded-full bg-[#A1255B] hover:bg-[#881d52] text-white shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none active:scale-95 ml-1"
+                className="touch_target w-8 h-8 rounded-full bg-brand hover:bg-brand-hover text-white shadow-2xs transition-all flex items-center justify-center shrink-0 cursor-pointer border-none active:scale-95 ml-1"
                 title="Search"
               >
                 <Search className="w-4 h-4 text-white" />

@@ -360,7 +360,7 @@ export function CheckoutdonepageView() {
       <div className="progress_status_container">
         <div className="progress_status_card">
           <h2 className="progress_status_header">
-            <Receipt className="w-5 h-5 text-[#A1255B]" />
+            <Receipt className="w-5 h-5 text-brand" />
             {t("Order Progress Status")}
           </h2>
 
@@ -545,7 +545,7 @@ export function CheckoutdonepageView() {
                 {hasDiscount && (
                   <div className="meta_row">
                     <span className="label_muted">{t("Discount:")}</span>
-                    <span className="value_brand font-bold text-[#A1255B]" suppressHydrationWarning>
+                    <span className="value_brand font-bold text-brand" suppressHydrationWarning>
                       -{formatMoney(totalDiscount)}
                     </span>
                   </div>
