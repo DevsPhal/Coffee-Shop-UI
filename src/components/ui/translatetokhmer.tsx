@@ -302,6 +302,7 @@ export const staticTranslations: Record<Language, Record<string, string>> = {
     "Use the number shown on your table, e.g. 05": "សូមប្រើលេខដែលមាននៅលើតុ ឧ. 05",
     "doesn't exist. Check the number on your table.": "មិនមានទេ។ សូមពិនិត្យលេខនៅលើតុរបស់អ្នក។",
     "Checking table...": "កំពុងពិនិត្យតុ...",
+    "Placing order...": "កំពុងដាក់ការកុម្ម៉ង់...",
     "Use my location": "ប្រើទីតាំងរបស់ខ្ញុំ",
     Cancel: "បោះបង់",
     "Confirm Location": "បញ្ជាក់ទីតាំង",

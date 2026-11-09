@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
 import { useContactStore } from "@/store/useContactStore";
+import { useCreateFeedbackMutation } from "@/store/api/feedbackApi";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { cleanPhoneInput, phoneInputProps } from "@/lib/phoneUtils";
@@ -36,6 +37,7 @@ export function ContactForm() {
     resetForm,
     submitMessage,
   } = useContactStore();
+  const [createFeedback] = useCreateFeedbackMutation();
 
   useEffect(() => {
     if (user) {
@@ -57,7 +59,7 @@ export function ContactForm() {
       router.push(`/login?next=${encodeURIComponent("/contact")}`);
       return;
     }
-    await submitMessage(user);
+    await submitMessage(user, (body) => createFeedback(body).unwrap());
   };
 
   if (isSubmitted) {

@@ -13,7 +13,8 @@ import { VARIANT_LABELS } from "@/store/api/optionMapping";
 import { useContactStore } from "@/store/useContactStore";
 import { isAuthenticated } from "@/lib/authStorage";
 import { useMounted } from "@/hooks/useMounted";
-import { apiErrorMessage } from "@/store/api/baseApi";
+import { apiErrorMessage, apiFieldErrors } from "@/store/api/baseApi";
+import { IMAGE_ACCEPT, imageFileProblem } from "@/lib/imageFile";
 import {
   useChangePasswordMutation,
   useGetCurrentUserQuery,
@@ -26,7 +27,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "@/components/ui/toast";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import { TooltipAlert } from "@/components/ui/tooltip-alert";
-import { validateForm } from "@/lib/formValidation";
+import { validateForm, type FieldErrors } from "@/lib/formValidation";
 import { changePasswordSchema, profileSchema, verifyPasswordSchema } from "@/lib/authSchema";
 import { cleanPhoneInput, formatPhone, phoneInputProps, samePhone } from "@/lib/phoneUtils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
@@ -178,6 +179,8 @@ export function UserprofilepageView() {
     confirmPass: "",
   });
   const [passError, setPassError] = useState("");
+  // Per-field messages for the edit-profile form, from the zod check or from the API.
+  const [profileErrors, setProfileErrors] = useState<FieldErrors>({});
 
   const [editForm, setEditForm] = usePersistentState<UserProfileData>("profile:editForm", { ...profile });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -263,6 +266,7 @@ export function UserprofilepageView() {
   const openEditProfile = () => {
     setEditForm({ ...profile });
     setAvatarFile(null);
+    setProfileErrors({});
     setIsEditProfileOpen(true);
   };
 
@@ -271,6 +275,7 @@ export function UserprofilepageView() {
     if (isSavingProfile) return;
 
     const check = validateForm(profileSchema, { name: editForm.name, phone: editForm.phone ?? "" });
+    setProfileErrors(check.errors);
     if (!check.ok) return;
     const { name, phone } = check.data;
 
@@ -296,6 +301,8 @@ export function UserprofilepageView() {
       setIsEditProfileOpen(false);
       toast.add({ type: "success", description: "Your profile has been updated." });
     } catch (err) {
+      const fields = apiFieldErrors(err);
+      if (fields.fullName || fields.phoneNumber) setProfileErrors({ name: fields.fullName, phone: fields.phoneNumber });
       toast.add({
         type: "error",
         description: apiErrorMessage(
@@ -830,9 +837,15 @@ export function UserprofilepageView() {
                 <input
                   type="file"
                   id="avatar-file-upload"
-                  accept="image/*"
+                  accept={IMAGE_ACCEPT}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
+                    e.target.value = "";
+                    const problem = file ? imageFileProblem(file) : null;
+                    if (problem) {
+                      toast.add({ type: "warning", description: problem });
+                      return;
+                    }
                     if (file) {
                       setAvatarFile(file);
                       const reader = new FileReader();
@@ -861,9 +874,12 @@ export function UserprofilepageView() {
                       type="text"
                       value={editForm.name}
                       onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      className="modal_input_control"
+                      className={`modal_input_control ${profileErrors.name ? "modal_input_control_error" : ""}`}
+                      aria-invalid={profileErrors.name ? true : undefined}
+                      maxLength={255}
                       required
                     />
+                    <TooltipAlert message={profileErrors.name} />
                   </div>
 
                   <div className="modal_input_group">
@@ -885,8 +901,10 @@ export function UserprofilepageView() {
                       {...phoneInputProps}
                       value={editForm.phone || ""}
                       onChange={(e) => setEditForm({ ...editForm, phone: cleanPhoneInput(e.target.value) })}
-                      className="modal_input_control"
+                      className={`modal_input_control ${profileErrors.phone ? "modal_input_control_error" : ""}`}
+                      aria-invalid={profileErrors.phone ? true : undefined}
                     />
+                    <TooltipAlert message={profileErrors.phone} />
                   </div>
                 </div>
               </div>

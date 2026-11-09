@@ -881,10 +881,11 @@ export function CheckoutpageView() {
             <button
               type="button"
               onClick={handlePlaceOrderNow}
-              disabled={isCheckingTable}
+              disabled={isCheckingTable || isPlacing}
+              aria-busy={isCheckingTable || isPlacing}
               className="checkout_submit_btn"
             >
-              {isCheckingTable ? t("Checking table...") : t("Place Order")}
+              {isCheckingTable ? t("Checking table...") : isPlacing ? t("Placing order...") : t("Place Order")}
             </button>
 
             <button

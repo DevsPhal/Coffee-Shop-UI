@@ -14,6 +14,8 @@ export const strongPassword = z
   .string()
   .min(1, { message: "Please enter a password." })
   .min(8, { message: "Password must be at least 8 characters." })
+  // BCrypt (the API) only reads the first 72 bytes.
+  .max(72, { message: "Password must be 72 characters or fewer." })
   .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/, {
     message:
       "Include an uppercase letter, a lowercase letter, a digit and a symbol — e.g. Qwert!12@",
@@ -125,7 +127,9 @@ export const shippingInformationSchema = z.object({
     .string()
     .trim()
     .min(1, { message: "Please enter your Full Name." })
-    .min(2, { message: "Full Name must be at least 2 characters." }),
+    .min(2, { message: "Full Name must be at least 2 characters." })
+    // The API's contactName limit.
+    .max(120, { message: "Full Name must be 120 characters or fewer." }),
   email: z
     .string()
     .trim()
@@ -137,7 +141,9 @@ export const shippingInformationSchema = z.object({
     .string()
     .trim()
     .min(1, { message: "Please enter your Address." })
-    .min(3, { message: "Address must be at least 3 characters." }),
+    .min(3, { message: "Address must be at least 3 characters." })
+    // The API allows 500 for "address, capital"; this leaves room for the capital's name.
+    .max(450, { message: "Address must be 450 characters or fewer." }),
 });
 
 export type ShippingInformationValues = z.infer<typeof shippingInformationSchema>;
