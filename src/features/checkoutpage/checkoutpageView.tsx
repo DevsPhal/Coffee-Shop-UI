@@ -261,7 +261,15 @@ export function CheckoutpageView() {
       return false;
     }
     try {
-      const table = await lookupTable(tableNumber, true).unwrap();
+      // Always ask the server: the table status (reserved or not) may have changed since it was last looked up.
+      const table = await lookupTable(tableNumber, false).unwrap();
+      // A reserved table is kept for its booking; the API refuses orders there until staff seat the party.
+      if (table.status === "RESERVED") {
+        const message = `${t("Table")} ${table.tableNumber} ${t("is reserved. Please ask our staff to seat you.")}`;
+        setErrors((prev) => ({ ...prev, table: message }));
+        toast.add({ type: "warning", description: message });
+        return false;
+      }
       setDineInTable(table.tableNumber);
       setTableInput(null);
       setErrors((prev) => ({ ...prev, table: undefined }));

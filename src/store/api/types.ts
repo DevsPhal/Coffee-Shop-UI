@@ -496,7 +496,9 @@ export interface ShopSettingsResponse {
   khrPerUsdRate: Numeric;
 }
 
-export type TableStatus = "AVAILABLE" | "OCCUPIED" | "RESERVED";
+// RESERVED: held for a booking (only staff can seat that party). CLEANING: the last party is done;
+// guests still at the table can keep ordering, new ones wait for staff.
+export type TableStatus = "AVAILABLE" | "OCCUPIED" | "RESERVED" | "CLEANING";
 
 export interface TableResponse {
   id: UUID;
