@@ -103,10 +103,11 @@ export const orderApi = baseApi.injectEndpoints({
       },
     }),
 
-    cancelMyOrder: builder.mutation<OrderResponse, UUID>({
-      query: (id) => ({ url: `/api/customer/orders/${id}/cancel`, method: "POST" }),
+    // Every cancellation says why; the shop sees the reason with the order straight away.
+    cancelMyOrder: builder.mutation<OrderResponse, { id: UUID; reason: string }>({
+      query: ({ id, reason }) => ({ url: `/api/customer/orders/${id}/cancel`, method: "POST", body: { reason } }),
       transformResponse: unwrap<OrderResponse>,
-      invalidatesTags: (_r, _e, id) => [
+      invalidatesTags: (_r, _e, { id }) => [
         { type: "Order", id },
         { type: "Order", id: "LIST" },
       ],

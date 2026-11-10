@@ -8,24 +8,26 @@ import { useMounted } from "@/hooks/useMounted";
 import { toast } from "@/components/ui/toast";
 import { Modal, ModalContent } from "@/components/ui/modal";
 import {
+  Ban,
+  Bell,
+  Bike,
   Check,
+  CheckCircle2,
+  ChevronRight,
+  Coffee,
+  ConciergeBell,
+  MessageCircleReply,
+  QrCode,
   Receipt,
   ReceiptText,
-  CheckCircle2,
-  Bell,
-  Coffee,
-  Bike,
-  ConciergeBell,
   UtensilsCrossed,
-  XCircle,
-  MessageCircleReply,
   Wallet,
-  QrCode,
-  ChevronRight,
+  XCircle,
 } from "lucide-react";
 import { isAuthenticated } from "@/lib/authStorage";
 import { useGetCurrentUserQuery } from "@/store/api/authApi";
 import {
+  useCancelMyOrderMutation,
   useGetMyOrderQuery,
   useCallStaffMutation,
   useGetMyStaffCallQuery,
@@ -39,6 +41,7 @@ import { toTitleCase } from "@/lib/utils";
 import { useLanguage } from "@/components/ui/translatetokhmer";
 import { PaymentMethodModal } from "@/components/ui/PaymentMethodModal";
 import { STAFF_CALL_REASON_LABELS, StaffCallReasonModal } from "@/components/ui/StaffCallReasonModal";
+import { CancelOrderModal } from "@/components/ui/CancelOrderModal";
 import type { StaffCallReason } from "@/store/api/types";
 import { EmptyState, ErrorState, PageLoader } from "@/components/ui/states";
 import "@/app/globals.scss";
@@ -72,6 +75,8 @@ export function CheckoutdonepageView() {
   const delivery = stored?.orderId === targetId ? stored : null;
   const [callStaffModal, setCallStaffModal] = useState(false);
   const [reasonModalOpen, setReasonModalOpen] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelMyOrder] = useCancelMyOrderMutation();
   const [callStaff, { isLoading: isCallingStaff }] = useCallStaffMutation();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [payCashOnPickup] = usePayCashOnPickupMutation();
@@ -128,6 +133,18 @@ export function CheckoutdonepageView() {
           : 1;
   const isCancelled = order?.status === "CANCELLED";
   const isUnpaid = order?.status === "PENDING";
+  // The customer can cancel until the order leaves the shop, as long as nothing has been paid yet: while it waits,
+  // and a cash order while it is being made. The API has the same rule (and checks a Bakong QR first).
+  const canCancel =
+    order != null &&
+    order.paidAt == null &&
+    (order.status === "PENDING" || (order.status === "PREPARING" && order.paymentMethod === "CASH"));
+  const refundLabel =
+    order?.refundAmount != null
+      ? order.refundCurrency === "KHR"
+        ? `${Number(order.refundAmount).toLocaleString("en-US")} ៛`
+        : `$${Number(order.refundAmount).toFixed(2)}`
+      : null;
 
   const effectiveStep = isMounted ? currentStep : 1;
   const isOutForDelivery = isDelivery && effectiveStep === 3;
@@ -149,7 +166,9 @@ export function CheckoutdonepageView() {
             : "Order Confirmed!";
 
   const bannerSubtitle = isCancelled
-    ? "This order was cancelled and you have not been charged."
+    ? refundLabel
+      ? "This order was cancelled and your cash payment was refunded."
+      : "This order was cancelled and you have not been charged."
     : isUnpaid
       ? isDeliveryFeePending
         ? "We've sent your order to the shop — waiting for them to confirm your delivery fee."
@@ -183,6 +202,19 @@ export function CheckoutdonepageView() {
       return effectiveStep > 2 ? "done" : effectiveStep === 2 ? "current" : "todo";
     }
     return effectiveStep > 3 ? "done" : effectiveStep === 3 ? "current" : "todo";
+  };
+
+  const handleCancelOrder = async (reason: string) => {
+    if (!order) return;
+    try {
+      await cancelMyOrder({ id: order.id, reason }).unwrap();
+      setCancelModalOpen(false);
+      // The live order update already tells the customer it was cancelled; the page then shows the reason.
+      void refetch();
+    } catch (error) {
+      toast.add({ type: "error", description: apiErrorMessage(error as never, "Could not cancel the order. Please try again.") });
+      void refetch();
+    }
   };
 
   const handleOpenCallStaff = () => {
@@ -429,6 +461,22 @@ export function CheckoutdonepageView() {
             <ChevronRight className="w-5 h-5 shrink-0" />
           </button>
         )}
+        {isCancelled && order?.cancelReason && (
+          <div className="progress_cancel_reason" role="note">
+            <Ban className="w-4 h-4 shrink-0" aria-hidden />
+            <p>
+              <b>
+                {order.cancelledByRole === "CUSTOMER"
+                  ? t("You cancelled this order")
+                  : order.cancelledByRole
+                    ? t("The shop cancelled this order")
+                    : t("This order was cancelled automatically")}
+              </b>
+              <span>{order.cancelReason}</span>
+              {refundLabel ? <span>{t("Refunded in cash:")} {refundLabel}</span> : null}
+            </p>
+          </div>
+        )}
         {isUnpaid && order?.paymentMethod === "BAKONG" && (
           <Link
             href={`/payment?orderId=${encodeURIComponent(targetId)}`}
@@ -439,6 +487,12 @@ export function CheckoutdonepageView() {
             <span className="progress_payment_action_amount" suppressHydrationWarning>{formatMoney(grandTotal)}</span>
             <ChevronRight className="w-5 h-5 shrink-0" />
           </Link>
+        )}
+        {canCancel && (
+          <button type="button" onClick={() => setCancelModalOpen(true)} className="progress_cancel_action">
+            <Ban className="w-4 h-4 shrink-0" aria-hidden />
+            <span>{t("Cancel order")}</span>
+          </button>
         )}
       </div>
 
@@ -631,6 +685,13 @@ export function CheckoutdonepageView() {
           </button>
         </ModalContent>
       </Modal>
+
+      <CancelOrderModal
+        open={cancelModalOpen}
+        onOpenChange={setCancelModalOpen}
+        beingMade={order?.status === "PREPARING"}
+        onConfirm={handleCancelOrder}
+      />
 
       <StaffCallReasonModal
         open={reasonModalOpen}

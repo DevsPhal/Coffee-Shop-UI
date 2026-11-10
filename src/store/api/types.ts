@@ -371,6 +371,13 @@ export interface OrderResponse {
   bakongAmount: Numeric | null;
   /** When the order's QR payment window closes; the order is cancelled if unpaid by then. */
   bakongExpiresAt: string | null;
+  /** A cancelled order: why, when and who ("CUSTOMER", a staff role, or null when it was cancelled automatically). */
+  cancelReason?: string | null;
+  cancelledAt?: string | null;
+  cancelledByRole?: string | null;
+  /** Cash the shop handed back for a paid order it cancelled. */
+  refundAmount?: Numeric | null;
+  refundCurrency?: Currency | null;
   note: string | null;
   paidAt: string | null;
   createdAt: string;
